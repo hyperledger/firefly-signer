@@ -4,7 +4,7 @@
   ],
   "go.lintTool": "golangci-lint",
   "cSpell.words": [
-
+    "keystorev"
   ],
   "go.testTimeout": "10s"
 }
