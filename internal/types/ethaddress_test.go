@@ -26,10 +26,10 @@ import (
 func TestEthAddressCheckSum(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 EthAddress                     `json:"addr1"`
-		Addr2 EthAddress                     `json:"addr2"`
-		Addr3 EthAddressNoChecksumNo0xPrefix `json:"addr3"`
-		Addr4 EthAddressNoChecksumNo0xPrefix `json:"addr4"`
+		Addr1 EthAddress         `json:"addr1"`
+		Addr2 EthAddress         `json:"addr2"`
+		Addr3 EthAddressPlainHex `json:"addr3"`
+		Addr4 EthAddressPlainHex `json:"addr4"`
 	}{}
 
 	testData := `{

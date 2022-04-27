@@ -17,7 +17,10 @@
 package keystorev3
 
 import (
+	"encoding/hex"
+	"fmt"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -46,7 +49,38 @@ const sampleWallet = `{
 	"version": 3
   }`
 
-func TestLoadWallet(t *testing.T) {
-	_, err := ReadWalletFile([]byte(sampleWallet))
+func TestLoadSampleWallet(t *testing.T) {
+	w, err := ReadWalletFile([]byte(sampleWallet), "correcthorsebatterystaple")
 	assert.NoError(t, err)
+
+	keypair := w.KeyPair()
+	assert.Equal(t, samplePrivateKey, hex.EncodeToString(keypair.PrivateKeyBytes()))
+}
+
+func TestMustReadBytesPanic(t *testing.T) {
+	assert.Panics(t, func() {
+		mustReadBytes(100, iotest.ErrReader(fmt.Errorf("pop")))
+	})
+}
+
+func TestReadWalletFileBadJSON(t *testing.T) {
+	_, err := ReadWalletFile([]byte(`!!not json`), "")
+	assert.Regexp(t, "invalid wallet file", err)
+}
+
+func TestReadWalletFileMissingID(t *testing.T) {
+	_, err := ReadWalletFile([]byte(`{}`), "")
+	assert.Regexp(t, "missing keyfile id", err)
+}
+
+func TestReadWalletFileBadVersion(t *testing.T) {
+	_, err := ReadWalletFile([]byte(`{"id":"6A2175E5-E553-4E25-AD1B-569A3BB0C3FD", "version": 1}`), "")
+	assert.Regexp(t, "incorrect keyfile version", err)
+}
+
+func TestReadWalletFileBadKDF(t *testing.T) {
+	_, err := ReadWalletFile([]byte(`{"id":"6A2175E5-E553-4E25-AD1B-569A3BB0C3FD", "version": 3, "crypto": {
+		"kdf": "unknown"
+	}}`), "")
+	assert.Regexp(t, "unsupported kdf", err)
 }

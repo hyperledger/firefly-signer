@@ -26,8 +26,8 @@ import (
 func TestHexBytes(t *testing.T) {
 
 	testStruct := struct {
-		H1 HexBytesNoPrefix `json:"h1"`
-		H2 HexBytesNoPrefix `json:"h2"`
+		H1 HexBytesPlain    `json:"h1"`
+		H2 HexBytesPlain    `json:"h2"`
 		H3 HexBytes0xPrefix `json:"h3"`
 		H4 HexBytes0xPrefix `json:"h4"`
 	}{}
@@ -59,7 +59,7 @@ func TestHexBytes(t *testing.T) {
 func TestHexBytesFailNonHex(t *testing.T) {
 
 	testStruct := struct {
-		H1 HexBytesNoPrefix `json:"h1"`
+		H1 HexBytesPlain `json:"h1"`
 	}{}
 
 	testData := `{
@@ -73,7 +73,7 @@ func TestHexBytesFailNonHex(t *testing.T) {
 func TestHexBytesFailNonString(t *testing.T) {
 
 	testStruct := struct {
-		H1 HexBytesNoPrefix `json:"h1"`
+		H1 HexBytesPlain `json:"h1"`
 	}{}
 
 	testData := `{
