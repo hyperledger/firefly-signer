@@ -24,13 +24,13 @@ import (
 	"strings"
 )
 
-// HexBytesNoPrefix is simple bytes that are JSON stored/retrieved as hex
-type HexBytesNoPrefix []byte
+// HexBytesPlain is simple bytes that are JSON stored/retrieved as hex
+type HexBytesPlain []byte
 
 // HexBytes0xPrefix is simple bytes that can o
 type HexBytes0xPrefix []byte
 
-func (h *HexBytesNoPrefix) UnmarshalJSON(b []byte) error {
+func (h *HexBytesPlain) UnmarshalJSON(b []byte) error {
 	var s string
 	err := json.Unmarshal(b, &s)
 	if err != nil {
@@ -43,16 +43,16 @@ func (h *HexBytesNoPrefix) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (h HexBytesNoPrefix) String() string {
+func (h HexBytesPlain) String() string {
 	return hex.EncodeToString(h)
 }
 
-func (h HexBytesNoPrefix) MarshalJSON() ([]byte, error) {
+func (h HexBytesPlain) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, h.String())), nil
 }
 
 func (h *HexBytes0xPrefix) UnmarshalJSON(b []byte) error {
-	return ((*HexBytesNoPrefix)(h)).UnmarshalJSON(b)
+	return ((*HexBytesPlain)(h)).UnmarshalJSON(b)
 }
 
 func (h HexBytes0xPrefix) String() string {
