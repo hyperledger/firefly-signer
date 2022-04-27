@@ -4,7 +4,12 @@
   ],
   "go.lintTool": "golangci-lint",
   "cSpell.words": [
-    "keystorev"
+    "dklen",
+    "fftypes",
+    "kdfparams",
+    "Keccak",
+    "keystorev",
+    "secp"
   ],
   "go.testTimeout": "10s"
 }
