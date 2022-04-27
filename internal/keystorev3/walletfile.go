@@ -17,16 +17,26 @@
 package keystorev3
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/hyperledger/firefly-signer/internal/secp256k1"
 	"github.com/hyperledger/firefly-signer/internal/types"
 	"github.com/hyperledger/firefly/pkg/fftypes"
+)
+
+const (
+	version3        = 3
+	cipherAES128ctr = "es-128-ctr"
+	kdfTypeScrypt   = "scrypt"
+	kdfTypePbkdf2   = "pbkdf2"
 )
 
 type WalletFile interface {
 	KeyPair() *secp256k1.KeyPair
 }
 
-type scryptKdfParams struct {
+type kdfParamsScrypt struct {
 	DKLen int                 `json:"dklen"`
 	N     int                 `json:"n"`
 	P     int                 `json:"p"`
@@ -34,7 +44,7 @@ type scryptKdfParams struct {
 	Salt  types.HexBytesPlain `json:"salt"`
 }
 
-type aes128CtrKdfParams struct {
+type kdfParamsPbkdf2 struct {
 	DKLen int                 `json:"dklen"`
 	C     int                 `json:"c"`
 	PRF   string              `json:"prf"`
@@ -55,18 +65,20 @@ type cryptoCommon struct {
 
 type cryptoScrypt struct {
 	cryptoCommon
-	KDFParams scryptKdfParams `json:"kdfparams"`
+	KDFParams kdfParamsScrypt `json:"kdfparams"`
 }
 
-type cryptoAES128Ctr struct {
+type cryptoPbkdf2 struct {
 	cryptoCommon
-	KDFParams aes128CtrKdfParams `json:"kdfparams"`
+	KDFParams kdfParamsPbkdf2 `json:"kdfparams"`
 }
 
 type walletFileBase struct {
 	Address types.EthAddressPlainHex `json:"address"`
 	ID      *fftypes.UUID            `json:"id"`
 	Version int                      `json:"version"`
+
+	keypair *secp256k1.KeyPair
 }
 
 type walletFileCommon struct {
@@ -74,9 +86,9 @@ type walletFileCommon struct {
 	Crypto cryptoCommon `json:"crypto"`
 }
 
-type walletFileAES128Ctr struct {
+type walletFilePbkdf2 struct {
 	walletFileBase
-	Crypto cryptoAES128Ctr `json:"crypto"`
+	Crypto cryptoPbkdf2 `json:"crypto"`
 }
 
 type walletFileScrypt struct {
@@ -85,5 +97,19 @@ type walletFileScrypt struct {
 }
 
 func (w *walletFileBase) KeyPair() *secp256k1.KeyPair {
-	return nil
+	return w.keypair
+}
+
+func (c *cryptoCommon) decryptCommon(derivedKey []byte) ([]byte, error) {
+	if len(derivedKey) != 32 {
+		return nil, fmt.Errorf("invalid scrypt keystore: derived key length %d != 32", len(derivedKey))
+	}
+	// Last 16 bytes of derived key are used for MAC
+	derivedMac := generateMac(derivedKey[16:32], c.CipherText)
+	if !bytes.Equal(derivedMac, c.MAC) {
+		return nil, fmt.Errorf("invalid password provided")
+	}
+	// First 16 bytes of derived key are used as the encryption key
+	encryptKey := derivedKey[0:16]
+	return aes128CtrDecrypt(encryptKey, c.CipherParams.IV, c.CipherText)
 }
