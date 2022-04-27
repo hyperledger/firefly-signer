@@ -34,9 +34,6 @@ type EthAddress [20]byte
 // EthAddressNoChecksumNo0xPrefix can parse the same, but formats as just flat hex (no prefix)
 type EthAddressNoChecksumNo0xPrefix EthAddress
 
-// HexBytes is simple bytes that are JSON stored/retrieved as bytes
-type HexBytes []byte
-
 func (a *EthAddress) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
