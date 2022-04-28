@@ -27,7 +27,7 @@ func encodeBytes(inBytes []byte, offset rlpOffset) []byte {
 	if len(inBytes) <= 55 {
 		// Add the length to same byte as the offset
 		outBytes := make([]byte, len(inBytes)+1)
-		outBytes[0] = byte(shortString) + byte(len(inBytes))
+		outBytes[0] = byte(offset) + byte(len(inBytes))
 		copy(outBytes[1:], inBytes[0:])
 		return outBytes
 	}
