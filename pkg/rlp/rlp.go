@@ -22,23 +22,31 @@ import (
 	"strings"
 )
 
+// Data is an individual RLP Data element - or an "RLP string"
 type Data []byte
 
+// List is a list of RLP elements, which could be either Data or List elements
 type List []Element
 
+// Element is an interface implemented by both Data and List elements
 type Element interface {
+	// When true the Element can safely be cast to List, and when false the Element can safely be cast to Data
 	IsList() bool
+	// Encode converts the element to a byte array
 	Encode() []byte
 }
 
+// WrapString converts a plain string to an RLP Data element for encoding
 func WrapString(s string) Data {
 	return Data(s)
 }
 
+// WrapString converts a positive integer to an RLP Data element for encoding
 func WrapInt(i *big.Int) Data {
 	return Data(i.Bytes())
 }
 
+// WrapHex converts a hex encoded string (with or without 0x prefix) to an RLP Data element for encoding
 func WrapHex(s string) (Data, error) {
 	b, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
 	if err != nil {
@@ -47,6 +55,7 @@ func WrapHex(s string) (Data, error) {
 	return Data(b), nil
 }
 
+// MustWrapHex panics if hex decoding fails
 func MustWrapHex(s string) Data {
 	b, err := WrapHex(s)
 	if err != nil {
@@ -55,6 +64,7 @@ func MustWrapHex(s string) Data {
 	return b
 }
 
+// Int is a convenience function to convert the bytes within an RLP Data element to an integer (big endian encoding)
 func (r Data) Int() *big.Int {
 	if r == nil {
 		return nil
@@ -63,14 +73,17 @@ func (r Data) Int() *big.Int {
 	return i.SetBytes(r)
 }
 
+// Encode encodes this individual RLP Data element
 func (r Data) Encode() []byte {
 	return encodeBytes(r, false)
 }
 
+// IsList is false for individual RLP Data elements
 func (r Data) IsList() bool {
 	return false
 }
 
+// Encode encodes the RLP List to a byte array, including recursing into child arrays
 func (l List) Encode() []byte {
 	if len(l) == 0 {
 		return encodeBytes([]byte{}, true)
@@ -83,6 +96,7 @@ func (l List) Encode() []byte {
 
 }
 
+// IsList returns true for list elements
 func (l List) IsList() bool {
 	return true
 }

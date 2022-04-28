@@ -61,12 +61,18 @@ const (
 	shortToLong byte = 0x37
 )
 
-// Decode will decode the first element in an RLP byte array,
-// and return the postition it reached in the array along with:
+// Decode will decode an RLP element at the beginning of the byte slice.
+// An error is returned if problems are found in the RLP encoding
+//
+// The position of the first byte after the RLP element is returned.
+// This will be the length of the byte slice, if the RLP element filled the
+// entire slice. Otherwise, the position can be used to find/decode
+// additional data (RLP or otherwise) in the byte slice.
+//
+// The element returned will be one of:
 // - nil if passed an empty byte array
 // - Data if the RLP stream contains a data element in the first position
 // - List if the RLP stream contains a list in the first position
-// An error is returned if problems are found in the RLP data
 func Decode(rlpData []byte) (Element, int, error) {
 	decoded, endPos, err := decode(rlpData, 1)
 	if err != nil {
