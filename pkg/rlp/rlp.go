@@ -43,7 +43,7 @@ const (
 	 * list followed by the concatenation of the RLP encodings of the items. The range of the first
 	 * byte is thus [0xc0, 0xf7].
 	 */
-	// shortList rlpOffset = 0xc0
+	shortList rlpOffset = 0xc0
 
 	/**
 	 * [0xf7] If the total payload of a list is more than 55 bytes long, the RLP encoding consists
@@ -54,25 +54,25 @@ const (
 	// longList rlpOffset = 0xf7
 )
 
-type ByteArray []byte
-
-type Element interface {
-	IsList() bool
-	Value() []byte
-	Children() List
-}
+type Data []byte
 
 type List []Element
 
-func WrapString(s string) ByteArray {
-	return ByteArray(s)
+type Element interface {
+	IsList() bool
+	List() List
+	Encode() []byte
 }
 
-func WrapInt(i *big.Int) ByteArray {
-	return ByteArray(i.Bytes())
+func WrapString(s string) Data {
+	return Data(s)
 }
 
-func (r ByteArray) Int() *big.Int {
+func WrapInt(i *big.Int) Data {
+	return Data(i.Bytes())
+}
+
+func (r Data) Int() *big.Int {
 	if r == nil {
 		return nil
 	}
@@ -80,6 +80,34 @@ func (r ByteArray) Int() *big.Int {
 	return i.SetBytes(r)
 }
 
-func (r ByteArray) Encode() []byte {
+func (r Data) Encode() []byte {
 	return encodeBytes(r, shortString)
+}
+
+func (r Data) List() List {
+	return nil
+}
+
+func (r Data) IsList() bool {
+	return false
+}
+
+func (l List) Encode() []byte {
+	if len(l) == 0 {
+		return encodeBytes([]byte{}, shortList)
+	}
+	var concatenation []byte
+	for _, entry := range l {
+		concatenation = append(concatenation, entry.Encode()...)
+	}
+	return encodeBytes(concatenation, shortList)
+
+}
+
+func (l List) List() List {
+	return l
+}
+
+func (l List) IsList() bool {
+	return true
 }
