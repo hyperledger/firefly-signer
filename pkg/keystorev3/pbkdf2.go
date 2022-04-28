@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hyperledger/firefly-signer/internal/secp256k1"
+	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"golang.org/x/crypto/pbkdf2"
 )
 

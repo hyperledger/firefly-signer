@@ -22,8 +22,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/hyperledger/firefly-signer/internal/secp256k1"
 	"github.com/hyperledger/firefly-signer/internal/types"
+	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/hyperledger/firefly/pkg/fftypes"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/pbkdf2"
