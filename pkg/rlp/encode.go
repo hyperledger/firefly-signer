@@ -16,9 +16,13 @@
 
 package rlp
 
-func encodeBytes(inBytes []byte, offset rlpOffset) []byte {
+func encodeBytes(inBytes []byte, isList bool) []byte {
+	shortOffset := shortString
+	if isList {
+		shortOffset = shortList
+	}
 	if len(inBytes) == 1 &&
-		offset == shortString &&
+		!isList &&
 		inBytes[0] >= 0x00 &&
 		inBytes[0] <= 0x7f {
 		// We don't need the offset, this can be sent as a single byte
@@ -27,14 +31,14 @@ func encodeBytes(inBytes []byte, offset rlpOffset) []byte {
 	if len(inBytes) <= 55 {
 		// Add the length to same byte as the offset
 		outBytes := make([]byte, len(inBytes)+1)
-		outBytes[0] = byte(offset) + byte(len(inBytes))
+		outBytes[0] = shortOffset + byte(len(inBytes))
 		copy(outBytes[1:], inBytes[0:])
 		return outBytes
 	}
 	// The length is too long to fit in a single byte, we have to encode it
 	encodedByteLen := int64ToMinimalBytes(int64(len(inBytes)))
 	outBytes := make([]byte, 1+len(encodedByteLen)+len(inBytes))
-	outBytes[0] = byte(offset) + 0x37 + byte(len(encodedByteLen))
+	outBytes[0] = shortOffset + shortToLong + byte(len(encodedByteLen))
 	copy(outBytes[1:], encodedByteLen)
 	copy(outBytes[1+len(encodedByteLen):], inBytes)
 	return outBytes

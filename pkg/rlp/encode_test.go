@@ -23,10 +23,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestWrapHexFail(t *testing.T) {
+	assert.Panics(t, func() {
+		MustWrapHex("! not hex")
+	})
+}
+
 func TestEncodeData(t *testing.T) {
 
 	d := Data{}
-	assert.Nil(t, d.List())
 	assert.False(t, d.IsList())
 
 	assert.Equal(t, []byte{}, int64ToMinimalBytes(0))
@@ -41,66 +46,7 @@ func TestEncodeData(t *testing.T) {
 
 	assert.Equal(t, []byte{0x00}, Data{0x00}.Encode())
 
-	assert.Equal(t, []byte{
-		0xb8,
-		0x38,
-		'L',
-		'o',
-		'r',
-		'e',
-		'm',
-		' ',
-		'i',
-		'p',
-		's',
-		'u',
-		'm',
-		' ',
-		'd',
-		'o',
-		'l',
-		'o',
-		'r',
-		' ',
-		's',
-		'i',
-		't',
-		' ',
-		'a',
-		'm',
-		'e',
-		't',
-		',',
-		' ',
-		'c',
-		'o',
-		'n',
-		's',
-		'e',
-		'c',
-		't',
-		'e',
-		't',
-		'u',
-		'r',
-		' ',
-		'a',
-		'd',
-		'i',
-		'p',
-		'i',
-		's',
-		'i',
-		'c',
-		'i',
-		'n',
-		'g',
-		' ',
-		'e',
-		'l',
-		'i',
-		't',
-	}, WrapString("Lorem ipsum dolor sit amet, consectetur adipisicing elit").Encode())
+	assert.Equal(t, loremIpsumRLPBytes, WrapString(loremIpsumString).Encode())
 
 	expected := make([]byte, 56)
 	expected[0] = 0xb7
@@ -124,7 +70,6 @@ func TestEncodeIntegers(t *testing.T) {
 func TestEncodeList(t *testing.T) {
 
 	l := List{}
-	assert.Equal(t, l, l.List())
 	assert.True(t, l.IsList())
 
 	assert.Equal(t, []byte{0xc8, 0x83, 'c', 'a', 't', 0x83, 'd', 'o', 'g'},
