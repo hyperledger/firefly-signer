@@ -34,6 +34,11 @@ func (k *KeyPair) PrivateKeyBytes() []byte {
 	return k.PrivateKey.D.FillBytes(make([]byte, privateKeySize))
 }
 
+func (k *KeyPair) PublicKeyBytes() []byte {
+	// Remove the "04" Suffix byte when computing the address. This byte indicates that it is an uncompressed public key.
+	return k.PublicKey.SerializeUncompressed()[1:]
+}
+
 func GenerateSecp256k1KeyPair() (*KeyPair, error) {
 	key, _ := btcec.NewPrivateKey(btcec.S256())
 	return wrapSecp256k1Key(key, key.PubKey()), nil
@@ -50,11 +55,9 @@ func wrapSecp256k1Key(key *btcec.PrivateKey, pubKey *btcec.PublicKey) *KeyPair {
 		PublicKey:  pubKey,
 	}
 
-	// Remove the "04" Suffix byte when computing the address. This byte indicates that it is an uncompressed public key.
-	publicKeyBytes := k.PublicKey.SerializeUncompressed()[1:]
 	// Take the hash of the public key to generate the address
 	hash := sha3.NewLegacyKeccak256()
-	hash.Write(publicKeyBytes)
+	hash.Write(k.PublicKeyBytes())
 	// Ethereum addresses only use the lower 20 bytes, so toss the rest away
 	copy(k.Address[:], hash.Sum(nil)[12:32])
 

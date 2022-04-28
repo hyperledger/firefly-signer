@@ -31,6 +31,9 @@ import (
 // EthAddress uses full 0x prefixed checksum address format
 type EthAddress [20]byte
 
+// EthAddress0xHex formats with an 0x prefix, but no checksum (lower case)
+type EthAddress0xHex EthAddress
+
 // EthAddressPlainHex can parse the same, but formats as just flat hex (no prefix)
 type EthAddressPlainHex EthAddress
 
@@ -87,4 +90,16 @@ func (a EthAddressPlainHex) MarshalJSON() ([]byte, error) {
 
 func (a EthAddressPlainHex) String() string {
 	return hex.EncodeToString(a[0:20])
+}
+
+func (a *EthAddress0xHex) UnmarshalJSON(b []byte) error {
+	return ((*EthAddress)(a)).UnmarshalJSON(b)
+}
+
+func (a EthAddress0xHex) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, a.String())), nil
+}
+
+func (a EthAddress0xHex) String() string {
+	return "0x" + hex.EncodeToString(a[0:20])
 }

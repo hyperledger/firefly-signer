@@ -4,6 +4,7 @@
   ],
   "go.lintTool": "golangci-lint",
   "cSpell.words": [
+    "btcec",
     "dklen",
     "fftypes",
     "kdfparams",
