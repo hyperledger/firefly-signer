@@ -26,6 +26,8 @@ import (
 var ffc = config.AddRootKey
 
 var (
+	// BackendChainID optionally set the Chain ID manually (usually queries network ID)
+	BackendChainID = ffc("backend.chainId")
 	// FileWalletEnabled if the Keystore V3 wallet is enabled
 	FileWalletEnabled = ffc("fileWallet.enabled")
 	// FileWalletPath the path of the Keystore V3 wallet path
@@ -55,6 +57,7 @@ var ServerPrefix config.Prefix
 var BackendPrefix config.Prefix
 
 func setDefaults() {
+	viper.SetDefault(string(BackendChainID), -1)
 	viper.SetDefault(string(FileWalletEnabled), true)
 	viper.SetDefault(string(FileWalletSignerCacheSize), 250)
 	viper.SetDefault(string(FileWalletSignerCacheTTL), "24h")

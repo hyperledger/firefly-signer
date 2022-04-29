@@ -95,12 +95,12 @@ type fileWallet struct {
 	metadataPasswordFileProperty *template.Template
 }
 
-func (w *fileWallet) Sign(ctx context.Context, addr *ethtypes.Address0xHex, tx *ethsigner.Transaction, chainID int64) ([]byte, error) {
-	keypair, err := w.getSignerForAccount(ctx, addr)
+func (w *fileWallet) Sign(ctx context.Context, txn *ethsigner.Transaction, chainID int64) ([]byte, error) {
+	keypair, err := w.getSignerForAccount(ctx, txn.From)
 	if err != nil {
 		return nil, err
 	}
-	return tx.Sign(keypair, chainID)
+	return txn.Sign(keypair, chainID)
 }
 
 func (w *fileWallet) Initialize(ctx context.Context) error {

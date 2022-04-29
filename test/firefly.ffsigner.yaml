@@ -4,3 +4,5 @@ fileWallet:
     format: toml
     keyFileProperty: '{{ index .signing "key-file" }}'
     passwordFileProperty: '{{ index .signing "key-file" }}'
+backend:
+  chainId: 0

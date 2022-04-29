@@ -3,3 +3,5 @@ fileWallet:
   metadata:
     format: toml
     keyFileProperty: '{{ !!! }}'
+backend:
+  chainId: 0
