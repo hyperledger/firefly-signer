@@ -23,8 +23,8 @@ import (
 	"sync/atomic"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
-	"github.com/hyperledger/firefly/pkg/config"
 	"github.com/hyperledger/firefly/pkg/ffresty"
 	"github.com/hyperledger/firefly/pkg/fftypes"
 	"github.com/hyperledger/firefly/pkg/i18n"
@@ -44,9 +44,9 @@ type Backend interface {
 }
 
 // NewRPCBackend Constructor
-func NewRPCBackend(ctx context.Context, prefix config.Prefix) Backend {
+func NewRPCBackend(ctx context.Context) Backend {
 	return &rpcBackend{
-		client: ffresty.New(ctx, prefix),
+		client: ffresty.New(ctx, signerconfig.BackendPrefix),
 	}
 }
 

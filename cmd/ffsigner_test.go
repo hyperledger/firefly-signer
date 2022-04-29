@@ -17,10 +17,12 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/hyperledger/firefly-signer/mocks/rpcservermocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,8 +36,7 @@ func TestRunOK(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		err := Execute()
-		assert.NoError(t, err)
+		_ = Execute()
 	}()
 
 	time.Sleep(10 * time.Millisecond)
@@ -45,31 +46,30 @@ func TestRunOK(t *testing.T) {
 
 }
 
-// func TestRunMissingConfig(t *testing.T) {
+func TestRunBadConfig(t *testing.T) {
 
-// 	rootCmd.SetArgs([]string{"-f", "../test/does-not-exist.ffsigner.yaml"})
-// 	defer rootCmd.SetArgs([]string{})
+	rootCmd.SetArgs([]string{"-f", "../test/bad-config.ffsigner.yaml"})
+	defer rootCmd.SetArgs([]string{})
 
-// 	err := Execute()
-// 	assert.Regexp(t, "FF00101", err)
+	err := Execute()
+	assert.Regexp(t, "FF00101", err)
 
-// }
+}
 
-// func TestRunBadConfig(t *testing.T) {
+func TestRunFailStartup(t *testing.T) {
+	rootCmd.SetArgs([]string{"-f", "../test/quick-fail.ffsigner.yaml"})
+	defer rootCmd.SetArgs([]string{})
 
-// 	rootCmd.SetArgs([]string{"-f", "../test/empty-config.ffsigner.yaml"})
-// 	defer rootCmd.SetArgs([]string{})
+	err := Execute()
+	assert.Regexp(t, "FF10104", err)
 
-// 	err := Execute()
-// 	assert.Regexp(t, "FF201018", err)
+}
 
-// }
+func TestRunFailServer(t *testing.T) {
 
-// func TestRunFailStartup(t *testing.T) {
-// 	rootCmd.SetArgs([]string{"-f", "../test/quick-fail.ffsigner.yaml"})
-// 	defer rootCmd.SetArgs([]string{})
+	s := &rpcservermocks.Server{}
+	s.On("Start").Return(fmt.Errorf("pop"))
+	err := runServer(s)
+	assert.Regexp(t, err, "pop")
 
-// 	err := Execute()
-// 	assert.Regexp(t, "FF201017", err)
-
-// }
+}

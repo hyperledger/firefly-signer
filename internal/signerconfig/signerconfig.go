@@ -18,6 +18,7 @@ package signerconfig
 
 import (
 	"github.com/hyperledger/firefly/pkg/config"
+	"github.com/hyperledger/firefly/pkg/httpserver"
 	"github.com/hyperledger/firefly/pkg/wsclient"
 	"github.com/spf13/viper"
 )
@@ -31,6 +32,8 @@ var (
 	WalletsKeystoreV3Path = ffc("wallets.keystorev3.path")
 )
 
+var ServerPrefix config.Prefix
+
 var BackendPrefix config.Prefix
 
 func setDefaults() {
@@ -39,6 +42,9 @@ func setDefaults() {
 
 func Reset() {
 	config.RootConfigReset(setDefaults)
+
+	ServerPrefix = config.NewPluginConfig("server")
+	httpserver.InitHTTPConfPrefix(ServerPrefix, 8545)
 
 	BackendPrefix = config.NewPluginConfig("backend")
 	wsclient.InitPrefix(BackendPrefix)

@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/go-resty/resty/v2 v2.7.0
+	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hyperledger/firefly v1.0.0-rc.5.0.20220426012553-30f939eb8ec1
 	github.com/sirupsen/logrus v1.8.1
