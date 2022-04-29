@@ -18,7 +18,7 @@ package secp256k1
 
 import (
 	"github.com/btcsuite/btcd/btcec" // ISC licensed
-	"github.com/hyperledger/firefly-signer/internal/types"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -27,7 +27,7 @@ const privateKeySize = 32
 type KeyPair struct {
 	PrivateKey *btcec.PrivateKey
 	PublicKey  *btcec.PublicKey
-	Address    types.EthAddress
+	Address    ethtypes.Address
 }
 
 func (k *KeyPair) PrivateKeyBytes() []byte {

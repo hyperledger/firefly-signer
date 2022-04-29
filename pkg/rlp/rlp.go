@@ -20,6 +20,8 @@ import (
 	"encoding/hex"
 	"math/big"
 	"strings"
+
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 )
 
 // Data is an individual RLP Data element - or an "RLP string"
@@ -44,6 +46,14 @@ func WrapString(s string) Data {
 // WrapString converts a positive integer to an RLP Data element for encoding
 func WrapInt(i *big.Int) Data {
 	return Data(i.Bytes())
+}
+
+// WrapAddress wraps an address, or writes empty data if the address is nil
+func WrapAddress(a *ethtypes.Address) Data {
+	if a == nil {
+		return Data{}
+	}
+	return Data(a[0:20])
 }
 
 // WrapHex converts a hex encoded string (with or without 0x prefix) to an RLP Data element for encoding

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package ethtypes
 
 import (
 	"encoding/json"
@@ -23,15 +23,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEthAddressCheckSum(t *testing.T) {
+func TestAddressCheckSum(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 EthAddress         `json:"addr1"`
-		Addr2 EthAddress         `json:"addr2"`
-		Addr3 EthAddressPlainHex `json:"addr3"`
-		Addr4 EthAddressPlainHex `json:"addr4"`
-		Addr5 EthAddress0xHex    `json:"addr5"`
-		Addr6 EthAddress0xHex    `json:"addr6"`
+		Addr1 Address         `json:"addr1"`
+		Addr2 Address         `json:"addr2"`
+		Addr3 AddressPlainHex `json:"addr3"`
+		Addr4 AddressPlainHex `json:"addr4"`
+		Addr5 Address0xHex    `json:"addr5"`
+		Addr6 Address0xHex    `json:"addr6"`
 	}{}
 
 	testData := `{
@@ -65,10 +65,10 @@ func TestEthAddressCheckSum(t *testing.T) {
 
 }
 
-func TestEthAddressFailLen(t *testing.T) {
+func TestAddressFailLen(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 EthAddress `json:"addr1"`
+		Addr1 Address `json:"addr1"`
 	}{}
 
 	testData := `{
@@ -79,10 +79,10 @@ func TestEthAddressFailLen(t *testing.T) {
 	assert.Regexp(t, "bad address - must be 20 bytes", err)
 }
 
-func TestEthAddressFailNonHex(t *testing.T) {
+func TestAddressFailNonHex(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 EthAddress `json:"addr1"`
+		Addr1 Address `json:"addr1"`
 	}{}
 
 	testData := `{
@@ -93,10 +93,10 @@ func TestEthAddressFailNonHex(t *testing.T) {
 	assert.Regexp(t, "bad address", err)
 }
 
-func TestEthAddressFailNonString(t *testing.T) {
+func TestAddressFailNonString(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 EthAddress `json:"addr1"`
+		Addr1 Address `json:"addr1"`
 	}{}
 
 	testData := `{

@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/hyperledger/firefly-signer/internal/types"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/hyperledger/firefly/pkg/fftypes"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +42,7 @@ func TestPbkdf2Wallet(t *testing.T) {
 
 	w1 := &walletFilePbkdf2{
 		walletFileBase: walletFileBase{
-			Address: types.EthAddressPlainHex(keypair.Address),
+			Address: ethtypes.AddressPlainHex(keypair.Address),
 			ID:      fftypes.NewUUID(),
 			Version: version3,
 			keypair: keypair,

@@ -17,9 +17,11 @@
 package rlp
 
 import (
+	"encoding/hex"
 	"math/big"
 	"testing"
 
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,5 +116,28 @@ func TestEncodeList(t *testing.T) {
 		},
 		WrapInt(big.NewInt(1)),
 	}.Encode())
+
+}
+
+func TestEncodeNil(t *testing.T) {
+
+	assert.Equal(t, []byte{0x80}, (Data)(nil).Encode())
+
+}
+
+func TestEncodeAddress(t *testing.T) {
+
+	b, err := hex.DecodeString("497eedc4299dea2f2a364be10025d0ad0f702de3")
+	assert.NoError(t, err)
+	var a ethtypes.Address
+	copy(a[0:20], b[0:20])
+
+	d := WrapAddress(&a)
+	aa, _, err := Decode(d.Encode())
+	assert.NoError(t, err)
+	assert.Equal(t, Data(b), aa.(Data))
+
+	d1 := WrapAddress((*ethtypes.Address)(nil))
+	assert.Equal(t, Data{}, d1)
 
 }
