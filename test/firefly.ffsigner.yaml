@@ -1,0 +1,6 @@
+fileWallet:
+  path: "../test/keystore_toml"
+  metadata:
+    format: toml
+    keyFileProperty: '{{ index .signing "key-file" }}'
+    passwordFileProperty: '{{ index .signing "key-file" }}'

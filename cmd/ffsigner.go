@@ -23,8 +23,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/hyperledger/firefly-signer/internal/filewallet"
 	"github.com/hyperledger/firefly-signer/internal/rpcserver"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly/pkg/config"
 	"github.com/hyperledger/firefly/pkg/i18n"
 	"github.com/hyperledger/firefly/pkg/log"
@@ -87,7 +89,15 @@ func run() error {
 		cancelCtx()
 	}()
 
-	server, err := rpcserver.NewServer(ctx)
+	if !config.GetBool(signerconfig.FileWalletEnabled) {
+		return i18n.NewError(ctx, signermsgs.MsgNoWalletEnabled)
+	}
+	fileWallet, err := filewallet.NewFileWallet(ctx)
+	if err != nil {
+		return err
+	}
+
+	server, err := rpcserver.NewServer(ctx, fileWallet)
 	if err != nil {
 		return err
 	}

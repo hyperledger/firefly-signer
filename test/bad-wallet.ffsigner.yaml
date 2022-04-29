@@ -1,0 +1,5 @@
+fileWallet:
+  path: "../test/keystore_toml"
+  metadata:
+    format: toml
+    keyFileProperty: '{{ !!! }}'
