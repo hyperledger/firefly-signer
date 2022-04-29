@@ -72,7 +72,7 @@ func TestEncodeExistingEIP1559(t *testing.T) {
 		"02f89701248459682f00854e58be5c3c8302b13d943c99f2a4b366d46bcf2277639a135a6d1288eceb878e1bc9bf040000a4a0712d680000000000000000000000000000000000000000000000000000000000000001c001a0ea6e1513d716146af3a02e1497fbe7fc3b2ffb08ccb4a1bfef4eaa2a122f62dfa00ddc23aec20948a55d3e1f8afd29b5570d8d279450a472b55561ef6afe4a07ff")
 	assert.NoError(t, err)
 
-	txn := EthTransaction{
+	txn := Transaction{
 		Nonce:                ethtypes.NewHexInteger64(0x24),
 		MaxFeePerGas:         ethtypes.NewHexInteger64(0x4e58be5c3c),
 		MaxPriorityFeePerGas: ethtypes.NewHexInteger64(0x59682f00),
