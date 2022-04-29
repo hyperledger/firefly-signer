@@ -125,6 +125,12 @@ func TestEncodeNil(t *testing.T) {
 
 }
 
+func TestEncodeZero(t *testing.T) {
+
+	assert.Equal(t, []byte{0x80}, WrapInt(big.NewInt(0)).Encode())
+
+}
+
 func TestEncodeAddress(t *testing.T) {
 
 	b, err := hex.DecodeString("497eedc4299dea2f2a364be10025d0ad0f702de3")

@@ -50,16 +50,19 @@ func NewSecp256k1KeyPair(b []byte) (*KeyPair, error) {
 }
 
 func wrapSecp256k1Key(key *btcec.PrivateKey, pubKey *btcec.PublicKey) *KeyPair {
-	k := &KeyPair{
+	return &KeyPair{
 		PrivateKey: key,
 		PublicKey:  pubKey,
+		Address:    *PublicKeyToAddress(pubKey),
 	}
+}
 
+func PublicKeyToAddress(pubKey *btcec.PublicKey) *ethtypes.Address {
 	// Take the hash of the public key to generate the address
 	hash := sha3.NewLegacyKeccak256()
-	hash.Write(k.PublicKeyBytes())
+	hash.Write(pubKey.SerializeUncompressed()[1:])
 	// Ethereum addresses only use the lower 20 bytes, so toss the rest away
-	copy(k.Address[:], hash.Sum(nil)[12:32])
-
-	return k
+	a := new(ethtypes.Address)
+	copy(a[:], hash.Sum(nil)[12:32])
+	return a
 }

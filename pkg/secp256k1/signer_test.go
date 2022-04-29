@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,10 +46,10 @@ func addEthMessagePrefix(message []byte) []byte {
 	return b.Bytes()
 }
 
-func testKeyPair(t *testing.T) *secp256k1.KeyPair {
+func testKeyPair(t *testing.T) *KeyPair {
 	keyBytes, err := hex.DecodeString(samplePrivateKey)
 	assert.NoError(t, err)
-	keypair, err := secp256k1.NewSecp256k1KeyPair(keyBytes)
+	keypair, err := NewSecp256k1KeyPair(keyBytes)
 	assert.NoError(t, err)
 	return keypair
 }
@@ -67,8 +66,8 @@ func TestValidateSampleData(t *testing.T) {
 
 func TestSignMessage(t *testing.T) {
 
-	signer := NewSigner(testKeyPair(t))
-	sig, err := signer.Sign(addEthMessagePrefix([]byte(sampleMessage)))
+	keypair := testKeyPair(t)
+	sig, err := keypair.Sign(addEthMessagePrefix([]byte(sampleMessage)))
 	assert.NoError(t, err)
 
 	assert.Equal(t, int64(28), sig.V.Int64())
@@ -77,4 +76,11 @@ func TestSignMessage(t *testing.T) {
 
 	sig.UpdateEIP155(1001)
 	assert.Equal(t, int64(2038), sig.V.Int64())
+}
+
+func TestSignFailNil(t *testing.T) {
+
+	_, err := (*KeyPair)(nil).Sign(addEthMessagePrefix([]byte(sampleMessage)))
+	assert.Regexp(t, "nil signer", err)
+
 }

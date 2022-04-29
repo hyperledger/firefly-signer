@@ -41,6 +41,10 @@ func (a *Address) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
+	return a.SetString(s)
+}
+
+func (a *Address) SetString(s string) error {
 	b, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
 	if err != nil {
 		return fmt.Errorf("bad address: %s", err)
