@@ -26,12 +26,12 @@ import (
 func TestAddressCheckSum(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 Address         `json:"addr1"`
-		Addr2 Address         `json:"addr2"`
-		Addr3 AddressPlainHex `json:"addr3"`
-		Addr4 AddressPlainHex `json:"addr4"`
-		Addr5 Address0xHex    `json:"addr5"`
-		Addr6 Address0xHex    `json:"addr6"`
+		Addr1 AddressWithChecksum `json:"addr1"`
+		Addr2 AddressWithChecksum `json:"addr2"`
+		Addr3 AddressPlainHex     `json:"addr3"`
+		Addr4 AddressPlainHex     `json:"addr4"`
+		Addr5 Address0xHex        `json:"addr5"`
+		Addr6 Address0xHex        `json:"addr6"`
 	}{}
 
 	testData := `{
@@ -68,7 +68,7 @@ func TestAddressCheckSum(t *testing.T) {
 func TestAddressFailLen(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 Address `json:"addr1"`
+		Addr1 AddressWithChecksum `json:"addr1"`
 	}{}
 
 	testData := `{
@@ -82,7 +82,7 @@ func TestAddressFailLen(t *testing.T) {
 func TestAddressFailNonHex(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 Address `json:"addr1"`
+		Addr1 AddressWithChecksum `json:"addr1"`
 	}{}
 
 	testData := `{
@@ -96,7 +96,7 @@ func TestAddressFailNonHex(t *testing.T) {
 func TestAddressFailNonString(t *testing.T) {
 
 	testStruct := struct {
-		Addr1 Address `json:"addr1"`
+		Addr1 AddressWithChecksum `json:"addr1"`
 	}{}
 
 	testData := `{
@@ -105,4 +105,15 @@ func TestAddressFailNonString(t *testing.T) {
 
 	err := json.Unmarshal([]byte(testData), &testStruct)
 	assert.Error(t, err)
+}
+
+func TestAddressConstructors(t *testing.T) {
+	assert.Equal(t, "0x497eedc4299dea2f2a364be10025d0ad0f702de3", MustNewAddress("497EEDC4299DEA2F2A364BE10025D0AD0F702DE3").String())
+	assert.Panics(t, func() {
+		MustNewAddress("!Bad")
+	})
+
+	a, err := NewAddressWithChecksum("497EEDC4299DEA2F2A364BE10025D0AD0F702DE3")
+	assert.NoError(t, err)
+	assert.Equal(t, "0x497EEdc4299Dea2f2A364Be10025d0aD0f702De3", a.String())
 }

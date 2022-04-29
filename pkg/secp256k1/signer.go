@@ -63,7 +63,7 @@ func (s *SignatureData) UpdateEIP2930() {
 }
 
 // Recover obtains the original signer
-func (s *SignatureData) Recover(message []byte, chainID int64) (a *ethtypes.Address, err error) {
+func (s *SignatureData) Recover(message []byte, chainID int64) (a *ethtypes.Address0xHex, err error) {
 	msgHash := sha3.NewLegacyKeccak256()
 	msgHash.Write(message)
 	signatureBytes := make([]byte, 65)

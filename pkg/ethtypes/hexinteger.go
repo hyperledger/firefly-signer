@@ -62,12 +62,6 @@ func (h *HexInteger) BigInt() *big.Int {
 	return (*big.Int)(h)
 }
 
-func NewAddress(s string) *Address {
-	a := new(Address)
-	_ = a.SetString(s)
-	return a
-}
-
 func NewHexInteger64(i int64) *HexInteger {
 	return (*HexInteger)(big.NewInt(i))
 }

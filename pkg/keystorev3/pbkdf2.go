@@ -29,7 +29,7 @@ const (
 	prfHmacSHA256 = "hmac-sha256"
 )
 
-func readPbkdf2WalletFile(jsonWallet []byte, password string) (WalletFile, error) {
+func readPbkdf2WalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
 	var w *walletFilePbkdf2
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {
 		return nil, fmt.Errorf("invalid pbkdf2 keystore: %s", err)
@@ -37,12 +37,12 @@ func readPbkdf2WalletFile(jsonWallet []byte, password string) (WalletFile, error
 	return w, w.decrypt(password)
 }
 
-func (w *walletFilePbkdf2) decrypt(password string) (err error) {
+func (w *walletFilePbkdf2) decrypt(password []byte) (err error) {
 	if w.Crypto.KDFParams.PRF != prfHmacSHA256 {
 		return fmt.Errorf("invalid pbkdf2 wallet file: unsupported prf '%s'", w.Crypto.KDFParams.PRF)
 	}
 
-	derivedKey := pbkdf2.Key([]byte(password), w.Crypto.KDFParams.Salt, w.Crypto.KDFParams.C, w.Crypto.KDFParams.DKLen, sha256.New)
+	derivedKey := pbkdf2.Key(password, w.Crypto.KDFParams.Salt, w.Crypto.KDFParams.C, w.Crypto.KDFParams.DKLen, sha256.New)
 
 	privateKey, err := w.Crypto.decryptCommon(derivedKey)
 	if err == nil {

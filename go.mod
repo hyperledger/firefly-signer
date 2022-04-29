@@ -8,6 +8,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hyperledger/firefly v1.0.0-rc.5.0.20220426012553-30f939eb8ec1
+	github.com/karlseguin/ccache v2.0.3+incompatible
+	github.com/pelletier/go-toml v1.9.4
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1

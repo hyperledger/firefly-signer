@@ -5,10 +5,13 @@
   "go.lintTool": "golangci-lint",
   "cSpell.words": [
     "btcec",
+    "ccache",
+    "Debugf",
     "dklen",
     "ffresty",
     "ffsigner",
     "fftypes",
+    "GJSON",
     "Infof",
     "kdfparams",
     "Keccak",
@@ -17,6 +20,7 @@
     "secp",
     "signermsgs",
     "stretchr",
+    "Warnf",
     "wsclient"
   ],
   "go.testTimeout": "10s"

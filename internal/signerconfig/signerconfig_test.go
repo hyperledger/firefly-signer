@@ -28,5 +28,5 @@ const configDir = "../../test/data/config"
 func TestInitConfigOK(t *testing.T) {
 	Reset()
 
-	assert.True(t, config.GetBool(WalletsKeystoreV3Enabled))
+	assert.True(t, config.GetBool(FileWalletEnabled))
 }

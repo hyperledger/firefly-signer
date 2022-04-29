@@ -27,7 +27,7 @@ const privateKeySize = 32
 type KeyPair struct {
 	PrivateKey *btcec.PrivateKey
 	PublicKey  *btcec.PublicKey
-	Address    ethtypes.Address
+	Address    ethtypes.Address0xHex
 }
 
 func (k *KeyPair) PrivateKeyBytes() []byte {
@@ -57,12 +57,12 @@ func wrapSecp256k1Key(key *btcec.PrivateKey, pubKey *btcec.PublicKey) *KeyPair {
 	}
 }
 
-func PublicKeyToAddress(pubKey *btcec.PublicKey) *ethtypes.Address {
+func PublicKeyToAddress(pubKey *btcec.PublicKey) *ethtypes.Address0xHex {
 	// Take the hash of the public key to generate the address
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write(pubKey.SerializeUncompressed()[1:])
 	// Ethereum addresses only use the lower 20 bytes, so toss the rest away
-	a := new(ethtypes.Address)
+	a := new(ethtypes.Address0xHex)
 	copy(a[:], hash.Sum(nil)[12:32])
 	return a
 }

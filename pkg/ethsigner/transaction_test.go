@@ -41,7 +41,7 @@ func TestEncodeExistingLegacyEIP155(t *testing.T) {
 	txn := Transaction{
 		Nonce:    ethtypes.NewHexInteger64(3),
 		GasLimit: ethtypes.NewHexInteger64(40574),
-		To:       ethtypes.NewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
+		To:       ethtypes.MustNewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
 		Data:     inputData,
 	}
 	sig := &secp256k1.SignatureData{
@@ -78,7 +78,7 @@ func TestEncodeExistingEIP1559(t *testing.T) {
 		MaxPriorityFeePerGas: ethtypes.NewHexInteger64(0x59682f00),
 		GasLimit:             ethtypes.NewHexInteger64(0x2b13d),
 		Value:                ethtypes.NewHexInteger64(0x8e1bc9bf040000),
-		To:                   ethtypes.NewAddress("0x3c99f2a4b366d46bcf2277639a135a6d1288eceb"),
+		To:                   ethtypes.MustNewAddress("0x3c99f2a4b366d46bcf2277639a135a6d1288eceb"),
 		Data:                 inputData,
 	}
 	sig := &secp256k1.SignatureData{
@@ -106,7 +106,7 @@ func TestSignAutoEIP155(t *testing.T) {
 		Nonce:    ethtypes.NewHexInteger64(3),
 		GasPrice: ethtypes.NewHexInteger64(100000000),
 		GasLimit: ethtypes.NewHexInteger64(40574),
-		To:       ethtypes.NewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
+		To:       ethtypes.MustNewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
 		Data:     inputData,
 		Value:    ethtypes.NewHexInteger64(100000000),
 	}
@@ -145,7 +145,7 @@ func TestSignAutoEIP1559(t *testing.T) {
 		MaxPriorityFeePerGas: ethtypes.NewHexInteger64(123456780),
 		MaxFeePerGas:         ethtypes.NewHexInteger64(150000000),
 		GasLimit:             ethtypes.NewHexInteger64(40574),
-		To:                   ethtypes.NewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
+		To:                   ethtypes.MustNewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
 		Data:                 inputData,
 		Value:                ethtypes.NewHexInteger64(100000000),
 	}
@@ -184,7 +184,7 @@ func TestSignLegacyOriginal(t *testing.T) {
 		Nonce:    ethtypes.NewHexInteger64(3),
 		GasPrice: ethtypes.NewHexInteger64(100000000),
 		GasLimit: ethtypes.NewHexInteger64(40574),
-		To:       ethtypes.NewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
+		To:       ethtypes.MustNewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
 		Data:     inputData,
 		Value:    ethtypes.NewHexInteger64(100000000),
 	}

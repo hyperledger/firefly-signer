@@ -135,7 +135,7 @@ func TestSyncRPCCallOK(t *testing.T) {
 		assert.Equal(t, "2.0", rpcReq.JSONRpc)
 		assert.Equal(t, "eth_getTransactionCount", rpcReq.Method)
 		assert.Equal(t, `"000012346"`, rpcReq.ID.String())
-		assert.Equal(t, `"0xFB075Bb99f2aA4c49955bF703509a227D7a12248"`, rpcReq.Params[0].String())
+		assert.Equal(t, `"0xfb075bb99f2aa4c49955bf703509a227d7a12248"`, rpcReq.Params[0].String())
 		assert.Equal(t, `"pending"`, rpcReq.Params[1].String())
 		return 200, &RPCResponse{
 			JSONRpc: "2.0",
@@ -147,7 +147,7 @@ func TestSyncRPCCallOK(t *testing.T) {
 	defer done()
 
 	var txCount ethtypes.HexInteger
-	err := rb.CallRPC(ctx, &txCount, "eth_getTransactionCount", ethtypes.NewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
+	err := rb.CallRPC(ctx, &txCount, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
 	assert.NoError(t, err)
 	assert.Equal(t, int64(0x26), txCount.BigInt().Int64())
 }
@@ -165,7 +165,7 @@ func TestSyncRPCCallErrorResponse(t *testing.T) {
 	defer done()
 
 	var txCount ethtypes.HexInteger
-	err := rb.CallRPC(ctx, &txCount, "eth_getTransactionCount", ethtypes.NewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
+	err := rb.CallRPC(ctx, &txCount, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
 	assert.Regexp(t, "pop", err)
 }
 

@@ -39,7 +39,7 @@ func NewWalletFileStandard(password string, keypair *secp256k1.KeyPair) WalletFi
 	return newScryptWalletFile(password, keypair, nStandard, pDefault)
 }
 
-func ReadWalletFile(jsonWallet []byte, password string) (WalletFile, error) {
+func ReadWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
 	var w walletFileCommon
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {
 		return nil, fmt.Errorf("invalid wallet file: %s", err)

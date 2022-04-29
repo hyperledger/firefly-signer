@@ -34,7 +34,7 @@ func TestScryptWalletRoundTripLight(t *testing.T) {
 	w1b, err := json.Marshal(&w1)
 	assert.NoError(t, err)
 
-	w2, err := ReadWalletFile(w1b, "waltsentme")
+	w2, err := ReadWalletFile(w1b, []byte("waltsentme"))
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.PrivateKeyBytes(), w2.KeyPair().PrivateKeyBytes())
 
@@ -50,7 +50,7 @@ func TestScryptWalletRoundTripStandard(t *testing.T) {
 	w1b, err := json.Marshal(&w1)
 	assert.NoError(t, err)
 
-	w2, err := ReadWalletFile(w1b, "TrustNo1")
+	w2, err := ReadWalletFile(w1b, []byte("TrustNo1"))
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.PrivateKeyBytes(), w2.KeyPair().PrivateKeyBytes())
 
@@ -58,7 +58,7 @@ func TestScryptWalletRoundTripStandard(t *testing.T) {
 
 func TestScryptReadInvalidFile(t *testing.T) {
 
-	_, err := readScryptWalletFile([]byte(`!bad JSON`), "")
+	_, err := readScryptWalletFile([]byte(`!bad JSON`), []byte(""))
 	assert.Error(t, err)
 
 }
@@ -74,7 +74,7 @@ func TestMustGenerateDerivedScryptKeyPanic(t *testing.T) {
 func TestScryptWalletFileDecryptInvalid(t *testing.T) {
 
 	w := &walletFileScrypt{}
-	err := w.decrypt("")
+	err := w.decrypt([]byte(""))
 	assert.Regexp(t, "invalid scrypt keystore", err)
 
 }
@@ -86,7 +86,7 @@ func TestScryptWalletFileDecryptInvalidDKLen(t *testing.T) {
 	assert.NoError(t, err)
 
 	w.Crypto.KDFParams.DKLen = 16
-	err = w.decrypt("test")
+	err = w.decrypt([]byte("test"))
 	assert.Regexp(t, "derived key length", err)
 
 }
@@ -97,7 +97,7 @@ func TestScryptWalletFileDecryptBadPassword(t *testing.T) {
 	err := json.Unmarshal([]byte(sampleWallet), &w)
 	assert.NoError(t, err)
 
-	err = w.decrypt("wrong")
+	err = w.decrypt([]byte("wrong"))
 	assert.Regexp(t, "invalid password", err)
 
 }
