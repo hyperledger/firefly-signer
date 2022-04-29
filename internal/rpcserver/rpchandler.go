@@ -14,15 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package signermsgs
+package rpcserver
 
-import "github.com/hyperledger/firefly/pkg/i18n"
+import "net/http"
 
-var ffe = i18n.FFE
+func (s *rpcServer) rpcHandler(w http.ResponseWriter, r *http.Request) {
 
-//revive:disable
-var (
-	MsgInvalidOutputType = ffe("FF20210", "Invalid output type: %s")
-	MsgInvalidParam      = ffe("FF20211", "Invalid parameter at position %d for method %s: %s")
-	MsgRPCRequestFailed  = ffe("FF20212", "Backend RPC request failed: %s")
-)
+}

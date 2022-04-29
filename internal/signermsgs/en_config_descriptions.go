@@ -25,6 +25,12 @@ var (
 	ConfigWalletsKeystoreV3Enabled = ffc("config.wallets.keystorev3.enabled", "Whether the Keystore V3 filesystem wallet is enabled", "boolean")
 	ConfigWalletsKeystoreV3Path    = ffc("config.wallets.keystorev3.path", "Path on the filesystem in which Keystore V3 files are located", "string")
 
+	ConfigServerAddress      = ffc("config.server.address", "Local address for the JSON/RPC server to listen on", "string")
+	ConfigServerPort         = ffc("config.server.port", "Port for the JSON/RPC server to listen on", "number")
+	ConfigAPIPublicURL       = ffc("config.server.publicURL", "External address callers should access API over", "string")
+	ConfigServerReadTimeout  = ffc("config.server.readTimeout", "The maximum time to wait when reading from an HTTP connection", "duration")
+	ConfigServerWriteTimeout = ffc("config.server.writeTimeout", "The maximum time to wait when writing to a HTTP connection", "duration")
+
 	ConfigBackendURL      = ffc("config.backend.url", "URL for the backend JSON/RPC server / blockchain node", "url")
 	ConfigBackendProxyURL = ffc("config.backend.proxy.url", "Optional HTTP proxy URL", "url")
 )

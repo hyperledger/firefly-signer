@@ -30,7 +30,9 @@ mocks-$(strip $(1))-$(strip $(2)): ${MOCKERY}
 	${MOCKERY} --case underscore --dir $(1) --name $(2) --outpkg $(3) --output mocks/$(strip $(3))
 endef
 
-# $(eval $(call makemock, pkg/ffcapi,                  API,                 ffcapimocks))
+$(eval $(call makemock, pkg/ethsigner,       Wallet,  ethsignermocks))
+$(eval $(call makemock, internal/rpcserver,  Server,  rpcservermocks))
+$(eval $(call makemock, internal/rpcbackend, Backend, rpcbackendmocks))
 
 firefly-signer: ${GOFILES}
 		$(VGO) build -o ./firefly-signer -ldflags "-X main.buildDate=`date -u +\"%Y-%m-%dT%H:%M:%SZ\"` -X main.buildVersion=$(BUILD_VERSION)" -tags=prod -tags=prod -v ./ffsigner 

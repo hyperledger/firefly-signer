@@ -23,6 +23,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/hyperledger/firefly-signer/internal/rpcserver"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly/pkg/config"
 	"github.com/hyperledger/firefly/pkg/i18n"
@@ -86,5 +87,17 @@ func run() error {
 		cancelCtx()
 	}()
 
-	return nil
+	server, err := rpcserver.NewServer(ctx)
+	if err != nil {
+		return err
+	}
+	return runServer(server)
+}
+
+func runServer(server rpcserver.Server) error {
+	err := server.Start()
+	if err != nil {
+		return err
+	}
+	return server.WaitStop()
 }

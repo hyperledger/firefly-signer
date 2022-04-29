@@ -60,7 +60,7 @@ func newTestServer(t *testing.T, rpcHandler testRPCHander) (context.Context, *rp
 	prefix := signerconfig.BackendPrefix
 	prefix.Set(ffresty.HTTPConfigURL, fmt.Sprintf("http://%s", server.Listener.Addr()))
 
-	rb := NewRPCBackend(ctx, prefix).(*rpcBackend)
+	rb := NewRPCBackend(ctx).(*rpcBackend)
 
 	return ctx, rb, func() {
 		cancelCtx()
@@ -176,7 +176,7 @@ func TestSyncRPCCallErrorBadInput(t *testing.T) {
 
 	var txCount ethtypes.HexInteger
 	err := rb.CallRPC(ctx, &txCount, "test-bad-params", map[bool]bool{false: true})
-	assert.Regexp(t, "FF202011", err)
+	assert.Regexp(t, "FF20211", err)
 }
 
 func TestSyncRPCCallServerDown(t *testing.T) {
@@ -186,5 +186,5 @@ func TestSyncRPCCallServerDown(t *testing.T) {
 
 	var txCount ethtypes.HexInteger
 	err := rb.CallRPC(ctx, &txCount, "net_version")
-	assert.Regexp(t, "FF202012", err)
+	assert.Regexp(t, "FF20212", err)
 }
