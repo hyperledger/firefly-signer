@@ -23,4 +23,6 @@ var ffe = i18n.FFE
 //revive:disable
 var (
 	MsgInvalidOutputType = ffe("FF202010", "Invalid output type: %s")
+	MsgInvalidParam      = ffe("FF202011", "Invalid parameter at position %d for method %s: %s")
+	MsgRPCRequestFailed  = ffe("FF202012", "Backend RPC request failed: %s")
 )

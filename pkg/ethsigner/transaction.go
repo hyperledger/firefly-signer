@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ethtransaction
+package ethsigner
 
 import (
 	"math/big"
@@ -30,7 +30,7 @@ const (
 	TransactionType1559   byte = 0x02
 )
 
-type EthTransaction struct {
+type Transaction struct {
 	Nonce                *ethtypes.HexInteger      `json:"nonce"`
 	GasPrice             *ethtypes.HexInteger      `json:"gasPrice,omitempty"`
 	MaxPriorityFeePerGas *ethtypes.HexInteger      `json:"maxPriorityFeePerGas,omitempty"`
@@ -41,7 +41,7 @@ type EthTransaction struct {
 	Data                 ethtypes.HexBytes0xPrefix `json:"data"`
 }
 
-func (t *EthTransaction) BuildLegacy() rlp.List {
+func (t *Transaction) BuildLegacy() rlp.List {
 	rlpList := make(rlp.List, 0, 6)
 	rlpList = append(rlpList, rlp.WrapInt(t.Nonce.BigInt()))
 	rlpList = append(rlpList, rlp.WrapInt(t.GasPrice.BigInt()))
@@ -52,7 +52,7 @@ func (t *EthTransaction) BuildLegacy() rlp.List {
 	return rlpList
 }
 
-func (t *EthTransaction) Build1559(chainID int64) rlp.List {
+func (t *Transaction) Build1559(chainID int64) rlp.List {
 	rlpList := make(rlp.List, 0, 9)
 	rlpList = append(rlpList, rlp.WrapInt(big.NewInt(chainID)))
 	rlpList = append(rlpList, rlp.WrapInt(t.Nonce.BigInt()))
@@ -70,7 +70,7 @@ func (t *EthTransaction) Build1559(chainID int64) rlp.List {
 // - If either of the new EIP-1559 fields are set, use EIP-1559
 // - By default use EIP-155 signing
 // Never picks legacy-legacy (non EIP-155), or EIP-2930
-func (t *EthTransaction) Sign(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
+func (t *Transaction) Sign(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
 	if t.MaxPriorityFeePerGas.BigInt().Sign() > 0 || t.MaxFeePerGas.BigInt().Sign() > 0 {
 		return t.SignEIP1559(signer, chainID)
 	}
@@ -78,7 +78,7 @@ func (t *EthTransaction) Sign(signer *secp256k1.KeyPair, chainID int64) ([]byte,
 }
 
 // SignLegacyOriginal uses legacy transaction structure, with legacy V value (27/28)
-func (t *EthTransaction) SignLegacyOriginal(signer *secp256k1.KeyPair) ([]byte, error) {
+func (t *Transaction) SignLegacyOriginal(signer *secp256k1.KeyPair) ([]byte, error) {
 	rlpList := t.BuildLegacy()
 
 	txData := rlpList.Encode()
@@ -92,7 +92,7 @@ func (t *EthTransaction) SignLegacyOriginal(signer *secp256k1.KeyPair) ([]byte, 
 }
 
 // SignLegacyEIP155 uses legacy transaction structure, with EIP-155 signing V value (2*ChainID + 35 + Y-parity)
-func (t *EthTransaction) SignLegacyEIP155(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
+func (t *Transaction) SignLegacyEIP155(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
 	rlpList := t.BuildLegacy()
 
 	txData := rlpList.Encode()
@@ -109,7 +109,7 @@ func (t *EthTransaction) SignLegacyEIP155(signer *secp256k1.KeyPair, chainID int
 }
 
 // SignEIP1559 uses EIP-1559 transaction structure (with EIP-2718 transaction type byte), with EIP-2930 V value (0 / 1 - direct parity-Y)
-func (t *EthTransaction) SignEIP1559(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
+func (t *Transaction) SignEIP1559(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
 	rlpList := t.Build1559(chainID)
 
 	// First sign the transaction type, concattented with RLP list _excluding_ signature
@@ -129,7 +129,7 @@ func (t *EthTransaction) SignEIP1559(signer *secp256k1.KeyPair, chainID int64) (
 	return append([]byte{TransactionType1559}, rlpList.Encode()...), nil
 }
 
-func (t *EthTransaction) addSignature(rlpList rlp.List, sig *secp256k1.SignatureData) rlp.List {
+func (t *Transaction) addSignature(rlpList rlp.List, sig *secp256k1.SignatureData) rlp.List {
 	rlpList = append(rlpList, rlp.WrapInt(sig.V))
 	rlpList = append(rlpList, rlp.WrapInt(sig.R))
 	rlpList = append(rlpList, rlp.WrapInt(sig.S))

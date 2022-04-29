@@ -18,6 +18,7 @@ package signerconfig
 
 import (
 	"github.com/hyperledger/firefly/pkg/config"
+	"github.com/hyperledger/firefly/pkg/wsclient"
 	"github.com/spf13/viper"
 )
 
@@ -30,13 +31,7 @@ var (
 	WalletsKeystoreV3Path = ffc("wallets.keystorev3.path")
 )
 
-var ConnectorPrefix config.Prefix
-
-var FFCorePrefix config.Prefix
-
-var APIPrefix config.Prefix
-
-var PolicyEngineBasePrefix config.Prefix
+var BackendPrefix config.Prefix
 
 func setDefaults() {
 	viper.SetDefault(string(WalletsKeystoreV3Enabled), true)
@@ -44,4 +39,7 @@ func setDefaults() {
 
 func Reset() {
 	config.RootConfigReset(setDefaults)
+
+	BackendPrefix = config.NewPluginConfig("backend")
+	wsclient.InitPrefix(BackendPrefix)
 }
