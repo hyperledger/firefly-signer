@@ -36,13 +36,26 @@ func TestRunOK(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = Execute()
+		err := Execute()
+		if err != nil {
+			assert.Regexp(t, "context deadline", err)
+		}
 	}()
 
 	time.Sleep(10 * time.Millisecond)
 	sigs <- os.Kill
 
 	<-done
+
+}
+
+func TestRunNoWallet(t *testing.T) {
+
+	rootCmd.SetArgs([]string{"-f", "../test/no-wallet.ffsigner.yaml"})
+	defer rootCmd.SetArgs([]string{})
+
+	err := Execute()
+	assert.Regexp(t, "FF20217", err)
 
 }
 
@@ -53,6 +66,16 @@ func TestRunBadConfig(t *testing.T) {
 
 	err := Execute()
 	assert.Regexp(t, "FF00101", err)
+
+}
+
+func TestRunBadWalletConfig(t *testing.T) {
+
+	rootCmd.SetArgs([]string{"-f", "../test/bad-wallet.ffsigner.yaml"})
+	defer rootCmd.SetArgs([]string{})
+
+	err := Execute()
+	assert.Regexp(t, "FF20216", err)
 
 }
 

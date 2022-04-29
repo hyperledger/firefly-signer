@@ -29,4 +29,5 @@ var (
 	MsgWalletNotAvailable = ffe("FF20214", "Wallet for address '%s' not available")
 	MsgWalletFailed       = ffe("FF20215", "Wallet for address '%s' could not be initialized")
 	MsgBadGoTemplate      = ffe("FF20216", "Bad go template for '%s' - try something like '{{ index .signing \"key-file\" }}' syntax")
+	MsgNoWalletEnabled    = ffe("FF20217", "No wallets enabled in configuration")
 )

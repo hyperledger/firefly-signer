@@ -24,12 +24,14 @@ import (
 	"testing"
 
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
+	"github.com/hyperledger/firefly-signer/mocks/ethsignermocks"
 	"github.com/hyperledger/firefly-signer/mocks/rpcbackendmocks"
 	"github.com/hyperledger/firefly/pkg/httpserver"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func newTestServer(t *testing.T) (string, *rpcServer, func()) {
+func newTestServer(t *testing.T) (string, *rpcServer, *ethsignermocks.Wallet, func()) {
 	signerconfig.Reset()
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -39,13 +41,16 @@ func newTestServer(t *testing.T) (string, *rpcServer, func()) {
 	signerconfig.ServerPrefix.Set(httpserver.HTTPConfPort, serverPort)
 	signerconfig.ServerPrefix.Set(httpserver.HTTPConfAddress, "127.0.0.1")
 
-	ss, err := NewServer(context.Background())
+	w := &ethsignermocks.Wallet{}
+
+	ss, err := NewServer(context.Background(), w)
 	assert.NoError(t, err)
 	s := ss.(*rpcServer)
 	s.backend = &rpcbackendmocks.Backend{}
 
 	return fmt.Sprintf("http://127.0.0.1:%s", serverPort),
 		s,
+		w,
 		func() {
 			s.Stop()
 			_ = s.WaitStop()
@@ -55,10 +60,23 @@ func newTestServer(t *testing.T) (string, *rpcServer, func()) {
 
 func TestStartStop(t *testing.T) {
 
-	_, s, done := newTestServer(t)
+	_, s, w, done := newTestServer(t)
 	defer done()
 
-	s.Start()
+	w.On("Initialize", mock.Anything).Return(nil)
+	err := s.Start()
+	assert.NoError(t, err)
+
+}
+
+func TestStartFail(t *testing.T) {
+
+	_, s, w, done := newTestServer(t)
+	defer done()
+
+	w.On("Initialize", mock.Anything).Return(fmt.Errorf("pop"))
+	err := s.Start()
+	assert.Regexp(t, "pop", err)
 
 }
 
@@ -66,7 +84,7 @@ func TestBadConfig(t *testing.T) {
 
 	signerconfig.Reset()
 	signerconfig.ServerPrefix.Set(httpserver.HTTPConfAddress, ":::::")
-	_, err := NewServer(context.Background())
+	_, err := NewServer(context.Background(), &ethsignermocks.Wallet{})
 	assert.Error(t, err)
 
 }

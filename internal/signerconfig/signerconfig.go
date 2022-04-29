@@ -27,27 +27,27 @@ var ffc = config.AddRootKey
 
 var (
 	// FileWalletEnabled if the Keystore V3 wallet is enabled
-	FileWalletEnabled = ffc("filewallet.enabled")
+	FileWalletEnabled = ffc("fileWallet.enabled")
 	// FileWalletPath the path of the Keystore V3 wallet path
-	FileWalletPath = ffc("filewallet.path")
+	FileWalletPath = ffc("fileWallet.path")
 	// FileWalletFilenamesWith0xPrefix extension to append to the "from" address string to find the file (see metadata section for file types). All filenames must be lower case on disk.
-	FileWalletFilenamesWith0xPrefix = ffc("filewallet.filenames.with0xPrefix")
+	FileWalletFilenamesWith0xPrefix = ffc("fileWallet.filenames.with0xPrefix")
 	// FileWalletFilenamesPrimaryExt extension to append to the "from" address string to find the file (see metadata section for file types). All filenames must be lower case on disk.
-	FileWalletFilenamesPrimaryExt = ffc("filewallet.filenames.primaryExt")
+	FileWalletFilenamesPrimaryExt = ffc("fileWallet.filenames.primaryExt")
 	// FileWalletFilenamesPasswordExt extension to append to the "from" address string to find the password file (if not using a metadata file to specify the password file)
-	FileWalletFilenamesPasswordExt = ffc("filewallet.filenames.passwordExt")
+	FileWalletFilenamesPasswordExt = ffc("fileWallet.filenames.passwordExt")
 	// FileWalletDefaultPasswordFile default password file to use if neither the metadata, or passwordExtension find a password
-	FileWalletDefaultPasswordFile = ffc("filewallet.defaultPasswordFile")
+	FileWalletDefaultPasswordFile = ffc("fileWallet.defaultPasswordFile")
 	// FileWalletSignerCacheSize the number of signing keys to keep in memory
-	FileWalletSignerCacheSize = ffc("filewallet.signerCacheSize")
+	FileWalletSignerCacheSize = ffc("fileWallet.signerCacheSize")
 	// FileWalletSignerCacheTTL the time to keep an unused signing key in memory
-	FileWalletSignerCacheTTL = ffc("filewallet.signerCacheTTL")
+	FileWalletSignerCacheTTL = ffc("fileWallet.signerCacheTTL")
 	// FileWalletMetadataFormat format to parse the metadata - supported: auto (from extension) / filename / toml / yaml / json (please quote "0x..." strings in YAML)
-	FileWalletMetadataFormat = ffc("filewallet.metadata.format")
+	FileWalletMetadataFormat = ffc("fileWallet.metadata.format")
 	// FileWalletMetadataKeyFileProperty use for toml/yaml/json to find the name of the file containing the keystorev3 file
-	FileWalletMetadataKeyFileProperty = ffc("filewallet.metadata.keyFileProperty")
+	FileWalletMetadataKeyFileProperty = ffc("fileWallet.metadata.keyFileProperty")
 	// FileWalletMetadataPasswordFileProperty use for toml/yaml to find the name of the file containing the keystorev3 file
-	FileWalletMetadataPasswordFileProperty = ffc("filewallet.metadata.passwordFileProperty")
+	FileWalletMetadataPasswordFileProperty = ffc("fileWallet.metadata.passwordFileProperty")
 )
 
 var ServerPrefix config.Prefix

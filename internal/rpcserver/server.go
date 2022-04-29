@@ -23,6 +23,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/firefly-signer/internal/rpcbackend"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
+	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/hyperledger/firefly/pkg/httpserver"
 )
 
@@ -32,11 +33,12 @@ type Server interface {
 	WaitStop() error
 }
 
-func NewServer(ctx context.Context) (ss Server, err error) {
+func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err error) {
 
 	s := &rpcServer{
 		backend:       rpcbackend.NewRPCBackend(ctx),
 		apiServerDone: make(chan error),
+		wallet:        wallet,
 	}
 	s.ctx, s.cancelCtx = context.WithCancel(ctx)
 
@@ -56,6 +58,8 @@ type rpcServer struct {
 	started       bool
 	apiServer     httpserver.HTTPServer
 	apiServerDone chan error
+
+	wallet ethsigner.Wallet
 }
 
 func (s *rpcServer) router() *mux.Router {
@@ -69,6 +73,10 @@ func (s *rpcServer) runAPIServer() {
 }
 
 func (s *rpcServer) Start() error {
+	err := s.wallet.Initialize(s.ctx)
+	if err != nil {
+		return err
+	}
 	go s.runAPIServer()
 	s.started = true
 	return nil
