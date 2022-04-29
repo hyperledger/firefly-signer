@@ -14,17 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package signermsgs
+package ethsigner
 
-import "github.com/hyperledger/firefly/pkg/i18n"
-
-var ffc = i18n.FFC
-
-//revive:disable
-var (
-	ConfigWalletsKeystoreV3Enabled = ffc("config.wallets.keystorev3.enabled", "Whether the Keystore V3 filesystem wallet is enabled", "boolean")
-	ConfigWalletsKeystoreV3Path    = ffc("config.wallets.keystorev3.path", "Path on the filesystem in which Keystore V3 files are located", "string")
-
-	ConfigBackendURL      = ffc("config.backend.url", "URL for the backend JSON/RPC server / blockchain node", "url")
-	ConfigBackendProxyURL = ffc("config.backend.proxy.url", "Optional HTTP proxy URL", "url")
+import (
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 )
+
+// Wallet is the common interface can be implemented across wallet/signing capabilities
+type Wallet interface {
+	Sign(addr ethtypes.Address, tx *Transaction, chainID int64) ([]byte, error)
+	// SignPrivateTxn(addr ethtypes.Address, ptx *Transaction, chainID int64) ([]byte, error)
+	Initialize() error
+	GetAccounts() []ethtypes.Address
+	Refresh() error
+	Close() error
+}

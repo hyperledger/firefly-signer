@@ -6,11 +6,17 @@
   "cSpell.words": [
     "btcec",
     "dklen",
+    "ffresty",
     "fftypes",
+    "Infof",
     "kdfparams",
     "Keccak",
     "keystorev",
-    "secp"
+    "resty",
+    "secp",
+    "signermsgs",
+    "stretchr",
+    "wsclient"
   ],
   "go.testTimeout": "10s"
 }
