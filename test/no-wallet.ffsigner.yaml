@@ -1,2 +1,4 @@
 fileWallet:
   enabled: false
+backend:
+  chainId: 0

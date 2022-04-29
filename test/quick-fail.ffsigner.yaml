@@ -1,2 +1,4 @@
 server:
   address: ":::::::::"
+backend:
+  chainId: 0

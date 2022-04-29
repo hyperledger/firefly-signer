@@ -17,6 +17,7 @@
     "Keccak",
     "keystorev",
     "resty",
+    "rpcbackendmocks",
     "secp",
     "signermsgs",
     "stretchr",

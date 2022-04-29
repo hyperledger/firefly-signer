@@ -30,4 +30,8 @@ var (
 	MsgWalletFailed       = ffe("FF20215", "Wallet for address '%s' could not be initialized")
 	MsgBadGoTemplate      = ffe("FF20216", "Bad go template for '%s' - try something like '{{ index .signing \"key-file\" }}' syntax")
 	MsgNoWalletEnabled    = ffe("FF20217", "No wallets enabled in configuration")
+	MsgInvalidRequest     = ffe("FF20218", "Invalid request data")
+	MsgInvalidParamCount  = ffe("FF20219", "Invalid number of parameters: expected=%d received=%d")
+	MsgMissingFrom        = ffe("FF20220", "Missing 'from' address")
+	MsgQueryChainID       = ffe("FF20221", "Failed to query Chain ID")
 )

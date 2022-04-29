@@ -23,8 +23,12 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/firefly-signer/internal/rpcbackend"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
+	"github.com/hyperledger/firefly/pkg/config"
 	"github.com/hyperledger/firefly/pkg/httpserver"
+	"github.com/hyperledger/firefly/pkg/i18n"
 )
 
 type Server interface {
@@ -39,6 +43,7 @@ func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err err
 		backend:       rpcbackend.NewRPCBackend(ctx),
 		apiServerDone: make(chan error),
 		wallet:        wallet,
+		chainID:       config.GetInt64(signerconfig.BackendChainID),
 	}
 	s.ctx, s.cancelCtx = context.WithCancel(ctx)
 
@@ -59,7 +64,8 @@ type rpcServer struct {
 	apiServer     httpserver.HTTPServer
 	apiServerDone chan error
 
-	wallet ethsigner.Wallet
+	chainID int64
+	wallet  ethsigner.Wallet
 }
 
 func (s *rpcServer) router() *mux.Router {
@@ -73,6 +79,15 @@ func (s *rpcServer) runAPIServer() {
 }
 
 func (s *rpcServer) Start() error {
+	if s.chainID < 0 {
+		var chainID ethtypes.HexInteger
+		err := s.backend.CallRPC(s.ctx, &chainID, "net_version")
+		if err != nil {
+			return i18n.WrapError(s.ctx, err, signermsgs.MsgQueryChainID)
+		}
+		s.chainID = chainID.BigInt().Int64()
+	}
+
 	err := s.wallet.Initialize(s.ctx)
 	if err != nil {
 		return err

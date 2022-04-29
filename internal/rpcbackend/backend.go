@@ -31,10 +31,12 @@ import (
 	"github.com/hyperledger/firefly/pkg/log"
 )
 
+type RPCCode int64
+
 const (
-	RPCCodeParseError     = -32700
-	RPCCodeInvalidRequest = -32600
-	RPCCodeInternalError  = -32603
+	RPCCodeParseError     RPCCode = -32700
+	RPCCodeInvalidRequest RPCCode = -32600
+	RPCCodeInternalError  RPCCode = -32603
 )
 
 // Backend performs communication with a backend
@@ -122,12 +124,7 @@ func (rb *rpcBackend) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcR
 	if err != nil {
 		err := i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed, err)
 		log.L(ctx).Errorf("RPC:%s:%s <-- ERROR: %s", beReq.ID, rpcReq.ID, err)
-		rpcRes = &RPCResponse{
-			JSONRpc: rpcReq.JSONRpc,
-			ID:      rpcReq.ID,
-			Code:    RPCCodeInternalError,
-			Message: err.Error(),
-		}
+		rpcRes = RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError)
 		return rpcRes, err
 	}
 	if res.IsError() {
@@ -137,4 +134,13 @@ func (rb *rpcBackend) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcR
 	}
 	log.L(ctx).Infof("RPC:%s:%s <-- [%d] OK", beReq.ID, rpcReq.ID, res.StatusCode())
 	return rpcRes, nil
+}
+
+func RPCErrorResponse(err error, id *fftypes.JSONAny, code RPCCode) *RPCResponse {
+	return &RPCResponse{
+		JSONRpc: "2.0",
+		ID:      id,
+		Code:    int64(code),
+		Message: err.Error(),
+	}
 }

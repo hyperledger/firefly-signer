@@ -31,7 +31,8 @@ const (
 )
 
 type Transaction struct {
-	Nonce                *ethtypes.HexInteger      `json:"nonce"`
+	From                 *ethtypes.Address0xHex    `json:"from,omitempty"` // only here as a possible input to signing key selection (eth_sendTransaction)
+	Nonce                *ethtypes.HexInteger      `json:"nonce,omitempty"`
 	GasPrice             *ethtypes.HexInteger      `json:"gasPrice,omitempty"`
 	MaxPriorityFeePerGas *ethtypes.HexInteger      `json:"maxPriorityFeePerGas,omitempty"`
 	MaxFeePerGas         *ethtypes.HexInteger      `json:"maxFeePerGas,omitempty"`

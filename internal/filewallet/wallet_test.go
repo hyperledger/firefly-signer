@@ -110,7 +110,9 @@ func TestSignOK(t *testing.T) {
 	err := f.Initialize(ctx)
 	assert.NoError(t, err)
 
-	b, err := f.Sign(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"), &ethsigner.Transaction{}, 2022)
+	b, err := f.Sign(ctx, &ethsigner.Transaction{
+		From: ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"),
+	}, 2022)
 	assert.NoError(t, err)
 	assert.NotNil(t, b)
 
@@ -121,7 +123,9 @@ func TestSignNotFound(t *testing.T) {
 	ctx, f, done := newTestTOMLMetadataWallet(t)
 	defer done()
 
-	_, err := f.Sign(ctx, ethtypes.MustNewAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"), &ethsigner.Transaction{}, 2022)
+	_, err := f.Sign(ctx, &ethsigner.Transaction{
+		From: ethtypes.MustNewAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+	}, 2022)
 	assert.Regexp(t, "FF20214", err)
 
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/mocks/ethsignermocks"
 	"github.com/hyperledger/firefly-signer/mocks/rpcbackendmocks"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly/pkg/httpserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -63,16 +64,46 @@ func TestStartStop(t *testing.T) {
 	_, s, w, done := newTestServer(t)
 	defer done()
 
+	bm := s.backend.(*rpcbackendmocks.Backend)
+	bm.On("CallRPC", mock.Anything, mock.Anything, "net_version").Run(func(args mock.Arguments) {
+		hi := args[1].(*ethtypes.HexInteger)
+		hi.BigInt().SetInt64(12345)
+	}).Return(nil)
+
 	w.On("Initialize", mock.Anything).Return(nil)
 	err := s.Start()
 	assert.NoError(t, err)
 
+	assert.Equal(t, int64(12345), s.chainID)
+
 }
 
-func TestStartFail(t *testing.T) {
+func TestStartFailChainID(t *testing.T) {
+
+	_, s, _, done := newTestServer(t)
+	defer done()
+
+	bm := s.backend.(*rpcbackendmocks.Backend)
+	bm.On("CallRPC", mock.Anything, mock.Anything, "net_version").Run(func(args mock.Arguments) {
+		hi := args[1].(*ethtypes.HexInteger)
+		hi.BigInt().SetInt64(12345)
+	}).Return(fmt.Errorf("pop"))
+
+	err := s.Start()
+	assert.Regexp(t, "pop", err)
+
+}
+
+func TestStartFailInitialize(t *testing.T) {
 
 	_, s, w, done := newTestServer(t)
 	defer done()
+
+	bm := s.backend.(*rpcbackendmocks.Backend)
+	bm.On("CallRPC", mock.Anything, mock.Anything, "net_version").Run(func(args mock.Arguments) {
+		hi := args[1].(*ethtypes.HexInteger)
+		hi.BigInt().SetInt64(12345)
+	}).Return(nil)
 
 	w.On("Initialize", mock.Anything).Return(fmt.Errorf("pop"))
 	err := s.Start()

@@ -24,7 +24,7 @@ import (
 
 // Wallet is the common interface can be implemented across wallet/signing capabilities
 type Wallet interface {
-	Sign(ctx context.Context, addr *ethtypes.Address0xHex, tx *Transaction, chainID int64) ([]byte, error)
+	Sign(ctx context.Context, txn *Transaction, chainID int64) ([]byte, error)
 	// SignPrivateTxn(ctx context.Context, addr ethtypes.Address, ptx *Transaction, chainID int64) ([]byte, error)
 	Initialize(ctx context.Context) error
 	GetAccounts(ctx context.Context) ([]*ethtypes.Address0xHex /* no checksum on returned values */, error)

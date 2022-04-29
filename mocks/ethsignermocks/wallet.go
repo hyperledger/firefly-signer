@@ -81,13 +81,13 @@ func (_m *Wallet) Refresh(ctx context.Context) error {
 	return r0
 }
 
-// Sign provides a mock function with given fields: ctx, addr, tx, chainID
-func (_m *Wallet) Sign(ctx context.Context, addr *ethtypes.Address0xHex, tx *ethsigner.Transaction, chainID int64) ([]byte, error) {
-	ret := _m.Called(ctx, addr, tx, chainID)
+// Sign provides a mock function with given fields: ctx, txn, chainID
+func (_m *Wallet) Sign(ctx context.Context, txn *ethsigner.Transaction, chainID int64) ([]byte, error) {
+	ret := _m.Called(ctx, txn, chainID)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(context.Context, *ethtypes.Address0xHex, *ethsigner.Transaction, int64) []byte); ok {
-		r0 = rf(ctx, addr, tx, chainID)
+	if rf, ok := ret.Get(0).(func(context.Context, *ethsigner.Transaction, int64) []byte); ok {
+		r0 = rf(ctx, txn, chainID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
@@ -95,8 +95,8 @@ func (_m *Wallet) Sign(ctx context.Context, addr *ethtypes.Address0xHex, tx *eth
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *ethtypes.Address0xHex, *ethsigner.Transaction, int64) error); ok {
-		r1 = rf(ctx, addr, tx, chainID)
+	if rf, ok := ret.Get(1).(func(context.Context, *ethsigner.Transaction, int64) error); ok {
+		r1 = rf(ctx, txn, chainID)
 	} else {
 		r1 = ret.Error(1)
 	}
