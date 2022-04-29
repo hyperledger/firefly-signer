@@ -17,37 +17,26 @@
 package secp256k1
 
 import (
-	"fmt"
-	"strconv"
+	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/hyperledger/firefly-signer/pkg/rlp"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"golang.org/x/crypto/sha3"
 )
 
-const (
-	ethMessagePrefix = "\u0019Ethereum Signed Message:\n"
-)
-
 // SignatureData is the raw signature values, with Ethereum serialization
 type SignatureData struct {
-	V int64
-	R []byte
-	S []byte
+	V *big.Int
+	R *big.Int
+	S *big.Int
 }
 
-func (s *SignatureData) EIP155SignatureData(chainID int64) (*SignatureData, error) {
-	if s.V < 27 || s.V > 28 {
-		return nil, fmt.Errorf("signature appears to already be EIP-155 encoded")
-	}
-	eip155V := (s.V - 27) + // 0 or 1
-		(chainID * 2) +
-		35
-	return &SignatureData{
-		V: eip155V,
-		R: s.R,
-		S: s.S,
-	}, nil
+func (s *SignatureData) UpdateEIP155(chainID int64) {
+	chainIDx2 := big.NewInt(chainID)
+	chainIDx2 = chainIDx2.Mul(chainIDx2, big.NewInt(2))
+	s.V = s.V.Add(s.V, chainIDx2).Add(s.V, big.NewInt(35-27)) // 27/28 down to 0/1, then add 35
+
 }
 
 type EthSigner struct {
@@ -62,27 +51,37 @@ func NewSigner(keypair *secp256k1.KeyPair) *EthSigner {
 
 // Sign performs raw signing - see SignatureData functions for EIP-155 serialization
 func (s *EthSigner) Sign(message []byte) (*SignatureData, error) {
-	msgHash := s.ethMessageHash(message)
-	sig, err := btcec.SignCompact(btcec.S256(), s.keypair.PrivateKey, msgHash, false)
+	msgHash := sha3.NewLegacyKeccak256()
+	msgHash.Write(message)
+	sig, err := btcec.SignCompact(btcec.S256(), s.keypair.PrivateKey, msgHash.Sum(nil), false)
 	if err != nil {
 		return nil, err
 	}
 	// btcec does all the hard work for us. However, the interface of btcec is such
 	// that we need to unpack the result for Ethereum encoding.
 	ethSig := &SignatureData{
-		R: make([]byte, 32),
-		S: make([]byte, 32),
+		V: new(big.Int),
+		R: new(big.Int),
+		S: new(big.Int),
 	}
-	ethSig.V = int64(sig[0])
-	copy(ethSig.R, sig[1:33])
-	copy(ethSig.S, sig[33:65])
+	ethSig.V = ethSig.V.SetInt64(int64(sig[0]))
+	ethSig.R = ethSig.R.SetBytes(sig[1:33])
+	ethSig.S = ethSig.S.SetBytes(sig[33:65])
 	return ethSig, nil
 }
 
-func (s *EthSigner) ethMessageHash(message []byte) []byte {
-	hash := sha3.NewLegacyKeccak256()
-	hash.Write([]byte(ethMessagePrefix))
-	hash.Write([]byte(strconv.FormatInt(int64(len(message)), 10)))
-	hash.Write(message)
-	return hash.Sum(nil)
+func (s *EthSigner) SignRLPListEIP155(rlpList rlp.List, chainID int64) ([]byte, error) {
+	sig, err := s.Sign(rlpList.Encode())
+	if err != nil {
+		return nil, err
+	}
+	sig.UpdateEIP155(chainID)
+	rlpList = append(rlpList, rlp.WrapInt(sig.V))
+	rlpList = append(rlpList, rlp.WrapInt(sig.R))
+	rlpList = append(rlpList, rlp.WrapInt(sig.S))
+	rlpBytes := rlpList.Encode()
+	txBytes := make([]byte, len(rlpBytes)+1)
+	txBytes[0] = TransactionTypeLegacy
+	copy(txBytes[:1], rlpBytes)
+	return txBytes, nil
 }

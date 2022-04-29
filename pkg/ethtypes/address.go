@@ -14,10 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package ethtypes
 
 import (
-	// ISC licensed
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -28,16 +27,16 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// EthAddress uses full 0x prefixed checksum address format
-type EthAddress [20]byte
+// Address uses full 0x prefixed checksum address format
+type Address [20]byte
 
-// EthAddress0xHex formats with an 0x prefix, but no checksum (lower case)
-type EthAddress0xHex EthAddress
+// Address0xHex formats with an 0x prefix, but no checksum (lower case)
+type Address0xHex Address
 
-// EthAddressPlainHex can parse the same, but formats as just flat hex (no prefix)
-type EthAddressPlainHex EthAddress
+// AddressPlainHex can parse the same, but formats as just flat hex (no prefix)
+type AddressPlainHex Address
 
-func (a *EthAddress) UnmarshalJSON(b []byte) error {
+func (a *Address) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
@@ -53,11 +52,11 @@ func (a *EthAddress) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (a EthAddress) MarshalJSON() ([]byte, error) {
+func (a Address) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, a.String())), nil
 }
 
-func (a EthAddress) String() string {
+func (a Address) String() string {
 
 	// EIP-55: Mixed-case checksum address encoding
 	// https://eips.ethereum.org/EIPS/eip-55
@@ -80,26 +79,26 @@ func (a EthAddress) String() string {
 	return buff.String()
 }
 
-func (a *EthAddressPlainHex) UnmarshalJSON(b []byte) error {
-	return ((*EthAddress)(a)).UnmarshalJSON(b)
+func (a *AddressPlainHex) UnmarshalJSON(b []byte) error {
+	return ((*Address)(a)).UnmarshalJSON(b)
 }
 
-func (a EthAddressPlainHex) MarshalJSON() ([]byte, error) {
+func (a AddressPlainHex) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, a.String())), nil
 }
 
-func (a EthAddressPlainHex) String() string {
+func (a AddressPlainHex) String() string {
 	return hex.EncodeToString(a[0:20])
 }
 
-func (a *EthAddress0xHex) UnmarshalJSON(b []byte) error {
-	return ((*EthAddress)(a)).UnmarshalJSON(b)
+func (a *Address0xHex) UnmarshalJSON(b []byte) error {
+	return ((*Address)(a)).UnmarshalJSON(b)
 }
 
-func (a EthAddress0xHex) MarshalJSON() ([]byte, error) {
+func (a Address0xHex) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, a.String())), nil
 }
 
-func (a EthAddress0xHex) String() string {
+func (a Address0xHex) String() string {
 	return "0x" + hex.EncodeToString(a[0:20])
 }

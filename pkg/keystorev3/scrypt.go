@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hyperledger/firefly-signer/internal/types"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/hyperledger/firefly/pkg/fftypes"
 	"golang.org/x/crypto/scrypt"
@@ -67,7 +67,7 @@ func newScryptWalletFile(password string, keypair *secp256k1.KeyPair, n int, p i
 
 	return &walletFileScrypt{
 		walletFileBase: walletFileBase{
-			Address: types.EthAddressPlainHex(keypair.Address),
+			Address: ethtypes.AddressPlainHex(keypair.Address),
 			ID:      fftypes.NewUUID(),
 			Version: version3,
 			keypair: keypair,

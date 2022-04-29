@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/hyperledger/firefly-signer/internal/types"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/hyperledger/firefly/pkg/fftypes"
 )
@@ -37,30 +37,30 @@ type WalletFile interface {
 }
 
 type kdfParamsScrypt struct {
-	DKLen int                 `json:"dklen"`
-	N     int                 `json:"n"`
-	P     int                 `json:"p"`
-	R     int                 `json:"r"`
-	Salt  types.HexBytesPlain `json:"salt"`
+	DKLen int                    `json:"dklen"`
+	N     int                    `json:"n"`
+	P     int                    `json:"p"`
+	R     int                    `json:"r"`
+	Salt  ethtypes.HexBytesPlain `json:"salt"`
 }
 
 type kdfParamsPbkdf2 struct {
-	DKLen int                 `json:"dklen"`
-	C     int                 `json:"c"`
-	PRF   string              `json:"prf"`
-	Salt  types.HexBytesPlain `json:"salt"`
+	DKLen int                    `json:"dklen"`
+	C     int                    `json:"c"`
+	PRF   string                 `json:"prf"`
+	Salt  ethtypes.HexBytesPlain `json:"salt"`
 }
 
 type cipherParams struct {
-	IV types.HexBytesPlain `json:"iv"`
+	IV ethtypes.HexBytesPlain `json:"iv"`
 }
 
 type cryptoCommon struct {
-	Cipher       string              `json:"cipher"`
-	CipherText   types.HexBytesPlain `json:"ciphertext"`
-	CipherParams cipherParams        `json:"cipherparams"`
-	KDF          string              `json:"kdf"`
-	MAC          types.HexBytesPlain `json:"mac"`
+	Cipher       string                 `json:"cipher"`
+	CipherText   ethtypes.HexBytesPlain `json:"ciphertext"`
+	CipherParams cipherParams           `json:"cipherparams"`
+	KDF          string                 `json:"kdf"`
+	MAC          ethtypes.HexBytesPlain `json:"mac"`
 }
 
 type cryptoScrypt struct {
@@ -74,7 +74,7 @@ type cryptoPbkdf2 struct {
 }
 
 type walletFileBase struct {
-	Address types.EthAddressPlainHex `json:"address"`
+	Address ethtypes.AddressPlainHex `json:"address"`
 	ID      *fftypes.UUID            `json:"id"`
 	Version int                      `json:"version"`
 

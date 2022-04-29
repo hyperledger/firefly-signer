@@ -17,13 +17,17 @@
 package secp256k1
 
 import (
+	"bytes"
 	"encoding/hex"
+	"strconv"
 	"testing"
 
-	"github.com/hyperledger/firefly-signer/internal/types"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/stretchr/testify/assert"
 )
+
+const ethMessagePrefix = "\u0019Ethereum Signed Message:\n"
 
 // Test data directly taken from:
 // https://github.com/web3j/web3j/blob/master/crypto/src/test/java/org/web3j/crypto/SignTest.java
@@ -34,6 +38,14 @@ var (
 		"a645c0b7b58158babbfa6c6cd5a48aa7340a8749176b120e8516216787a13dc76"
 	sampleAddress = "0xef678007d18427e6022059dbc264f27507cd1ffc"
 )
+
+func addEthMessagePrefix(message []byte) []byte {
+	b := new(bytes.Buffer)
+	b.Write([]byte(ethMessagePrefix))
+	b.Write([]byte(strconv.FormatInt(int64(len(message)), 10)))
+	b.Write(message)
+	return b.Bytes()
+}
 
 func testKeyPair(t *testing.T) *secp256k1.KeyPair {
 	keyBytes, err := hex.DecodeString(samplePrivateKey)
@@ -46,21 +58,23 @@ func testKeyPair(t *testing.T) *secp256k1.KeyPair {
 func TestValidateSampleData(t *testing.T) {
 	// Validate the above sample data is consistent in the base secp256k1 key management layer
 	keypair := testKeyPair(t)
-	assert.Equal(t, samplePrivateKey, ((types.HexBytesPlain)(keypair.PrivateKeyBytes())).String())
-	var pubkey types.HexBytes0xPrefix = keypair.PublicKeyBytes()
+	assert.Equal(t, samplePrivateKey, ((ethtypes.HexBytesPlain)(keypair.PrivateKeyBytes())).String())
+	var pubkey ethtypes.HexBytes0xPrefix = keypair.PublicKeyBytes()
 	assert.Equal(t, samplePublicKey, pubkey.String())
-	var addr types.EthAddress0xHex = types.EthAddress0xHex(keypair.Address)
+	var addr ethtypes.Address0xHex = ethtypes.Address0xHex(keypair.Address)
 	assert.Equal(t, sampleAddress, addr.String())
 }
 
 func TestSignMessage(t *testing.T) {
 
 	signer := NewSigner(testKeyPair(t))
-	sig, err := signer.Sign([]byte(sampleMessage))
+	sig, err := signer.Sign(addEthMessagePrefix([]byte(sampleMessage)))
 	assert.NoError(t, err)
 
-	assert.Equal(t, int64(28), sig.V)
-	assert.Equal(t, "0464eee9e2fe1a10ffe48c78b80de1ed8dcf996f3f60955cb2e03cb21903d930", ((types.HexBytesPlain)(sig.R)).String())
-	assert.Equal(t, "06624da478b3f862582e85b31c6a21c6cae2eee2bd50f55c93c4faad9d9c8d7f", ((types.HexBytesPlain)(sig.S)).String())
+	assert.Equal(t, int64(28), sig.V.Int64())
+	assert.Equal(t, "0464eee9e2fe1a10ffe48c78b80de1ed8dcf996f3f60955cb2e03cb21903d930", ((ethtypes.HexBytesPlain)(sig.R.Bytes())).String())
+	assert.Equal(t, "06624da478b3f862582e85b31c6a21c6cae2eee2bd50f55c93c4faad9d9c8d7f", ((ethtypes.HexBytesPlain)(sig.S.Bytes())).String())
 
+	sig.UpdateEIP155(1001)
+	assert.Equal(t, int64(2038), sig.V.Int64())
 }
