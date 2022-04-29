@@ -135,7 +135,7 @@ func TestEncodeAddress(t *testing.T) {
 
 	b, err := hex.DecodeString("497eedc4299dea2f2a364be10025d0ad0f702de3")
 	assert.NoError(t, err)
-	var a ethtypes.Address
+	var a ethtypes.Address0xHex
 	copy(a[0:20], b[0:20])
 
 	d := WrapAddress(&a)
@@ -143,7 +143,7 @@ func TestEncodeAddress(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, Data(b), aa.(Data))
 
-	d1 := WrapAddress((*ethtypes.Address)(nil))
+	d1 := WrapAddress((*ethtypes.Address0xHex)(nil))
 	assert.Equal(t, Data{}, d1)
 
 }

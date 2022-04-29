@@ -27,16 +27,16 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// Address uses full 0x prefixed checksum address format
-type Address [20]byte
-
 // Address0xHex formats with an 0x prefix, but no checksum (lower case)
-type Address0xHex Address
+type Address0xHex [20]byte
+
+// AddressWithChecksum uses full 0x prefixed checksum address format
+type AddressWithChecksum Address0xHex
 
 // AddressPlainHex can parse the same, but formats as just flat hex (no prefix)
-type AddressPlainHex Address
+type AddressPlainHex AddressWithChecksum
 
-func (a *Address) UnmarshalJSON(b []byte) error {
+func (a *Address0xHex) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
@@ -44,7 +44,7 @@ func (a *Address) UnmarshalJSON(b []byte) error {
 	return a.SetString(s)
 }
 
-func (a *Address) SetString(s string) error {
+func (a *Address0xHex) SetString(s string) error {
 	b, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
 	if err != nil {
 		return fmt.Errorf("bad address: %s", err)
@@ -56,11 +56,11 @@ func (a *Address) SetString(s string) error {
 	return nil
 }
 
-func (a Address) MarshalJSON() ([]byte, error) {
+func (a AddressWithChecksum) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, a.String())), nil
 }
 
-func (a Address) String() string {
+func (a AddressWithChecksum) String() string {
 
 	// EIP-55: Mixed-case checksum address encoding
 	// https://eips.ethereum.org/EIPS/eip-55
@@ -84,7 +84,7 @@ func (a Address) String() string {
 }
 
 func (a *AddressPlainHex) UnmarshalJSON(b []byte) error {
-	return ((*Address)(a)).UnmarshalJSON(b)
+	return ((*Address0xHex)(a)).UnmarshalJSON(b)
 }
 
 func (a AddressPlainHex) MarshalJSON() ([]byte, error) {
@@ -95,8 +95,8 @@ func (a AddressPlainHex) String() string {
 	return hex.EncodeToString(a[0:20])
 }
 
-func (a *Address0xHex) UnmarshalJSON(b []byte) error {
-	return ((*Address)(a)).UnmarshalJSON(b)
+func (a *AddressWithChecksum) UnmarshalJSON(b []byte) error {
+	return ((*Address0xHex)(a)).UnmarshalJSON(b)
 }
 
 func (a Address0xHex) MarshalJSON() ([]byte, error) {
@@ -105,4 +105,22 @@ func (a Address0xHex) MarshalJSON() ([]byte, error) {
 
 func (a Address0xHex) String() string {
 	return "0x" + hex.EncodeToString(a[0:20])
+}
+
+func NewAddress(s string) (*Address0xHex, error) {
+	a := new(Address0xHex)
+	return a, a.SetString(s)
+}
+
+func NewAddressWithChecksum(s string) (*AddressWithChecksum, error) {
+	a := new(AddressWithChecksum)
+	return a, (*Address0xHex)(a).SetString(s)
+}
+
+func MustNewAddress(s string) *Address0xHex {
+	a, err := NewAddress(s)
+	if err != nil {
+		panic(err)
+	}
+	return a
 }

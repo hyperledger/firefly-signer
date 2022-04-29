@@ -26,10 +26,28 @@ import (
 var ffc = config.AddRootKey
 
 var (
-	// WalletsKeystoreV3Enabled if the Keystore V3 wallet is enabled
-	WalletsKeystoreV3Enabled = ffc("wallets.keystorev3.enabled")
-	// WalletsKeystoreV3Path the path of the Keystore V3 wallet path
-	WalletsKeystoreV3Path = ffc("wallets.keystorev3.path")
+	// FileWalletEnabled if the Keystore V3 wallet is enabled
+	FileWalletEnabled = ffc("filewallet.enabled")
+	// FileWalletPath the path of the Keystore V3 wallet path
+	FileWalletPath = ffc("filewallet.path")
+	// FileWalletFilenamesWith0xPrefix extension to append to the "from" address string to find the file (see metadata section for file types). All filenames must be lower case on disk.
+	FileWalletFilenamesWith0xPrefix = ffc("filewallet.filenames.with0xPrefix")
+	// FileWalletFilenamesPrimaryExt extension to append to the "from" address string to find the file (see metadata section for file types). All filenames must be lower case on disk.
+	FileWalletFilenamesPrimaryExt = ffc("filewallet.filenames.primaryExt")
+	// FileWalletFilenamesPasswordExt extension to append to the "from" address string to find the password file (if not using a metadata file to specify the password file)
+	FileWalletFilenamesPasswordExt = ffc("filewallet.filenames.passwordExt")
+	// FileWalletDefaultPasswordFile default password file to use if neither the metadata, or passwordExtension find a password
+	FileWalletDefaultPasswordFile = ffc("filewallet.defaultPasswordFile")
+	// FileWalletSignerCacheSize the number of signing keys to keep in memory
+	FileWalletSignerCacheSize = ffc("filewallet.signerCacheSize")
+	// FileWalletSignerCacheTTL the time to keep an unused signing key in memory
+	FileWalletSignerCacheTTL = ffc("filewallet.signerCacheTTL")
+	// FileWalletMetadataFormat format to parse the metadata - supported: auto (from extension) / filename / toml / yaml / json (please quote "0x..." strings in YAML)
+	FileWalletMetadataFormat = ffc("filewallet.metadata.format")
+	// FileWalletMetadataKeyFileProperty use for toml/yaml/json to find the name of the file containing the keystorev3 file
+	FileWalletMetadataKeyFileProperty = ffc("filewallet.metadata.keyFileProperty")
+	// FileWalletMetadataPasswordFileProperty use for toml/yaml to find the name of the file containing the keystorev3 file
+	FileWalletMetadataPasswordFileProperty = ffc("filewallet.metadata.passwordFileProperty")
 )
 
 var ServerPrefix config.Prefix
@@ -37,7 +55,10 @@ var ServerPrefix config.Prefix
 var BackendPrefix config.Prefix
 
 func setDefaults() {
-	viper.SetDefault(string(WalletsKeystoreV3Enabled), true)
+	viper.SetDefault(string(FileWalletEnabled), true)
+	viper.SetDefault(string(FileWalletSignerCacheSize), 250)
+	viper.SetDefault(string(FileWalletSignerCacheTTL), "24h")
+	viper.SetDefault(string(FileWalletMetadataFormat), `auto`)
 }
 
 func Reset() {

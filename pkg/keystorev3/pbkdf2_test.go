@@ -69,7 +69,7 @@ func TestPbkdf2Wallet(t *testing.T) {
 	wb1, err := json.Marshal(&w1)
 	assert.NoError(t, err)
 
-	w2, err := ReadWalletFile(wb1, "myPrecious")
+	w2, err := ReadWalletFile(wb1, []byte("myPrecious"))
 	assert.NoError(t, err)
 
 	assert.Equal(t, keypair.PrivateKeyBytes(), w2.KeyPair().PrivateKeyBytes())
@@ -78,14 +78,14 @@ func TestPbkdf2Wallet(t *testing.T) {
 
 func TestPbkdf2WalletFileDecryptInvalid(t *testing.T) {
 
-	_, err := readPbkdf2WalletFile([]byte(`!! not json`), "")
+	_, err := readPbkdf2WalletFile([]byte(`!! not json`), []byte(""))
 	assert.Regexp(t, "invalid pbkdf2 keystore", err)
 
 }
 
 func TestPbkdf2WalletFileUnsupportedPRF(t *testing.T) {
 
-	_, err := readPbkdf2WalletFile([]byte(`{}`), "")
+	_, err := readPbkdf2WalletFile([]byte(`{}`), []byte(""))
 	assert.Regexp(t, "invalid pbkdf2 wallet file: unsupported prf", err)
 
 }

@@ -1,0 +1,8 @@
+[metadata]
+createdAt = 2019-11-05T08:15:30-05:00
+description = "File based configuration"
+
+[signing]
+type = "file-based-signer"
+key-file = "../../test/keystore_toml/1f185718734552d08278aa70f804580bab5fd2b4.key.json"
+password-file = "../../test/keystore_toml/1f185718734552d08278aa70f804580bab5fd2b4.pwd"

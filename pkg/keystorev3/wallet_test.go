@@ -50,7 +50,7 @@ const sampleWallet = `{
   }`
 
 func TestLoadSampleWallet(t *testing.T) {
-	w, err := ReadWalletFile([]byte(sampleWallet), "correcthorsebatterystaple")
+	w, err := ReadWalletFile([]byte(sampleWallet), []byte("correcthorsebatterystaple"))
 	assert.NoError(t, err)
 
 	keypair := w.KeyPair()
@@ -64,23 +64,23 @@ func TestMustReadBytesPanic(t *testing.T) {
 }
 
 func TestReadWalletFileBadJSON(t *testing.T) {
-	_, err := ReadWalletFile([]byte(`!!not json`), "")
+	_, err := ReadWalletFile([]byte(`!!not json`), []byte(""))
 	assert.Regexp(t, "invalid wallet file", err)
 }
 
 func TestReadWalletFileMissingID(t *testing.T) {
-	_, err := ReadWalletFile([]byte(`{}`), "")
+	_, err := ReadWalletFile([]byte(`{}`), []byte(""))
 	assert.Regexp(t, "missing keyfile id", err)
 }
 
 func TestReadWalletFileBadVersion(t *testing.T) {
-	_, err := ReadWalletFile([]byte(`{"id":"6A2175E5-E553-4E25-AD1B-569A3BB0C3FD", "version": 1}`), "")
+	_, err := ReadWalletFile([]byte(`{"id":"6A2175E5-E553-4E25-AD1B-569A3BB0C3FD", "version": 1}`), []byte(""))
 	assert.Regexp(t, "incorrect keyfile version", err)
 }
 
 func TestReadWalletFileBadKDF(t *testing.T) {
 	_, err := ReadWalletFile([]byte(`{"id":"6A2175E5-E553-4E25-AD1B-569A3BB0C3FD", "version": 3, "crypto": {
 		"kdf": "unknown"
-	}}`), "")
+	}}`), []byte(""))
 	assert.Regexp(t, "unsupported kdf", err)
 }

@@ -29,15 +29,15 @@ func (_m *Wallet) Close() error {
 }
 
 // GetAccounts provides a mock function with given fields:
-func (_m *Wallet) GetAccounts() []ethtypes.Address {
+func (_m *Wallet) GetAccounts() []ethtypes.AddressWithChecksum {
 	ret := _m.Called()
 
-	var r0 []ethtypes.Address
-	if rf, ok := ret.Get(0).(func() []ethtypes.Address); ok {
+	var r0 []ethtypes.AddressWithChecksum
+	if rf, ok := ret.Get(0).(func() []ethtypes.AddressWithChecksum); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]ethtypes.Address)
+			r0 = ret.Get(0).([]ethtypes.AddressWithChecksum)
 		}
 	}
 
@@ -73,11 +73,11 @@ func (_m *Wallet) Refresh() error {
 }
 
 // Sign provides a mock function with given fields: addr, tx, chainID
-func (_m *Wallet) Sign(addr ethtypes.Address, tx *ethsigner.Transaction, chainID int64) ([]byte, error) {
+func (_m *Wallet) Sign(addr ethtypes.AddressWithChecksum, tx *ethsigner.Transaction, chainID int64) ([]byte, error) {
 	ret := _m.Called(addr, tx, chainID)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(ethtypes.Address, *ethsigner.Transaction, int64) []byte); ok {
+	if rf, ok := ret.Get(0).(func(ethtypes.AddressWithChecksum, *ethsigner.Transaction, int64) []byte); ok {
 		r0 = rf(addr, tx, chainID)
 	} else {
 		if ret.Get(0) != nil {
@@ -86,7 +86,7 @@ func (_m *Wallet) Sign(addr ethtypes.Address, tx *ethsigner.Transaction, chainID
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(ethtypes.Address, *ethsigner.Transaction, int64) error); ok {
+	if rf, ok := ret.Get(1).(func(ethtypes.AddressWithChecksum, *ethsigner.Transaction, int64) error); ok {
 		r1 = rf(addr, tx, chainID)
 	} else {
 		r1 = ret.Error(1)

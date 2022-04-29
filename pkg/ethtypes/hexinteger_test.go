@@ -116,10 +116,9 @@ func TestHexIntegerBadNegative(t *testing.T) {
 	assert.Regexp(t, "negative values are not supported", err)
 }
 
-func TestConstructors(t *testing.T) {
+func TestHexConstructors(t *testing.T) {
 	assert.Equal(t, int64(12345), NewHexInteger64(12345).BigInt().Int64())
 	assert.Equal(t, int64(12345), NewHexInteger(big.NewInt(12345)).BigInt().Int64())
-	assert.Equal(t, "0x497EEdc4299Dea2f2A364Be10025d0aD0f702De3", NewAddress("497EEDC4299DEA2F2A364BE10025D0AD0F702DE3").String())
 	assert.Equal(t, "0x0", NewHexInteger(big.NewInt(0)).String())
 	assert.Equal(t, "0x1", NewHexInteger(big.NewInt(1)).String())
 }

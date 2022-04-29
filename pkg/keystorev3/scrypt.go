@@ -29,7 +29,7 @@ import (
 
 const defaultR = 8
 
-func readScryptWalletFile(jsonWallet []byte, password string) (WalletFile, error) {
+func readScryptWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
 	var w *walletFileScrypt
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {
 		return nil, fmt.Errorf("invalid scrypt wallet file: %s", err)
@@ -93,8 +93,8 @@ func newScryptWalletFile(password string, keypair *secp256k1.KeyPair, n int, p i
 	}
 }
 
-func (w *walletFileScrypt) decrypt(password string) error {
-	derivedKey, err := scrypt.Key([]byte(password), w.Crypto.KDFParams.Salt, w.Crypto.KDFParams.N, w.Crypto.KDFParams.R, w.Crypto.KDFParams.P, w.Crypto.KDFParams.DKLen)
+func (w *walletFileScrypt) decrypt(password []byte) error {
+	derivedKey, err := scrypt.Key(password, w.Crypto.KDFParams.Salt, w.Crypto.KDFParams.N, w.Crypto.KDFParams.R, w.Crypto.KDFParams.P, w.Crypto.KDFParams.DKLen)
 	if err != nil {
 		return fmt.Errorf("invalid scrypt keystore: %s", err)
 	}

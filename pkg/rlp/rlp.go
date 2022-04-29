@@ -49,7 +49,7 @@ func WrapInt(i *big.Int) Data {
 }
 
 // WrapAddress wraps an address, or writes empty data if the address is nil
-func WrapAddress(a *ethtypes.Address) Data {
+func WrapAddress(a *ethtypes.Address0xHex) Data {
 	if a == nil {
 		return Data{}
 	}
