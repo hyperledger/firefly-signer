@@ -22,7 +22,7 @@ import (
 	"math/big"
 )
 
-// HexInteger is a positive integer - serializes to JSON as an 0x hex string, and parses flexibly depending on the prefix (so 0x for hex, or base 10 for plain string / float64)
+// HexInteger is a positive integer - serializes to JSON as an 0x hex string (no leading zeros), and parses flexibly depending on the prefix (so 0x for hex, or base 10 for plain string / float64)
 type HexInteger big.Int
 
 func (h *HexInteger) String() string {
@@ -60,4 +60,18 @@ func (h *HexInteger) BigInt() *big.Int {
 		return new(big.Int)
 	}
 	return (*big.Int)(h)
+}
+
+func NewAddress(s string) *Address {
+	a := new(Address)
+	_ = a.SetString(s)
+	return a
+}
+
+func NewHexInteger64(i int64) *HexInteger {
+	return (*HexInteger)(big.NewInt(i))
+}
+
+func NewHexInteger(i *big.Int) *HexInteger {
+	return (*HexInteger)(i)
 }

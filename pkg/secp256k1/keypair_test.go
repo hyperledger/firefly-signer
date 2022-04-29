@@ -17,6 +17,7 @@
 package secp256k1
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,5 +34,38 @@ func TestGeneratedKeyRoundTrip(t *testing.T) {
 
 	assert.Equal(t, keypair.PrivateKeyBytes(), keypair2.PrivateKeyBytes())
 	assert.True(t, keypair.PublicKey.IsEqual(keypair2.PublicKey))
+
+	data := []byte("hello world")
+	sig, err := keypair.Sign(data)
+	assert.NoError(t, err)
+
+	// Legacy 27/28 - pre EIP-155
+	addr, err := sig.Recover(data, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, keypair.Address, *addr)
+
+	// Latest 0/1 - EIP-1559 / EIP-2930
+	sig.UpdateEIP2930()
+	addr, err = sig.Recover(data, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, keypair.Address, *addr)
+	sig.V.SetInt64(sig.V.Int64() + 27)
+
+	// Chain ID encoded in V value - EIP-155
+	sig.UpdateEIP155(1001)
+	addr, err = sig.Recover(data, 1001)
+	assert.NoError(t, err)
+	assert.Equal(t, keypair.Address, *addr)
+
+	_, err = sig.Recover(data, 42)
+	assert.Regexp(t, "invalid V value in signature", err)
+
+	sigBad := &SignatureData{
+		V: big.NewInt(27),
+		R: new(big.Int),
+		S: new(big.Int),
+	}
+	_, err = sigBad.Recover(data, 0)
+	assert.Error(t, err)
 
 }
