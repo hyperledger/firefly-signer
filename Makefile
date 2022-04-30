@@ -44,7 +44,5 @@ clean:
 		$(VGO) clean
 deps:
 		$(VGO) get ./ffsigner
-swagger:
-		$(VGO) test ./internal/apiserver -timeout=10s -tags swagger
 docker:
 		docker build --build-arg BUILD_VERSION=${BUILD_VERSION} ${DOCKER_ARGS} -t hyperledger/firefly-signer .

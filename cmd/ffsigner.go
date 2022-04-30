@@ -38,7 +38,7 @@ var sigs = make(chan os.Signal, 1)
 
 var rootCmd = &cobra.Command{
 	Use:   "ffsigner",
-	Short: "Hyperledger FireFly Tranansaction Manager",
+	Short: "Hyperledger FireFly Signer",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return run()
@@ -58,7 +58,7 @@ func Execute() error {
 }
 
 func initConfig() {
-	// Read the configuration, and register our policy engines
+	// Read the configuration
 	signerconfig.Reset()
 }
 
