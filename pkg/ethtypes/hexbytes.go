@@ -26,7 +26,7 @@ import (
 // HexBytesPlain is simple bytes that are JSON stored/retrieved as hex
 type HexBytesPlain []byte
 
-// HexBytes0xPrefix is simple bytes that can o
+// HexBytes0xPrefix are serialized to JSON as hex with an `0x` prefix
 type HexBytes0xPrefix []byte
 
 func (h *HexBytesPlain) UnmarshalJSON(b []byte) error {
