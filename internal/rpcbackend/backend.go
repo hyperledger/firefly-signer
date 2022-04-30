@@ -129,7 +129,7 @@ func (rb *rpcBackend) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcR
 		SetBody(&beReq).
 		SetResult(rpcRes).
 		SetError(rpcRes).
-		Post("/")
+		Post("")
 	// Restore the original ID
 	rpcRes.ID = rpcReq.ID
 	if err != nil {
