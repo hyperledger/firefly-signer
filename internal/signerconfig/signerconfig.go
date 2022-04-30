@@ -32,7 +32,7 @@ var (
 	FileWalletEnabled = ffc("fileWallet.enabled")
 	// FileWalletPath the path of the Keystore V3 wallet path
 	FileWalletPath = ffc("fileWallet.path")
-	// FileWalletFilenamesWith0xPrefix extension to append to the "from" address string to find the file (see metadata section for file types). All filenames must be lower case on disk.
+	// FileWalletFilenamesWith0xPrefix whether or not to expect the 0x prefix on filenames
 	FileWalletFilenamesWith0xPrefix = ffc("fileWallet.filenames.with0xPrefix")
 	// FileWalletFilenamesPrimaryExt extension to append to the "from" address string to find the file (see metadata section for file types). All filenames must be lower case on disk.
 	FileWalletFilenamesPrimaryExt = ffc("fileWallet.filenames.primaryExt")
