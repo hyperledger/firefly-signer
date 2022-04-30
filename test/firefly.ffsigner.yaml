@@ -1,8 +1,10 @@
 fileWallet:
   path: "../test/keystore_toml"
+  filenames:
+    primaryExt: ".toml"
   metadata:
-    format: toml
+    format: auto
     keyFileProperty: '{{ index .signing "key-file" }}'
-    passwordFileProperty: '{{ index .signing "key-file" }}'
+    passwordFileProperty: '{{ index .signing "password-file" }}'
 backend:
   chainId: 0
