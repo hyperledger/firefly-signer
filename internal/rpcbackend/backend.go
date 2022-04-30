@@ -64,13 +64,24 @@ type RPCRequest struct {
 	Params  []*fftypes.JSONAny `json:"params,omitempty"`
 }
 
-type RPCResponse struct {
-	JSONRpc string             `json:"jsonrpc"`
-	ID      *fftypes.JSONAny   `json:"id"`
-	Result  *fftypes.JSONAny   `json:"result,omitempty"`
-	Code    int64              `json:"code,omitempty"`
-	Message string             `json:"message,omitempty"`
+type RPCError struct {
+	Code    int64              `json:"code"`
+	Message string             `json:"message"`
 	Data    []*fftypes.JSONAny `json:"data,omitempty"`
+}
+
+type RPCResponse struct {
+	JSONRpc string           `json:"jsonrpc"`
+	ID      *fftypes.JSONAny `json:"id"`
+	Result  *fftypes.JSONAny `json:"result,omitempty"`
+	Error   *RPCError        `json:"error,omitempty"`
+}
+
+func (r *RPCResponse) Message() string {
+	if r.Error != nil {
+		return r.Error.Message
+	}
+	return ""
 }
 
 func (rb *rpcBackend) allocateRequestID(req *RPCRequest) {
@@ -128,11 +139,15 @@ func (rb *rpcBackend) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcR
 		return rpcRes, err
 	}
 	if res.IsError() {
-		log.L(ctx).Errorf("RPC:%s:%s <-- [%d]: %s", beReq.ID, rpcReq.ID, res.StatusCode(), rpcRes.Message)
-		err := fmt.Errorf(rpcRes.Message)
+		log.L(ctx).Errorf("RPC:%s:%s <-- [%d]: %s", beReq.ID, rpcReq.ID, res.StatusCode(), rpcRes.Message())
+		err := fmt.Errorf(rpcRes.Message())
 		return rpcRes, err
 	}
 	log.L(ctx).Infof("RPC:%s:%s <-- [%d] OK", beReq.ID, rpcReq.ID, res.StatusCode())
+	if rpcRes.Result == nil {
+		// We don't want a result for errors, but a null success response needs to go in there
+		rpcRes.Result = fftypes.JSONAnyPtr(fftypes.NullString)
+	}
 	return rpcRes, nil
 }
 
@@ -140,7 +155,9 @@ func RPCErrorResponse(err error, id *fftypes.JSONAny, code RPCCode) *RPCResponse
 	return &RPCResponse{
 		JSONRpc: "2.0",
 		ID:      id,
-		Code:    int64(code),
-		Message: err.Error(),
+		Error: &RPCError{
+			Code:    int64(code),
+			Message: err.Error(),
+		},
 	}
 }

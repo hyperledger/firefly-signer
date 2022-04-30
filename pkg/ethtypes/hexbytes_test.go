@@ -83,3 +83,10 @@ func TestHexBytesFailNonString(t *testing.T) {
 	err := json.Unmarshal([]byte(testData), &testStruct)
 	assert.Error(t, err)
 }
+
+func TestHexByteConstructors(t *testing.T) {
+	assert.Equal(t, HexBytes0xPrefix{0x01, 0x02}, MustNewHexBytes0xPrefix("0x0102"))
+	assert.Panics(t, func() {
+		MustNewHexBytes0xPrefix("!wrong")
+	})
+}

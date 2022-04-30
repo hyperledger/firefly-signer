@@ -169,8 +169,10 @@ func TestServeJSONRPCFail(t *testing.T) {
 	})).Return(&rpcbackend.RPCResponse{
 		JSONRpc: "2.0",
 		ID:      fftypes.JSONAnyPtr(`1`),
-		Code:    int64(rpcbackend.RPCCodeInternalError),
-		Message: "error 1",
+		Error: &rpcbackend.RPCError{
+			Code:    int64(rpcbackend.RPCCodeInternalError),
+			Message: "error 1",
+		},
 	}, fmt.Errorf("pop"))
 
 	err := s.Start()
@@ -192,8 +194,10 @@ func TestServeJSONRPCFail(t *testing.T) {
 		{
 			"jsonrpc": "2.0",
 			"id": 1,
-			"code": -32603,
-			"message": "error 1"
+			"error": {
+				"code": -32603,
+				"message": "error 1"	
+			}
 		}
 	`)
 
@@ -302,8 +306,10 @@ func TestServeJSONRPCBatchOneFailed(t *testing.T) {
 	})).Return(&rpcbackend.RPCResponse{
 		JSONRpc: "2.0",
 		ID:      fftypes.JSONAnyPtr(`2`),
-		Code:    int64(rpcbackend.RPCCodeInternalError),
-		Message: "error 2",
+		Error: &rpcbackend.RPCError{
+			Code:    int64(rpcbackend.RPCCodeInternalError),
+			Message: "error 2",
+		},
 	}, fmt.Errorf("pop"))
 
 	err := s.Start()
@@ -335,8 +341,10 @@ func TestServeJSONRPCBatchOneFailed(t *testing.T) {
 		{
 			"jsonrpc": "2.0",
 			"id": 2,
-			"code": -32603,
-			"message": "error 2"
+			"error": {
+				"code": -32603,
+				"message": "error 2"	
+			}
 		}
 	]`)
 
@@ -366,8 +374,10 @@ func TestServeJSONRPCBatchBadArray(t *testing.T) {
 		{
 			"jsonrpc": "2.0",
 			"id": 1,
-			"code": -32600,
-			"message": "FF20218: Invalid request data"
+			"error": {
+				"code": -32600,
+				"message": "FF20218: Invalid request data"
+			}
 		}
 	`)
 
@@ -395,8 +405,10 @@ func TestServeJSONRPCBatchEmptyData(t *testing.T) {
 		{
 			"jsonrpc": "2.0",
 			"id": 1,
-			"code": -32600,
-			"message": "FF20218: Invalid request data"
+			"error": {
+				"code": -32600,
+				"message": "FF20218: Invalid request data"	
+			}
 		}
 	`)
 
@@ -424,8 +436,10 @@ func TestServeJSONRPCBatchBadJSON(t *testing.T) {
 		{
 			"jsonrpc": "2.0",
 			"id": 1,
-			"code": -32600,
-			"message": "FF20218: Invalid request data"
+			"error": {
+				"code": -32600,
+				"message": "FF20218: Invalid request data"	
+			}
 		}
 	`)
 

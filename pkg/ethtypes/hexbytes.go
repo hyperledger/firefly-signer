@@ -61,3 +61,19 @@ func (h HexBytes0xPrefix) String() string {
 func (h HexBytes0xPrefix) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, h.String())), nil
 }
+
+func NewHexBytes0xPrefix(s string) (HexBytes0xPrefix, error) {
+	h, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	return HexBytes0xPrefix(h), nil
+}
+
+func MustNewHexBytes0xPrefix(s string) HexBytes0xPrefix {
+	h, err := NewHexBytes0xPrefix(s)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
