@@ -127,7 +127,7 @@ func TestSignAutoEIP155(t *testing.T) {
 	foundSig.R.SetBytes([]byte(rlpList.(rlp.List)[7].(rlp.Data)))
 	foundSig.S.SetBytes([]byte(rlpList.(rlp.List)[8].(rlp.Data)))
 
-	expectedUnsigned := txn.BuildLegacy().Encode()
+	expectedUnsigned := txn.AddEIP155HashValues(txn.BuildLegacy(), 1001).Encode()
 	addr, err := foundSig.Recover(expectedUnsigned, 1001)
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.Address.String(), addr.String())
