@@ -40,11 +40,24 @@ func TestEthAccountsOK(t *testing.T) {
 	}, nil)
 
 	rpcRes, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "eth_accounts",
 	})
 	assert.NoError(t, err)
 
 	assert.Equal(t, `["0xfb075bb99f2aa4c49955bf703509a227d7a12248"]`, rpcRes.Result.String())
+
+}
+
+func TestMissingID(t *testing.T) {
+
+	_, s, done := newTestServer(t)
+	defer done()
+
+	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		Method: "net_version",
+	})
+	assert.Regexp(t, "FF20224", err)
 
 }
 
@@ -57,6 +70,7 @@ func TestPersonalAccountsFail(t *testing.T) {
 	w.On("GetAccounts", mock.Anything).Return(nil, fmt.Errorf("pop"))
 
 	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "personal_accounts",
 	})
 	assert.Regexp(t, "pop", err)
@@ -76,6 +90,7 @@ func TestPassthrough(t *testing.T) {
 	}, nil)
 
 	rpcRes, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "net_version",
 	})
 	assert.NoError(t, err)
@@ -90,6 +105,7 @@ func TestSignMissingParam(t *testing.T) {
 	defer done()
 
 	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "eth_sendTransaction",
 	})
 	assert.Regexp(t, "FF20219", err)
@@ -102,6 +118,7 @@ func TestSignBadTX(t *testing.T) {
 	defer done()
 
 	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "eth_sendTransaction",
 		Params: []*fftypes.JSONAny{
 			fftypes.JSONAnyPtr(`"not an object"`),
@@ -117,6 +134,7 @@ func TestSignMissingFrom(t *testing.T) {
 	defer done()
 
 	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "eth_sendTransaction",
 		Params: []*fftypes.JSONAny{
 			fftypes.JSONAnyPtr(`{}`),
@@ -135,6 +153,7 @@ func TestSignGetNonceFail(t *testing.T) {
 	bm.On("CallRPC", mock.Anything, mock.Anything, "eth_getTransactionCount", mock.Anything, "pending").Return(fmt.Errorf("pop"))
 
 	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "eth_sendTransaction",
 		Params: []*fftypes.JSONAny{
 			fftypes.JSONAnyPtr(`{
@@ -155,6 +174,7 @@ func TestSignSignFail(t *testing.T) {
 	w.On("Sign", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("pop"))
 
 	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "eth_sendTransaction",
 		Params: []*fftypes.JSONAny{
 			fftypes.JSONAnyPtr(`{

@@ -36,4 +36,5 @@ var (
 	MsgQueryChainID       = ffe("FF20221", "Failed to query Chain ID")
 	MsgSigningFailed      = ffe("FF20222", "Signing failed: %s")
 	MsgInvalidTransaction = ffe("FF20223", "Invalid eth_sendTransaction input")
+	MsgMissingRequestID   = ffe("FF20224", "Invalid JSON/RPC request. Must set request ID")
 )

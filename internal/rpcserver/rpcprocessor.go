@@ -19,6 +19,7 @@ package rpcserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/hyperledger/firefly-signer/internal/rpcbackend"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
@@ -29,6 +30,11 @@ import (
 )
 
 func (s *rpcServer) processRPC(ctx context.Context, rpcReq *rpcbackend.RPCRequest) (*rpcbackend.RPCResponse, error) {
+	if rpcReq.ID == nil {
+		err := i18n.NewError(ctx, signermsgs.MsgMissingRequestID)
+		return rpcbackend.RPCErrorResponse(err, rpcReq.ID, rpcbackend.RPCCodeInvalidRequest), err
+	}
+
 	switch rpcReq.Method {
 	case "eth_accounts", "personal_accounts":
 		return s.processEthAccounts(ctx, rpcReq)
@@ -90,7 +96,7 @@ func (s *rpcServer) processEthSendTransaction(ctx context.Context, rpcReq *rpcba
 
 	// Progress with the original request, now updated with a raw transaction fully signed
 	rpcReq.Method = "eth_sendRawTransaction"
-	rpcReq.Params = []*fftypes.JSONAny{fftypes.JSONAnyPtrBytes(hexData)}
+	rpcReq.Params = []*fftypes.JSONAny{fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, hexData))}
 	return s.backend.SyncRequest(ctx, rpcReq)
 
 }
