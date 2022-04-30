@@ -72,7 +72,7 @@ fileWallet:
   metadata:
         format: toml
         keyFileProperty: '{{ index .signing "key-file" }}'
-        passwordFileProperty: '{{ index .signing "key-file" }}'
+        passwordFileProperty: '{{ index .signing "password-file" }}'
 server:
     address: '127.0.0.1'
     port: 8545
