@@ -41,6 +41,8 @@ func (s *rpcServer) rpcHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.L(ctx).Tracef("RPC --> %s", b)
+
 	if s.sniffFirstByte(b) == '[' {
 		s.handleRPCBatch(ctx, w, b)
 		return
@@ -54,10 +56,10 @@ func (s *rpcServer) rpcHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	rpcResponse, err := s.processRPC(ctx, &rpcRequest)
 	if err != nil {
-		s.replyRPC(w, rpcResponse, http.StatusInternalServerError)
+		s.replyRPC(ctx, w, rpcResponse, http.StatusInternalServerError)
 		return
 	}
-	s.replyRPC(w, rpcResponse, http.StatusOK)
+	s.replyRPC(ctx, w, rpcResponse, http.StatusOK)
 
 }
 
@@ -68,12 +70,13 @@ func (s *rpcServer) replyRPCParseError(ctx context.Context, w http.ResponseWrite
 		fftypes.JSONAnyPtr("1"), // we couldn't parse the request ID
 		rpcbackend.RPCCodeInvalidRequest,
 	)
-	s.replyRPC(w, rpcError, http.StatusBadRequest)
+	s.replyRPC(ctx, w, rpcError, http.StatusBadRequest)
 }
 
-func (s *rpcServer) replyRPC(w http.ResponseWriter, result interface{}, status int) {
+func (s *rpcServer) replyRPC(ctx context.Context, w http.ResponseWriter, result interface{}, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	b, _ := json.Marshal(result)
+	log.L(ctx).Tracef("RPC <-- %s", b)
 	w.Header().Set("Content-Length", strconv.Itoa(len(b)))
 	w.WriteHeader(status)
 	_, _ = w.Write(b)
@@ -121,5 +124,5 @@ func (s *rpcServer) handleRPCBatch(ctx context.Context, w http.ResponseWriter, b
 			status = http.StatusInternalServerError
 		}
 	}
-	s.replyRPC(w, rpcResponses, status)
+	s.replyRPC(ctx, w, rpcResponses, status)
 }

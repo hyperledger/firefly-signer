@@ -21,6 +21,7 @@
     "secp",
     "signermsgs",
     "stretchr",
+    "Tracef",
     "Warnf",
     "wsclient"
   ],
