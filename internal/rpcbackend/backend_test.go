@@ -217,3 +217,8 @@ func TestSyncRPCCallServerDown(t *testing.T) {
 	err := rb.CallRPC(ctx, &txCount, "net_version")
 	assert.Regexp(t, "FF20212", err)
 }
+
+func TestSafeMessageGetter(t *testing.T) {
+
+	assert.Empty(t, (&RPCResponse{}).Message())
+}

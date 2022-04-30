@@ -24,7 +24,7 @@ var ffe = i18n.FFE
 var (
 	MsgInvalidOutputType  = ffe("FF20210", "Invalid output type: %s")
 	MsgInvalidParam       = ffe("FF20211", "Invalid parameter at position %d for method %s: %s")
-	MsgRPCRequestFailed   = ffe("FF20212", "Backend RPC request failed: %s")
+	MsgRPCRequestFailed   = ffe("FF20212", "Backend RPC request failed")
 	MsgReadDirFile        = ffe("FF20213", "Directory listing failed")
 	MsgWalletNotAvailable = ffe("FF20214", "Wallet for address '%s' not available")
 	MsgWalletFailed       = ffe("FF20215", "Wallet for address '%s' could not be initialized")
