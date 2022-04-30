@@ -33,8 +33,7 @@ import (
 
 func (s *rpcServer) rpcHandler(w http.ResponseWriter, r *http.Request) {
 
-	// Add a UUID to all logs on this context
-	ctx := log.WithLogField(r.Context(), "r", fftypes.NewUUID().String())
+	ctx := r.Context() // will include logging ID from FireFly server framework
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
