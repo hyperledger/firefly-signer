@@ -53,6 +53,14 @@ func (t *Transaction) BuildLegacy() rlp.List {
 	return rlpList
 }
 
+func (t *Transaction) AddEIP155HashValues(rlpList rlp.List, chainID int64) rlp.List {
+	// These values go into the hash of the transaction
+	rlpList = append(rlpList, rlp.WrapInt(big.NewInt(chainID)))
+	rlpList = append(rlpList, rlp.WrapInt(big.NewInt(0)))
+	rlpList = append(rlpList, rlp.WrapInt(big.NewInt(0)))
+	return rlpList
+}
+
 func (t *Transaction) Build1559(chainID int64) rlp.List {
 	rlpList := make(rlp.List, 0, 9)
 	rlpList = append(rlpList, rlp.WrapInt(big.NewInt(chainID)))
@@ -96,8 +104,10 @@ func (t *Transaction) SignLegacyOriginal(signer *secp256k1.KeyPair) ([]byte, err
 func (t *Transaction) SignLegacyEIP155(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
 	rlpList := t.BuildLegacy()
 
-	txData := rlpList.Encode()
-	sig, err := signer.Sign(txData)
+	rlpList = t.AddEIP155HashValues(rlpList, chainID)
+
+	hashData := rlpList.Encode()
+	sig, err := signer.Sign(hashData)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +115,7 @@ func (t *Transaction) SignLegacyEIP155(signer *secp256k1.KeyPair, chainID int64)
 	// Use the EIP-155 V value, of (2*ChainID + 35 + Y-parity)
 	sig.UpdateEIP155(chainID)
 
-	rlpList = t.addSignature(rlpList, sig)
+	rlpList = t.addSignature(rlpList[0:6] /* we don't include the chainID+0+0 hash values in the payload */, sig)
 	return rlpList.Encode(), nil
 }
 
