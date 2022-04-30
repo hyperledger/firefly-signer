@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func newTestServer(t *testing.T) (string, *rpcServer, *ethsignermocks.Wallet, func()) {
+func newTestServer(t *testing.T) (string, *rpcServer, func()) {
 	signerconfig.Reset()
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -51,7 +51,6 @@ func newTestServer(t *testing.T) (string, *rpcServer, *ethsignermocks.Wallet, fu
 
 	return fmt.Sprintf("http://127.0.0.1:%s", serverPort),
 		s,
-		w,
 		func() {
 			s.Stop()
 			_ = s.WaitStop()
@@ -61,7 +60,7 @@ func newTestServer(t *testing.T) (string, *rpcServer, *ethsignermocks.Wallet, fu
 
 func TestStartStop(t *testing.T) {
 
-	_, s, w, done := newTestServer(t)
+	_, s, done := newTestServer(t)
 	defer done()
 
 	bm := s.backend.(*rpcbackendmocks.Backend)
@@ -70,6 +69,7 @@ func TestStartStop(t *testing.T) {
 		hi.BigInt().SetInt64(12345)
 	}).Return(nil)
 
+	w := s.wallet.(*ethsignermocks.Wallet)
 	w.On("Initialize", mock.Anything).Return(nil)
 	err := s.Start()
 	assert.NoError(t, err)
@@ -80,7 +80,7 @@ func TestStartStop(t *testing.T) {
 
 func TestStartFailChainID(t *testing.T) {
 
-	_, s, _, done := newTestServer(t)
+	_, s, done := newTestServer(t)
 	defer done()
 
 	bm := s.backend.(*rpcbackendmocks.Backend)
@@ -96,7 +96,7 @@ func TestStartFailChainID(t *testing.T) {
 
 func TestStartFailInitialize(t *testing.T) {
 
-	_, s, w, done := newTestServer(t)
+	_, s, done := newTestServer(t)
 	defer done()
 
 	bm := s.backend.(*rpcbackendmocks.Backend)
@@ -105,6 +105,7 @@ func TestStartFailInitialize(t *testing.T) {
 		hi.BigInt().SetInt64(12345)
 	}).Return(nil)
 
+	w := s.wallet.(*ethsignermocks.Wallet)
 	w.On("Initialize", mock.Anything).Return(fmt.Errorf("pop"))
 	err := s.Start()
 	assert.Regexp(t, "pop", err)

@@ -38,7 +38,6 @@ func (s *rpcServer) rpcHandler(w http.ResponseWriter, r *http.Request) {
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.L(ctx).Errorf("Cannot parse RPC request (%s): %s", err, b)
 		s.replyRPCParseError(ctx, w, b)
 		return
 	}
@@ -98,14 +97,9 @@ func (s *rpcServer) handleRPCBatch(ctx context.Context, w http.ResponseWriter, b
 
 	var rpcArray []*rpcbackend.RPCRequest
 	err := json.Unmarshal(batchBytes, &rpcArray)
-	if err != nil {
+	if err != nil || len(rpcArray) == 0 {
+		log.L(ctx).Errorf("Bad RPC array received %s", batchBytes)
 		s.replyRPCParseError(ctx, w, batchBytes)
-		return
-	}
-
-	if len(rpcArray) == 0 {
-		// Do nothing
-		log.L(ctx).Errorf("Zero length RPC array received: %s", batchBytes)
 		return
 	}
 

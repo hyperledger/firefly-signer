@@ -34,4 +34,6 @@ var (
 	MsgInvalidParamCount  = ffe("FF20219", "Invalid number of parameters: expected=%d received=%d")
 	MsgMissingFrom        = ffe("FF20220", "Missing 'from' address")
 	MsgQueryChainID       = ffe("FF20221", "Failed to query Chain ID")
+	MsgSigningFailed      = ffe("FF20222", "Signing failed: %s")
+	MsgInvalidTransaction = ffe("FF20223", "Invalid eth_sendTransaction input")
 )

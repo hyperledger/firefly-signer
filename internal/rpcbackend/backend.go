@@ -68,8 +68,8 @@ type RPCResponse struct {
 	JSONRpc string             `json:"jsonrpc"`
 	ID      *fftypes.JSONAny   `json:"id"`
 	Result  *fftypes.JSONAny   `json:"result,omitempty"`
-	Code    int64              `json:"code"`
-	Message string             `json:"message"`
+	Code    int64              `json:"code,omitempty"`
+	Message string             `json:"message,omitempty"`
 	Data    []*fftypes.JSONAny `json:"data,omitempty"`
 }
 
