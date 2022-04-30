@@ -116,7 +116,7 @@ func TestHexIntegerBadNegative(t *testing.T) {
 	assert.Regexp(t, "negative values are not supported", err)
 }
 
-func TestHexConstructors(t *testing.T) {
+func TestHexIntConstructors(t *testing.T) {
 	assert.Equal(t, int64(12345), NewHexInteger64(12345).BigInt().Int64())
 	assert.Equal(t, int64(12345), NewHexInteger(big.NewInt(12345)).BigInt().Int64())
 	assert.Equal(t, "0x0", NewHexInteger(big.NewInt(0)).String())

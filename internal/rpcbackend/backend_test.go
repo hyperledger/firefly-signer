@@ -152,13 +152,42 @@ func TestSyncRPCCallOK(t *testing.T) {
 	assert.Equal(t, int64(0x26), txCount.BigInt().Int64())
 }
 
+func TestSyncRPCCallNullResponse(t *testing.T) {
+
+	ctx, rb, done := newTestServer(t, func(rpcReq *RPCRequest) (status int, rpcRes *RPCResponse) {
+		assert.Equal(t, "2.0", rpcReq.JSONRpc)
+		assert.Equal(t, "eth_getTransactionReceipt", rpcReq.Method)
+		assert.Equal(t, `"000012346"`, rpcReq.ID.String())
+		assert.Equal(t, `"0xf44d5387087f61237bdb5132e9cf0f38ab20437128f7291b8df595305a1a8284"`, rpcReq.Params[0].String())
+		return 200, &RPCResponse{
+			JSONRpc: "2.0",
+			ID:      rpcReq.ID,
+			Result:  nil,
+		}
+	})
+	rb.requestCounter = 12345
+	defer done()
+
+	rpcRes, err := rb.SyncRequest(ctx, &RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
+		Method: "eth_getTransactionReceipt",
+		Params: []*fftypes.JSONAny{
+			fftypes.JSONAnyPtr(`"0xf44d5387087f61237bdb5132e9cf0f38ab20437128f7291b8df595305a1a8284"`),
+		},
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, `null`, rpcRes.Result.String())
+}
+
 func TestSyncRPCCallErrorResponse(t *testing.T) {
 
 	ctx, rb, done := newTestServer(t, func(rpcReq *RPCRequest) (status int, rpcRes *RPCResponse) {
 		return 500, &RPCResponse{
 			JSONRpc: "2.0",
 			ID:      rpcReq.ID,
-			Message: "pop",
+			Error: &RPCError{
+				Message: "pop",
+			},
 		}
 	})
 	rb.requestCounter = 12345
