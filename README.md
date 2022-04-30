@@ -1,3 +1,6 @@
+[![codecov](https://codecov.io/gh/hyperledger/firefly-signer/branch/main/graph/badge.svg?token=OEI8A08P0R)](https://codecov.io/gh/hyperledger/firefly-signer)
+[![Go Reference](https://pkg.go.dev/badge/github.com/hyperledger/firefly-signer.svg)](https://pkg.go.dev/github.com/hyperledger/firefly-signer)
+
 # Hyperledger FireFly Signer
 
 A set of Ethereum transaction signing utilities, including a Keystore V3 wallet implementation

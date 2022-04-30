@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger/firefly-signer/internal/rpcbackend"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly/pkg/fftypes"
 	"github.com/hyperledger/firefly/pkg/i18n"
 )
@@ -61,6 +62,7 @@ func (s *rpcServer) processEthSendTransaction(ctx context.Context, rpcReq *rpcba
 	var txn ethsigner.Transaction
 	err := json.Unmarshal(rpcReq.Params[0].Bytes(), &txn)
 	if err != nil {
+		err := i18n.WrapError(ctx, err, signermsgs.MsgInvalidTransaction)
 		return rpcbackend.RPCErrorResponse(err, rpcReq.ID, rpcbackend.RPCCodeParseError), err
 	}
 
@@ -79,8 +81,16 @@ func (s *rpcServer) processEthSendTransaction(ctx context.Context, rpcReq *rpcba
 		}
 	}
 
-	return nil, nil
-	// var hexData ethtypes.HexBytes0xPrefix
-	// hexData, err = s.wallet.Sign(ctx, txn, config.)
+	// Sign the transaction
+	var hexData ethtypes.HexBytes0xPrefix
+	hexData, err = s.wallet.Sign(ctx, &txn, s.chainID)
+	if err != nil {
+		return rpcbackend.RPCErrorResponse(err, rpcReq.ID, rpcbackend.RPCCodeInternalError), err
+	}
+
+	// Progress with the original request, now updated with a raw transaction fully signed
+	rpcReq.Method = "eth_sendRawTransaction"
+	rpcReq.Params = []*fftypes.JSONAny{fftypes.JSONAnyPtrBytes(hexData)}
+	return s.backend.SyncRequest(ctx, rpcReq)
 
 }
