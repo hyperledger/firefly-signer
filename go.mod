@@ -6,7 +6,7 @@ require (
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gorilla/mux v1.8.0
-	github.com/hyperledger/firefly-common v0.1.2-0.20220505012722-b17e8af423d7
+	github.com/hyperledger/firefly-common v0.1.2
 	github.com/karlseguin/ccache v2.0.3+incompatible
 	github.com/karlseguin/expect v1.0.8 // indirect
 	github.com/pelletier/go-toml v1.9.4
