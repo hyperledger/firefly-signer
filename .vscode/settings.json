@@ -22,6 +22,8 @@
     "signermsgs",
     "stretchr",
     "Tracef",
+    "ufixed",
+    "Vyper",
     "Warnf",
     "wsclient"
   ],
