@@ -17,9 +17,9 @@
 package signerconfig
 
 import (
-	"github.com/hyperledger/firefly/pkg/config"
-	"github.com/hyperledger/firefly/pkg/httpserver"
-	"github.com/hyperledger/firefly/pkg/wsclient"
+	"github.com/hyperledger/firefly-common/pkg/config"
+	"github.com/hyperledger/firefly-common/pkg/httpserver"
+	"github.com/hyperledger/firefly-common/pkg/wsclient"
 	"github.com/spf13/viper"
 )
 
@@ -54,6 +54,8 @@ var (
 
 var ServerPrefix config.Prefix
 
+var CorsPrefix config.Prefix
+
 var BackendPrefix config.Prefix
 
 func setDefaults() {
@@ -69,6 +71,9 @@ func Reset() {
 
 	ServerPrefix = config.NewPluginConfig("server")
 	httpserver.InitHTTPConfPrefix(ServerPrefix, 8545)
+
+	CorsPrefix = config.NewPluginConfig("cors")
+	httpserver.InitCORSConfig(CorsPrefix)
 
 	BackendPrefix = config.NewPluginConfig("backend")
 	wsclient.InitPrefix(BackendPrefix)

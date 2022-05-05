@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-signer/internal/rpcbackend"
 	"github.com/hyperledger/firefly-signer/mocks/ethsignermocks"
 	"github.com/hyperledger/firefly-signer/mocks/rpcbackendmocks"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly/pkg/fftypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -57,7 +57,7 @@ func TestMissingID(t *testing.T) {
 	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
 		Method: "net_version",
 	})
-	assert.Regexp(t, "FF20224", err)
+	assert.Regexp(t, "FF22024", err)
 
 }
 
@@ -108,7 +108,7 @@ func TestSignMissingParam(t *testing.T) {
 		ID:     fftypes.JSONAnyPtr("1"),
 		Method: "eth_sendTransaction",
 	})
-	assert.Regexp(t, "FF20219", err)
+	assert.Regexp(t, "FF22019", err)
 
 }
 
@@ -124,7 +124,7 @@ func TestSignBadTX(t *testing.T) {
 			fftypes.JSONAnyPtr(`"not an object"`),
 		},
 	})
-	assert.Regexp(t, "FF20223", err)
+	assert.Regexp(t, "FF22023", err)
 
 }
 
@@ -140,7 +140,7 @@ func TestSignMissingFrom(t *testing.T) {
 			fftypes.JSONAnyPtr(`{}`),
 		},
 	})
-	assert.Regexp(t, "FF20220", err)
+	assert.Regexp(t, "FF22020", err)
 
 }
 

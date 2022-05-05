@@ -21,14 +21,14 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/hyperledger/firefly-common/pkg/config"
+	"github.com/hyperledger/firefly-common/pkg/httpserver"
+	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/internal/rpcbackend"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly/pkg/config"
-	"github.com/hyperledger/firefly/pkg/httpserver"
-	"github.com/hyperledger/firefly/pkg/i18n"
 )
 
 type Server interface {
@@ -47,7 +47,7 @@ func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err err
 	}
 	s.ctx, s.cancelCtx = context.WithCancel(ctx)
 
-	s.apiServer, err = httpserver.NewHTTPServer(ctx, "server", s.router(), s.apiServerDone, signerconfig.ServerPrefix)
+	s.apiServer, err = httpserver.NewHTTPServer(ctx, "server", s.router(), s.apiServerDone, signerconfig.ServerPrefix, signerconfig.CorsPrefix)
 	if err != nil {
 		return nil, err
 	}

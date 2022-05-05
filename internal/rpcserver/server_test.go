@@ -23,11 +23,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/httpserver"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/mocks/ethsignermocks"
 	"github.com/hyperledger/firefly-signer/mocks/rpcbackendmocks"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly/pkg/httpserver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

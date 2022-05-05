@@ -55,7 +55,7 @@ func TestRunNoWallet(t *testing.T) {
 	defer rootCmd.SetArgs([]string{})
 
 	err := Execute()
-	assert.Regexp(t, "FF20217", err)
+	assert.Regexp(t, "FF22017", err)
 
 }
 
@@ -75,7 +75,7 @@ func TestRunBadWalletConfig(t *testing.T) {
 	defer rootCmd.SetArgs([]string{})
 
 	err := Execute()
-	assert.Regexp(t, "FF20216", err)
+	assert.Regexp(t, "FF22016", err)
 
 }
 
@@ -84,7 +84,7 @@ func TestRunFailStartup(t *testing.T) {
 	defer rootCmd.SetArgs([]string{})
 
 	err := Execute()
-	assert.Regexp(t, "FF10104", err)
+	assert.Regexp(t, "FF00151", err)
 
 }
 

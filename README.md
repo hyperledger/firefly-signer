@@ -41,11 +41,15 @@ Potential future contributions:
 - Caching list of keys in-memory
 - Regular expression to match address anywhere in filename (depends on caching list of keys)
 
-# Example configuration
+# Configuration
+
+For a full list of configuration options see [config.md](./config.md)
+
+## Example configuration
 
 Two examples provided below:
 
-## Flat directory of keys
+### Flat directory of keys
 
 ```yaml
 fileWallet:
@@ -61,7 +65,7 @@ backend:
     url: https://blockhain.rpc.endpoint/path
 ```
 
-## Directory containing TOML configurations
+### Directory containing TOML configurations
 
 ```yaml
 fileWallet:

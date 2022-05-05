@@ -25,10 +25,10 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/ffresty"
+	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly/pkg/ffresty"
-	"github.com/hyperledger/firefly/pkg/fftypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -205,7 +205,7 @@ func TestSyncRPCCallErrorBadInput(t *testing.T) {
 
 	var txCount ethtypes.HexInteger
 	err := rb.CallRPC(ctx, &txCount, "test-bad-params", map[bool]bool{false: true})
-	assert.Regexp(t, "FF20211", err)
+	assert.Regexp(t, "FF22011", err)
 }
 
 func TestSyncRPCCallServerDown(t *testing.T) {
@@ -215,7 +215,7 @@ func TestSyncRPCCallServerDown(t *testing.T) {
 
 	var txCount ethtypes.HexInteger
 	err := rb.CallRPC(ctx, &txCount, "net_version")
-	assert.Regexp(t, "FF20212", err)
+	assert.Regexp(t, "FF22012", err)
 }
 
 func TestSafeMessageGetter(t *testing.T) {

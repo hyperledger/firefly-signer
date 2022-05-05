@@ -48,7 +48,7 @@ func TestVersionCmdInvalidType(t *testing.T) {
 	rootCmd.SetArgs([]string{"version", "-o", "wrong"})
 	defer rootCmd.SetArgs([]string{})
 	err := rootCmd.Execute()
-	assert.Regexp(t, "FF20210", err)
+	assert.Regexp(t, "FF22010", err)
 }
 
 func TestVersionCmdShorthand(t *testing.T) {
