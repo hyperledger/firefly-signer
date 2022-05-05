@@ -16,7 +16,7 @@
 
 package signermsgs
 
-import "github.com/hyperledger/firefly/pkg/i18n"
+import "github.com/hyperledger/firefly-common/pkg/i18n"
 
 var ffc = i18n.FFC
 
@@ -39,6 +39,7 @@ var (
 	ConfigAPIPublicURL       = ffc("config.server.publicURL", "External address callers should access API over", "string")
 	ConfigServerReadTimeout  = ffc("config.server.readTimeout", "The maximum time to wait when reading from an HTTP connection", "duration")
 	ConfigServerWriteTimeout = ffc("config.server.writeTimeout", "The maximum time to wait when writing to a HTTP connection", "duration")
+	ConfigAPIShutdownTimeout = ffc("config.server.shutdownTimeout", "The maximum amount of time to wait for any open HTTP requests to finish before shutting down the HTTP server", i18n.TimeDurationType)
 
 	ConfigBackendChainID  = ffc("config.backend.chainId", "Optionally set the Chain ID of the blockchain. Otherwise the Network ID will be queried, and used as the Chain ID in signind", "number")
 	ConfigBackendURL      = ffc("config.backend.url", "URL for the backend JSON/RPC server / blockchain node", "url")

@@ -26,12 +26,12 @@ import (
 	"testing"
 	"testing/iotest"
 
+	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-signer/internal/rpcbackend"
 	"github.com/hyperledger/firefly-signer/mocks/ethsignermocks"
 	"github.com/hyperledger/firefly-signer/mocks/rpcbackendmocks"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly/pkg/fftypes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -376,7 +376,7 @@ func TestServeJSONRPCBatchBadArray(t *testing.T) {
 			"id": 1,
 			"error": {
 				"code": -32600,
-				"message": "FF20218: Invalid request data"
+				"message": "FF22018: Invalid request data"
 			}
 		}
 	`)
@@ -407,7 +407,7 @@ func TestServeJSONRPCBatchEmptyData(t *testing.T) {
 			"id": 1,
 			"error": {
 				"code": -32600,
-				"message": "FF20218: Invalid request data"	
+				"message": "FF22018: Invalid request data"	
 			}
 		}
 	`)
@@ -438,7 +438,7 @@ func TestServeJSONRPCBatchBadJSON(t *testing.T) {
 			"id": 1,
 			"error": {
 				"code": -32600,
-				"message": "FF20218: Invalid request data"	
+				"message": "FF22018: Invalid request data"	
 			}
 		}
 	`)

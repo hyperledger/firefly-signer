@@ -20,10 +20,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/config"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,7 +62,7 @@ func TestGetAccountSimpleFilenamesOK(t *testing.T) {
 	defer done()
 
 	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 
 }
 
@@ -89,7 +89,7 @@ func TestListAccountsBadDir(t *testing.T) {
 	defer done()
 	f.path = "!!!"
 	_, err := f.GetAccounts(ctx)
-	assert.Regexp(t, "FF20213", err)
+	assert.Regexp(t, "FF22013", err)
 
 }
 
@@ -126,7 +126,7 @@ func TestSignNotFound(t *testing.T) {
 	_, err := f.Sign(ctx, &ethsigner.Transaction{
 		From: ethtypes.MustNewAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
 	}, 2022)
-	assert.Regexp(t, "FF20214", err)
+	assert.Regexp(t, "FF22014", err)
 
 }
 
@@ -153,7 +153,7 @@ func TestGetAccountBadYAML(t *testing.T) {
 	f.metadataFormat = "yaml"
 
 	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 
 }
 
@@ -164,7 +164,7 @@ func TestGetAccountBadJSON(t *testing.T) {
 	f.metadataFormat = "json"
 
 	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 
 }
 
@@ -178,7 +178,7 @@ func TestInitBadKeyFileTemplate(t *testing.T) {
 
 	ctx := context.Background()
 	_, err := NewFileWallet(ctx)
-	assert.Regexp(t, "FF20216.*keyFileProperty", err)
+	assert.Regexp(t, "FF22016.*keyFileProperty", err)
 }
 
 func TestInitBadPasswordFileTemplate(t *testing.T) {
@@ -191,7 +191,7 @@ func TestInitBadPasswordFileTemplate(t *testing.T) {
 
 	ctx := context.Background()
 	_, err := NewFileWallet(ctx)
-	assert.Regexp(t, "FF20216.*passwordFileProperty", err)
+	assert.Regexp(t, "FF22016.*passwordFileProperty", err)
 }
 
 func TestGetAccountBadTOMLRefKey(t *testing.T) {
@@ -209,7 +209,7 @@ func TestGetAccountBadTOMLRefKey(t *testing.T) {
 	f := ff.(*fileWallet)
 
 	_, err = f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 }
 
 func TestGetAccountNoTemplates(t *testing.T) {
@@ -225,7 +225,7 @@ func TestGetAccountNoTemplates(t *testing.T) {
 	f := ff.(*fileWallet)
 
 	_, err = f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 }
 
 func TestGetAccountBadKeyfile(t *testing.T) {
@@ -237,7 +237,7 @@ func TestGetAccountBadKeyfile(t *testing.T) {
 	f.defaultPasswordFile = "../../test/keystore_toml/1f185718734552d08278aa70f804580bab5fd2b4.pwd"
 
 	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 
 }
 
@@ -250,7 +250,7 @@ func TestGetAccountBadDefaultPasswordfile(t *testing.T) {
 	f.defaultPasswordFile = "!!!"
 
 	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 
 }
 
@@ -261,7 +261,7 @@ func TestGetAccountNoPassword(t *testing.T) {
 	f.metadataPasswordFileProperty = nil
 
 	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 
 }
 
@@ -272,7 +272,7 @@ func TestGetAccountWrongPath(t *testing.T) {
 	f.metadataPasswordFileProperty = nil
 
 	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("5d093e9b41911be5f5c4cf91b108bac5d130fa83"))
-	assert.Regexp(t, "FF20215", err)
+	assert.Regexp(t, "FF22015", err)
 
 }
 
@@ -285,6 +285,6 @@ func TestGetAccountNotFound(t *testing.T) {
 	f.defaultPasswordFile = "!!!"
 
 	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0xFFFF5718734552d08278aa70f804580bab5fd2b4"))
-	assert.Regexp(t, "FF20214", err)
+	assert.Regexp(t, "FF22014", err)
 
 }
