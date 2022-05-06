@@ -73,11 +73,6 @@ type elementaryTypeInfo struct {
 	nMax          uint16     // For suffixes with an N dimension, this is the maximum (inclusive) value
 }
 
-// ElementaryTypeInfo represents the rules for each elementary type understood by this ABI type parser.
-type ElementaryTypeInfo interface {
-	String() string // gives a summary of the rules the elemental type (used in error reporting)
-}
-
 func (et *elementaryTypeInfo) String() string {
 	switch et.suffixType {
 	case suffixTypeMOptional, suffixTypeMRequired:
@@ -111,6 +106,13 @@ var elementaryTypes = map[string]*elementaryTypeInfo{}
 func registerElementaryType(et elementaryTypeInfo) ElementaryTypeInfo {
 	elementaryTypes[et.name] = &et
 	return &et
+}
+
+// ElementaryTypeInfo represents the rules for each elementary type understood by this ABI type parser.
+// You can do an equality check against the appropriate constant, to check if this is the type you are expecting.
+// e.g.
+type ElementaryTypeInfo interface {
+	String() string // gives a summary of the rules the elemental type (used in error reporting)
 }
 
 var (
