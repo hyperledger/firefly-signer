@@ -23,6 +23,7 @@
     "stretchr",
     "Tracef",
     "ufixed",
+    "unmarshalling",
     "Vyper",
     "Warnf",
     "wsclient"
