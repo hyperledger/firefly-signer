@@ -45,7 +45,6 @@ type elementaryTypeInfo struct {
 	name          string     // The name of the type - the alphabetic characters up to an optional suffix
 	suffixType    suffixType // Whether there is a length suffix, and its type
 	defaultSuffix string     // If set and there is no suffix supplied, the following suffix is used
-	tuple         bool       // Whether this is a tuple - which is like an array where each element can have a different type
 	mMin          uint16     // For suffixes with an M dimension, this is the minimum value
 	mMax          uint16     // For suffixes with an M dimension, this is the maximum (inclusive) value
 	mMod          uint16     // If non-zero, then (M % MMod) == 0 must be true
@@ -53,73 +52,107 @@ type elementaryTypeInfo struct {
 	nMax          uint16     // For suffixes with an N dimension, this is the maximum (inclusive) value
 }
 
+// ElementaryTypeInfo represents the rules for each elementary type understood by this ABI type parser.
+type ElementaryTypeInfo interface {
+	// String gives a summary of the rules the elemental type (used in error reporting)
+	String() string
+}
+
+func (et *elementaryTypeInfo) String() string {
+	switch et.suffixType {
+	case suffixTypeMOptional, suffixTypeMRequired:
+		s := fmt.Sprintf("%s<M> (%d <= M <= %d)", et.name, et.mMin, et.mMax)
+		if et.mMod != 0 {
+			s = fmt.Sprintf("%s (M mod %d == 0)", s, et.mMod)
+		}
+		if et.suffixType == suffixTypeMOptional {
+			s = fmt.Sprintf("%s / %s", et.name, s)
+		}
+		if et.defaultSuffix != "" {
+			s = fmt.Sprintf("%s (%s == %s%s)", s, et.name, et.name, et.defaultSuffix)
+		}
+		return s
+	case suffixTypeMxNRequired:
+		s := fmt.Sprintf("%s<M>x<N> (%d <= M <= %d) (%d <= N <= %d)", et.name, et.mMin, et.mMax, et.nMin, et.nMax)
+		if et.mMod != 0 {
+			s = fmt.Sprintf("%s (M mod %d == 0)", s, et.mMod)
+		}
+		if et.defaultSuffix != "" {
+			s = fmt.Sprintf("%s (%s == %s%s)", s, et.name, et.name, et.defaultSuffix)
+		}
+		return s
+	default:
+		return et.name
+	}
+}
+
 var elementaryTypes = map[string]*elementaryTypeInfo{}
 
-func registerElementaryType(et elementaryTypeInfo) *elementaryTypeInfo {
+func registerElementaryType(et elementaryTypeInfo) ElementaryTypeInfo {
 	elementaryTypes[et.name] = &et
 	return &et
 }
 
 var (
-	elementaryTypeInt = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeInt = registerElementaryType(elementaryTypeInfo{
 		name:          "int",
 		suffixType:    suffixTypeMRequired,
 		defaultSuffix: "256",
-		mMin:          0,
+		mMin:          8,
 		mMax:          256,
 		mMod:          8,
 	})
-	elementaryTypeUint = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeUint = registerElementaryType(elementaryTypeInfo{
 		name:          "uint",
 		suffixType:    suffixTypeMRequired,
 		defaultSuffix: "256",
-		mMin:          0,
+		mMin:          8,
 		mMax:          256,
 		mMod:          8,
 	})
-	elementaryTypeAddress = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeAddress = registerElementaryType(elementaryTypeInfo{
 		name:       "address",
 		suffixType: suffixTypeNone,
 	})
-	elementaryTypeBool = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
 		name:       "bool",
 		suffixType: suffixTypeNone,
 	})
-	elementaryTypeFixed = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeFixed = registerElementaryType(elementaryTypeInfo{
 		name:          "fixed",
 		suffixType:    suffixTypeMxNRequired,
 		defaultSuffix: "128x18",
-		mMin:          0,
+		mMin:          8,
 		mMax:          256,
 		mMod:          8,
-		nMin:          0,
+		nMin:          1,
 		nMax:          80,
 	})
-	elementaryTypeUfixed = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeUfixed = registerElementaryType(elementaryTypeInfo{
 		name:          "ufixed",
 		suffixType:    suffixTypeMxNRequired,
 		defaultSuffix: "128x18",
-		mMin:          0,
+		mMin:          8,
 		mMax:          256,
 		mMod:          8,
-		nMin:          0,
+		nMin:          1,
 		nMax:          80,
 	})
-	elementaryTypeBytes = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeBytes = registerElementaryType(elementaryTypeInfo{
 		name:       "bytes",
 		suffixType: suffixTypeMOptional, // note that "bytes" without a suffix is a special dynamic sized byte sequence
-		mMin:       0,
+		mMin:       1,
 		mMax:       32,
 	})
-	elementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
 		name:       "function",
 		suffixType: suffixTypeNone,
 	})
-	elementaryTypeString = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeString = registerElementaryType(elementaryTypeInfo{
 		name:       "string",
 		suffixType: suffixTypeNone,
 	})
-	elementaryTypeTuple = registerElementaryType(elementaryTypeInfo{
+	ElementaryTypeTuple = registerElementaryType(elementaryTypeInfo{
 		name:       "tuple",
 		suffixType: suffixTypeNone,
 	})
@@ -187,8 +220,11 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 
 	// Split what's left of the string into the suffix, and any array definitions
 	suffix, arrays := splitElementaryTypeSuffix(abiTypeString, len(etStr))
+	if suffix == "" {
+		suffix = et.defaultSuffix
+	}
 
-	if et == elementaryTypeTuple {
+	if et == ElementaryTypeTuple {
 		tc = &typeComponent{
 			cType:         tupleComponent,
 			tupleChildren: make([]*typeComponent, len(p.Components)),
@@ -209,11 +245,11 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 		switch et.suffixType {
 		case suffixTypeNone:
 			if suffix != "" {
-				return nil, i18n.NewError(ctx, i18n.MsgUnsupportedABISuffix, suffix, abiTypeString)
+				return nil, i18n.NewError(ctx, i18n.MsgUnsupportedABISuffix, suffix, abiTypeString, et)
 			}
 		case suffixTypeMRequired:
 			if suffix == "" {
-				return nil, i18n.NewError(ctx, i18n.MsgMissingABISuffixM, et.name, abiTypeString)
+				return nil, i18n.NewError(ctx, i18n.MsgMissingABISuffix, abiTypeString, et)
 			}
 			if err := parseMSuffix(ctx, abiTypeString, tc, suffix); err != nil {
 				return nil, err
@@ -226,7 +262,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 			}
 		case suffixTypeMxNRequired:
 			if suffix == "" {
-				return nil, i18n.NewError(ctx, i18n.MsgMissingABISuffixMxN, et.name, abiTypeString)
+				return nil, i18n.NewError(ctx, i18n.MsgMissingABISuffix, abiTypeString, et)
 			}
 			if err := parseMxNSuffix(ctx, abiTypeString, tc, suffix); err != nil {
 				return nil, err
@@ -259,14 +295,14 @@ func splitElementaryTypeSuffix(abiTypeString string, pos int) (string, string) {
 func parseMSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, suffix string) error {
 	val, err := strconv.ParseUint(suffix, 10, 16)
 	if err != nil {
-		return i18n.WrapError(ctx, err, i18n.MsgInvalidABINumericSuffix, abiTypeString)
+		return i18n.WrapError(ctx, err, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	ec.m = uint16(val)
 	if ec.m < ec.elementaryType.mMin || ec.m > ec.elementaryType.mMax {
-		return i18n.NewError(ctx, i18n.MsgInvalidABINumericSuffix, abiTypeString)
+		return i18n.NewError(ctx, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	if ec.elementaryType.mMod != 0 && (ec.m%ec.elementaryType.mMod) != 0 {
-		return i18n.NewError(ctx, i18n.MsgInvalidABINumericSuffix, abiTypeString)
+		return i18n.NewError(ctx, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	return nil
 }
@@ -275,11 +311,11 @@ func parseMSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, 
 func parseNSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, suffix string) error {
 	val, err := strconv.ParseUint(suffix, 10, 16)
 	if err != nil {
-		return i18n.WrapError(ctx, err, i18n.MsgInvalidABINumericSuffix, abiTypeString)
+		return i18n.WrapError(ctx, err, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	ec.n = uint16(val)
-	if ec.m < ec.elementaryType.nMin || ec.m > ec.elementaryType.nMax {
-		return i18n.NewError(ctx, i18n.MsgInvalidABINumericSuffix, abiTypeString)
+	if ec.n < ec.elementaryType.nMin || ec.n > ec.elementaryType.nMax {
+		return i18n.NewError(ctx, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	return nil
 }
@@ -288,31 +324,24 @@ func parseNSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, 
 func parseMxNSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, suffix string) error {
 	pos := 0
 	mStr := new(strings.Builder)
-	for ; pos < len(suffix) && suffix[pos] >= '0' && suffix[pos] <= '9'; pos++ {
+	for ; pos < len(suffix) && suffix[pos] != 'x'; pos++ {
 		mStr.WriteByte(suffix[pos])
 	}
-	if pos >= (len(suffix)-1) || suffix[pos] != 'x' {
-		return i18n.NewError(ctx, i18n.MsgInvalidABISuffixMxN, ec.elementaryType.name, abiTypeString)
+	if pos >= (len(suffix) - 1) {
+		return i18n.NewError(ctx, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
+	pos++
 	if err := parseMSuffix(ctx, abiTypeString, ec, mStr.String()); err != nil {
 		return err
 	}
-	pos++
-	nStr := new(strings.Builder)
-	for ; pos < len(suffix) && suffix[pos] >= '0' && suffix[pos] <= '9'; pos++ {
-		nStr.WriteByte(suffix[pos])
-	}
-	if pos != len(suffix) {
-		return i18n.NewError(ctx, i18n.MsgInvalidABISuffixMxN, ec.elementaryType.name, abiTypeString)
-	}
-	return parseNSuffix(ctx, abiTypeString, ec, nStr.String())
+	return parseNSuffix(ctx, abiTypeString, ec, suffix[pos:])
 }
 
 // parseArrayM parses the "8" in "uint256[8]" for a fixed length array of <type>[M]
 func parseArrayM(ctx context.Context, abiTypeString string, ac *typeComponent, mStr string) error {
 	val, err := strconv.ParseUint(mStr, 10, 64)
 	if err != nil {
-		return i18n.WrapError(ctx, err, i18n.MsgInvalidABINumericSuffix, abiTypeString)
+		return i18n.WrapError(ctx, err, i18n.MsgInvalidABIArraySpec, abiTypeString)
 	}
 	ac.arrayLength = uint32(val)
 	return nil
@@ -326,12 +355,13 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 		return nil, i18n.NewError(ctx, i18n.MsgInvalidABIArraySpec, abiTypeString)
 	}
 	mStr := new(strings.Builder)
-	for pos++; pos < len(suffix) && suffix[pos] >= '0' && suffix[pos] <= '9'; pos++ {
+	for pos++; pos < len(suffix) && suffix[pos] != ']'; pos++ {
 		mStr.WriteByte(suffix[pos])
 	}
-	if pos >= len(suffix) || suffix[pos] != ']' {
+	if pos >= len(suffix) {
 		return nil, i18n.NewError(ctx, i18n.MsgInvalidABIArraySpec, abiTypeString)
 	}
+	pos++
 	var ac *typeComponent
 	if mStr.Len() == 0 {
 		ac = &typeComponent{
