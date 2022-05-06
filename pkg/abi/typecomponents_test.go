@@ -661,7 +661,7 @@ func TestABIMismatchedArrayClose(t *testing.T) {
 func TestTypeComponentStringInvalid(t *testing.T) {
 
 	tc := &typeComponent{
-		cType: cType(-1),
+		cType: ComponentType(-1),
 	}
 	assert.Empty(t, tc.String())
 

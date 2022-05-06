@@ -25,11 +25,32 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 )
 
-// typeComponent is a modelled representation of an component of an ABI type.
+// TypeComponent is a modelled representation of a component of an ABI type.
 // We don't just go to the tuple level, we go down all the way through the arrays too.
 // This breaks things down into the way in which they are serialized/parsed.
+// Example "((uint256,string[2],string[])[][3][],string)" becomes:
+// - tuple1
+//   - variable size array
+//      - fixed size [3] array
+//         - variable size array
+//            - tuple2
+//               - uint256
+//               - fixed size [2] array
+//                  - string
+//               - variable size array
+//                   - string
+//   - string
+// This thus matches the way a JSON structure would exist to supply values in
+type TypeComponent interface {
+	String() string                     // gives the signature for this type level of the type component hierarchy
+	ComponentType() ComponentType       // classification of the component type (tuple, array or elemental)
+	ElementaryType() ElementaryTypeInfo // only non-nil for elementary components
+	ArrayChild() TypeComponent          // only non-nil for array components
+	TupleChildren() []TypeComponent     // only non-nil for tuple components
+}
+
 type typeComponent struct {
-	cType            cType               // Is this parameter an elementary type, an array, or a tuple
+	cType            ComponentType       // Is this parameter an elementary type, an array, or a tuple
 	elementaryType   *elementaryTypeInfo // for elementary types - the type info reference
 	elementarySuffix string              // for elementary types - the suffix
 	m                uint16              // M dimension of elementary type suffix
@@ -54,8 +75,7 @@ type elementaryTypeInfo struct {
 
 // ElementaryTypeInfo represents the rules for each elementary type understood by this ABI type parser.
 type ElementaryTypeInfo interface {
-	// String gives a summary of the rules the elemental type (used in error reporting)
-	String() string
+	String() string // gives a summary of the rules the elemental type (used in error reporting)
 }
 
 func (et *elementaryTypeInfo) String() string {
@@ -167,24 +187,24 @@ const (
 	suffixTypeMxNRequired                   // There is a two-dimensional suffix - like "fixed128x128"
 )
 
-type cType int
+type ComponentType int
 
 const (
-	elementaryComponent cType = iota
-	fixedArrayComponent
-	variableArrayComponent
-	tupleComponent
+	ElementaryComponent ComponentType = iota
+	FixedArrayComponent
+	VariableArrayComponent
+	TupleComponent
 )
 
 func (tc *typeComponent) String() string {
 	switch tc.cType {
-	case elementaryComponent:
+	case ElementaryComponent:
 		return fmt.Sprintf("%s%s", tc.elementaryType.name, tc.elementarySuffix)
-	case fixedArrayComponent:
+	case FixedArrayComponent:
 		return fmt.Sprintf("%s[%d]", tc.arrayChild.String(), tc.arrayLength)
-	case variableArrayComponent:
+	case VariableArrayComponent:
 		return fmt.Sprintf("%s[]", tc.arrayChild.String())
-	case tupleComponent:
+	case TupleComponent:
 		buff := new(strings.Builder)
 		buff.WriteByte('(')
 		for i, child := range tc.tupleChildren {
@@ -198,6 +218,26 @@ func (tc *typeComponent) String() string {
 	default:
 		return ""
 	}
+}
+
+func (tc *typeComponent) ComponentType() ComponentType {
+	return tc.cType
+}
+
+func (tc *typeComponent) ElementaryType() ElementaryTypeInfo {
+	return tc.elementaryType
+}
+
+func (tc *typeComponent) ArrayChild() TypeComponent {
+	return tc.arrayChild
+}
+
+func (tc *typeComponent) TupleChildren() []TypeComponent {
+	children := make([]TypeComponent, len(tc.tupleChildren))
+	for i, c := range tc.tupleChildren {
+		children[i] = c
+	}
+	return children
 }
 
 func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeComponent, err error) {
@@ -226,7 +266,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 
 	if et == ElementaryTypeTuple {
 		tc = &typeComponent{
-			cType:         tupleComponent,
+			cType:         TupleComponent,
 			tupleChildren: make([]*typeComponent, len(p.Components)),
 		}
 		// Process all the components of the tuple
@@ -237,7 +277,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 		}
 	} else {
 		tc = &typeComponent{
-			cType:            elementaryComponent,
+			cType:            ElementaryComponent,
 			elementaryType:   et,
 			elementarySuffix: suffix,
 		}
@@ -365,12 +405,12 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 	var ac *typeComponent
 	if mStr.Len() == 0 {
 		ac = &typeComponent{
-			cType:      variableArrayComponent,
+			cType:      VariableArrayComponent,
 			arrayChild: child,
 		}
 	} else {
 		ac = &typeComponent{
-			cType:      fixedArrayComponent,
+			cType:      FixedArrayComponent,
 			arrayChild: child,
 		}
 		if err := parseArrayM(ctx, abiTypeString, ac, mStr.String()); err != nil {
