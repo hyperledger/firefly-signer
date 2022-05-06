@@ -174,13 +174,13 @@ func (p *Parameter) SignatureString() (s string, err error) {
 	return p.SignatureStringCtx(context.Background())
 }
 
-func (p *Parameter) SignatureStringCtx(ctx context.Context) (s string, err error) {
-	if p.parsed == nil {
-		if err = p.ParseCtx(ctx); err != nil {
-			return "", err
-		}
+func (p *Parameter) SignatureStringCtx(ctx context.Context) (string, error) {
+	// Ensure the type component tree has been parsed
+	tc, err := p.TypeComponentTreeCtx(ctx)
+	if err != nil {
+		return "", err
 	}
-	return p.parsed.String(), nil
+	return tc.String(), nil
 }
 
 // String returns the signature string. If a Parse needs to be initiated, and that
@@ -191,4 +191,22 @@ func (p *Parameter) String() string {
 		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
 	}
 	return s
+}
+
+// ComponentTypeTree returns the root of the component tree for the parameter.
+// If Parse has not yet been called, it will be called on your behalf.
+//
+// Note if you have modified the structure since Parse was last called, you should
+// call Parse again.
+func (p *Parameter) TypeComponentTree() (TypeComponent, error) {
+	return p.TypeComponentTreeCtx(context.Background())
+}
+
+func (p *Parameter) TypeComponentTreeCtx(ctx context.Context) (TypeComponent, error) {
+	if p.parsed == nil {
+		if err := p.ParseCtx(ctx); err != nil {
+			return nil, err
+		}
+	}
+	return p.parsed, nil
 }

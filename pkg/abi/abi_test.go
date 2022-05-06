@@ -23,6 +23,52 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestABIGetTupleTypeTree(t *testing.T) {
+
+	abiString := `[
+		{
+		  "name": "foo",
+		  "type": "function",
+		  "inputs": [
+			{
+				"name": "a",
+				"type": "tuple",
+				"components": [
+					{
+						"name": "b",
+						"type": "uint"
+					},
+					{
+						"name": "c",
+						"type": "string[]"
+					}
+				]
+			}
+		  ],
+		  "outputs": []
+		}
+	  ]`
+	var abi ABI
+	err := json.Unmarshal([]byte(abiString), &abi)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "foo((uint256,string[]))", abi[0].String())
+	tc, err := abi[0].Inputs[0].TypeComponentTree()
+	assert.NoError(t, err)
+
+	assert.Equal(t, TupleComponent, tc.ComponentType())
+	assert.Len(t, tc.TupleChildren(), 2)
+	assert.Equal(t, "(uint256,string[])", tc.String())
+
+	assert.Equal(t, ElementaryComponent, tc.TupleChildren()[0].ComponentType())
+	assert.Equal(t, ElementaryTypeUint, tc.TupleChildren()[0].ElementaryType())
+
+	assert.Equal(t, VariableArrayComponent, tc.TupleChildren()[1].ComponentType())
+	assert.Equal(t, ElementaryComponent, tc.TupleChildren()[1].ArrayChild().ComponentType())
+	assert.Equal(t, ElementaryTypeString, tc.TupleChildren()[1].ArrayChild().ElementaryType())
+
+}
+
 func TestABIModifyReParse(t *testing.T) {
 
 	abiString := `[
