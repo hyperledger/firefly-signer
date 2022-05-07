@@ -49,127 +49,127 @@ func TestGetIntegerFromInterface(t *testing.T) {
 
 	ctx := context.Background()
 
-	i, err := getIntegerFromInterface(ctx, "-12345")
+	i, err := getIntegerFromInterface(ctx, "ut", "-12345")
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, "0xfeedbeef")
+	i, err = getIntegerFromInterface(ctx, "ut", "0xfeedbeef")
 	assert.NoError(t, err)
 	assert.Equal(t, "4276993775", i.String())
 
-	i, err = getIntegerFromInterface(ctx, "-0xfeedbeef")
+	i, err = getIntegerFromInterface(ctx, "ut", "-0xfeedbeef")
 	assert.NoError(t, err)
 	assert.Equal(t, "-4276993775", i.String())
 
-	i, err = getIntegerFromInterface(ctx, int(-12345))
+	i, err = getIntegerFromInterface(ctx, "ut", int(-12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, int64(-12345))
+	i, err = getIntegerFromInterface(ctx, "ut", int64(-12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, int32(-12345))
+	i, err = getIntegerFromInterface(ctx, "ut", int32(-12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, int16(-12345))
+	i, err = getIntegerFromInterface(ctx, "ut", int16(-12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, int8(-32))
+	i, err = getIntegerFromInterface(ctx, "ut", int8(-32))
 	assert.NoError(t, err)
 	assert.Equal(t, "-32", i.String())
 
-	i, err = getIntegerFromInterface(ctx, uint(12345))
+	i, err = getIntegerFromInterface(ctx, "ut", uint(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, uint64(12345))
+	i, err = getIntegerFromInterface(ctx, "ut", uint64(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, uint32(12345))
+	i, err = getIntegerFromInterface(ctx, "ut", uint32(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, uint16(12345))
+	i, err = getIntegerFromInterface(ctx, "ut", uint16(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, uint8(32))
+	i, err = getIntegerFromInterface(ctx, "ut", uint8(32))
 	assert.NoError(t, err)
 	assert.Equal(t, "32", i.String())
 
-	i, err = getIntegerFromInterface(ctx, float64(12345))
+	i, err = getIntegerFromInterface(ctx, "ut", float64(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, float32(12345))
+	i, err = getIntegerFromInterface(ctx, "ut", float32(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
 	iB := big.NewInt(-12345)
-	i, err = getIntegerFromInterface(ctx, iB)
+	i, err = getIntegerFromInterface(ctx, "ut", iB)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	iF := big.NewFloat(-12345)
-	i, err = getIntegerFromInterface(ctx, iF)
+	i, err = getIntegerFromInterface(ctx, "ut", iF)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	str := "-12345"
-	i, err = getIntegerFromInterface(ctx, &str)
+	i, err = getIntegerFromInterface(ctx, "ut", &str)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	strPtr := &str
-	i, err = getIntegerFromInterface(ctx, &strPtr)
+	i, err = getIntegerFromInterface(ctx, "ut", &strPtr)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, &TestStringable{s: "-12345"})
+	i, err = getIntegerFromInterface(ctx, "ut", &TestStringable{s: "-12345"})
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	var is TestStringCustomType = "-12345"
-	i, err = getIntegerFromInterface(ctx, &is)
+	i, err = getIntegerFromInterface(ctx, "ut", &is)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	var ips TestStringPtrCustomType = strPtr
-	i, err = getIntegerFromInterface(ctx, ips)
+	i, err = getIntegerFromInterface(ctx, "ut", ips)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	var iI64 TestInt64CustomType = -12345
-	i, err = getIntegerFromInterface(ctx, &iI64)
+	i, err = getIntegerFromInterface(ctx, "ut", &iI64)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	i64 := int64(-12345)
 	var iPI64 TestInt64PtrCustomType = &i64
-	i, err = getIntegerFromInterface(ctx, iPI64)
+	i, err = getIntegerFromInterface(ctx, "ut", iPI64)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	var iI32 TestInt32CustomType = -12345
-	i, err = getIntegerFromInterface(ctx, &iI32)
+	i, err = getIntegerFromInterface(ctx, "ut", &iI32)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	i32 := int32(-12345)
 	var iPI32 TestInt32PtrCustomType = &i32
-	i, err = getIntegerFromInterface(ctx, iPI32)
+	i, err = getIntegerFromInterface(ctx, "ut", iPI32)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getIntegerFromInterface(ctx, "wrong")
+	i, err = getIntegerFromInterface(ctx, "ut", "wrong")
 	assert.Regexp(t, "FF00163", err)
 	assert.Nil(t, i)
 
-	i, err = getIntegerFromInterface(ctx, []string{"wrong"})
+	i, err = getIntegerFromInterface(ctx, "ut", []string{"wrong"})
 	assert.Regexp(t, "FF00163", err)
 	assert.Nil(t, i)
 
@@ -179,123 +179,123 @@ func TestGetFloatFromInterface(t *testing.T) {
 
 	ctx := context.Background()
 
-	i, err := getFloatFromInterface(ctx, "-1.2345")
+	i, err := getFloatFromInterface(ctx, "ut", "-1.2345")
 	assert.NoError(t, err)
 	assert.Equal(t, "-1.2345", i.String())
 
-	i, err = getFloatFromInterface(ctx, "0xfeedbeef")
+	i, err = getFloatFromInterface(ctx, "ut", "0xfeedbeef")
 	assert.NoError(t, err)
 	assert.Equal(t, "4276993775", i.String())
 
-	i, err = getFloatFromInterface(ctx, "-0xfeedbeef")
+	i, err = getFloatFromInterface(ctx, "ut", "-0xfeedbeef")
 	assert.NoError(t, err)
 	assert.Equal(t, "-4276993775", i.String())
 
-	i, err = getFloatFromInterface(ctx, int(-12345))
+	i, err = getFloatFromInterface(ctx, "ut", int(-12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, int64(-12345))
+	i, err = getFloatFromInterface(ctx, "ut", int64(-12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, int32(-12345))
+	i, err = getFloatFromInterface(ctx, "ut", int32(-12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, int16(-12345))
+	i, err = getFloatFromInterface(ctx, "ut", int16(-12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, int8(-32))
+	i, err = getFloatFromInterface(ctx, "ut", int8(-32))
 	assert.NoError(t, err)
 	assert.Equal(t, "-32", i.String())
 
-	i, err = getFloatFromInterface(ctx, uint(12345))
+	i, err = getFloatFromInterface(ctx, "ut", uint(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, uint64(12345))
+	i, err = getFloatFromInterface(ctx, "ut", uint64(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, uint32(12345))
+	i, err = getFloatFromInterface(ctx, "ut", uint32(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, uint16(12345))
+	i, err = getFloatFromInterface(ctx, "ut", uint16(12345))
 	assert.NoError(t, err)
 	assert.Equal(t, "12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, uint8(32))
+	i, err = getFloatFromInterface(ctx, "ut", uint8(32))
 	assert.NoError(t, err)
 	assert.Equal(t, "32", i.String())
 
-	i, err = getFloatFromInterface(ctx, float64(-1.2345))
+	i, err = getFloatFromInterface(ctx, "ut", float64(-1.2345))
 	assert.NoError(t, err)
 	assert.Equal(t, "-1.2345", i.String())
 
-	i, err = getFloatFromInterface(ctx, float32(1.2345))
+	i, err = getFloatFromInterface(ctx, "ut", float32(1.2345))
 	assert.NoError(t, err)
 	assert.Equal(t, "1.234500051", i.String())
 
 	iB := big.NewInt(-12345)
-	i, err = getFloatFromInterface(ctx, iB)
+	i, err = getFloatFromInterface(ctx, "ut", iB)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	iF := big.NewFloat(-12345)
-	i, err = getFloatFromInterface(ctx, iF)
+	i, err = getFloatFromInterface(ctx, "ut", iF)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	str := "-12345"
-	i, err = getFloatFromInterface(ctx, &str)
+	i, err = getFloatFromInterface(ctx, "ut", &str)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	strPtr := &str
-	i, err = getFloatFromInterface(ctx, &strPtr)
+	i, err = getFloatFromInterface(ctx, "ut", &strPtr)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	var is TestStringCustomType = "-12345"
-	i, err = getFloatFromInterface(ctx, &is)
+	i, err = getFloatFromInterface(ctx, "ut", &is)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	var ips TestStringPtrCustomType = strPtr
-	i, err = getFloatFromInterface(ctx, ips)
+	i, err = getFloatFromInterface(ctx, "ut", ips)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	var iI64 TestInt64CustomType = -12345
-	i, err = getFloatFromInterface(ctx, &iI64)
+	i, err = getFloatFromInterface(ctx, "ut", &iI64)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	i64 := int64(-12345)
 	var iPI64 TestInt64PtrCustomType = &i64
-	i, err = getFloatFromInterface(ctx, iPI64)
+	i, err = getFloatFromInterface(ctx, "ut", iPI64)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	var iI32 TestInt32CustomType = -12345
-	i, err = getFloatFromInterface(ctx, &iI32)
+	i, err = getFloatFromInterface(ctx, "ut", &iI32)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
 	i32 := int32(-12345)
 	var iPI32 TestInt32PtrCustomType = &i32
-	i, err = getFloatFromInterface(ctx, iPI32)
+	i, err = getFloatFromInterface(ctx, "ut", iPI32)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
 
-	i, err = getFloatFromInterface(ctx, "wrong")
+	i, err = getFloatFromInterface(ctx, "ut", "wrong")
 	assert.Regexp(t, "FF00164", err)
 	assert.Nil(t, i)
 
-	i, err = getFloatFromInterface(ctx, []string{"wrong"})
+	i, err = getFloatFromInterface(ctx, "ut", []string{"wrong"})
 	assert.Regexp(t, "FF00164", err)
 	assert.Nil(t, i)
 
@@ -305,36 +305,36 @@ func TestGetBoolFromInterface(t *testing.T) {
 
 	ctx := context.Background()
 
-	v, err := getBoolFromInterface(ctx, "true")
+	v, err := getBoolFromInterface(ctx, "ut", "true")
 	assert.NoError(t, err)
 	assert.True(t, v)
 
-	v, err = getBoolFromInterface(ctx, "false")
+	v, err = getBoolFromInterface(ctx, "ut", "false")
 	assert.NoError(t, err)
 	assert.False(t, v)
 
-	v, err = getBoolFromInterface(ctx, true)
+	v, err = getBoolFromInterface(ctx, "ut", true)
 	assert.NoError(t, err)
 	assert.True(t, v)
 
-	v, err = getBoolFromInterface(ctx, false)
+	v, err = getBoolFromInterface(ctx, "ut", false)
 	assert.NoError(t, err)
 	assert.False(t, v)
 
 	vTrue := true
-	v, err = getBoolFromInterface(ctx, &vTrue)
+	v, err = getBoolFromInterface(ctx, "ut", &vTrue)
 	assert.NoError(t, err)
 	assert.True(t, v)
 
 	var is TestStringCustomType = "true"
-	v, err = getBoolFromInterface(ctx, &is)
+	v, err = getBoolFromInterface(ctx, "ut", &is)
 	assert.NoError(t, err)
 	assert.True(t, v)
 
-	_, err = getBoolFromInterface(ctx, int(-12345))
+	_, err = getBoolFromInterface(ctx, "ut", int(-12345))
 	assert.Regexp(t, "FF00166", err)
 
-	_, err = getBoolFromInterface(ctx, []bool{true})
+	_, err = getBoolFromInterface(ctx, "ut", []bool{true})
 	assert.Regexp(t, "FF00166", err)
 
 }
@@ -343,42 +343,42 @@ func TestGetStringFromInterface(t *testing.T) {
 
 	ctx := context.Background()
 
-	s, err := getStringFromInterface(ctx, "test data")
+	s, err := getStringFromInterface(ctx, "ut", "test data")
 	assert.NoError(t, err)
 	assert.Equal(t, "test data", s)
 
-	s, err = getStringFromInterface(ctx, "test data")
+	s, err = getStringFromInterface(ctx, "ut", "test data")
 	assert.NoError(t, err)
 	assert.Equal(t, "test data", s)
 
-	s, err = getStringFromInterface(ctx, []byte("test data"))
+	s, err = getStringFromInterface(ctx, "ut", []byte("test data"))
 	assert.NoError(t, err)
 	assert.Equal(t, "test data", s)
 
 	str := "test data"
-	s, err = getStringFromInterface(ctx, &str)
+	s, err = getStringFromInterface(ctx, "ut", &str)
 	assert.NoError(t, err)
 	assert.Equal(t, "test data", s)
 
 	strPtr := &str
-	s, err = getStringFromInterface(ctx, &strPtr)
+	s, err = getStringFromInterface(ctx, "ut", &strPtr)
 	assert.NoError(t, err)
 	assert.Equal(t, "test data", s)
 
 	var is TestStringCustomType = "test data"
-	s, err = getStringFromInterface(ctx, &is)
+	s, err = getStringFromInterface(ctx, "ut", &is)
 	assert.NoError(t, err)
 	assert.Equal(t, "test data", s)
 
 	var ips TestStringPtrCustomType = strPtr
-	s, err = getStringFromInterface(ctx, ips)
+	s, err = getStringFromInterface(ctx, "ut", ips)
 	assert.NoError(t, err)
 	assert.Equal(t, "test data", s)
 
-	_, err = getStringFromInterface(ctx, int(-12345))
+	_, err = getStringFromInterface(ctx, "ut", int(-12345))
 	assert.Regexp(t, "FF00165", err)
 
-	_, err = getStringFromInterface(ctx, []string{"wrong"})
+	_, err = getStringFromInterface(ctx, "ut", []string{"wrong"})
 	assert.Regexp(t, "FF00165", err)
 
 }
@@ -387,49 +387,49 @@ func TestGetBytesFromInterface(t *testing.T) {
 
 	ctx := context.Background()
 
-	s, err := getBytesFromInterface(ctx, "0xfeedbeef")
+	s, err := getBytesFromInterface(ctx, "ut", "0xfeedbeef")
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
-	s, err = getBytesFromInterface(ctx, "feedbeef")
+	s, err = getBytesFromInterface(ctx, "ut", "feedbeef")
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
-	s, err = getBytesFromInterface(ctx, []byte{0xfe, 0xed, 0xbe, 0xef})
+	s, err = getBytesFromInterface(ctx, "ut", []byte{0xfe, 0xed, 0xbe, 0xef})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
-	s, err = getBytesFromInterface(ctx, []byte{0xfe, 0xed, 0xbe, 0xef})
+	s, err = getBytesFromInterface(ctx, "ut", []byte{0xfe, 0xed, 0xbe, 0xef})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
 	bv := []byte{0xfe, 0xed, 0xbe, 0xef}
-	s, err = getBytesFromInterface(ctx, &bv)
+	s, err = getBytesFromInterface(ctx, "ut", &bv)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
 	var bt TestByteArrayCustomType = []byte{0xfe, 0xed, 0xbe, 0xef}
-	s, err = getBytesFromInterface(ctx, bt)
+	s, err = getBytesFromInterface(ctx, "ut", bt)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
 	var bpt TestByteArrayPtrCustomType = &bv
-	s, err = getBytesFromInterface(ctx, bpt)
+	s, err = getBytesFromInterface(ctx, "ut", bpt)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
 	var is TestStringCustomType = "0xfeedbeef"
-	s, err = getBytesFromInterface(ctx, &is)
+	s, err = getBytesFromInterface(ctx, "ut", &is)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
-	_, err = getBytesFromInterface(ctx, int(-12345))
+	_, err = getBytesFromInterface(ctx, "ut", int(-12345))
 	assert.Regexp(t, "FF00167", err)
 
-	_, err = getBytesFromInterface(ctx, []string{"wrong"})
+	_, err = getBytesFromInterface(ctx, "ut", []string{"wrong"})
 	assert.Regexp(t, "FF00167", err)
 
-	_, err = getBytesFromInterface(ctx, "wrong")
+	_, err = getBytesFromInterface(ctx, "ut", "wrong")
 	assert.Regexp(t, "FF00167", err)
 
 }
