@@ -47,6 +47,8 @@ type TypeComponent interface {
 	ElementaryType() ElementaryTypeInfo // only non-nil for elementary components
 	ArrayChild() TypeComponent          // only non-nil for array components
 	TupleChildren() []TypeComponent     // only non-nil for tuple components
+	ParseExternal(v interface{}) (*ComponentValue, error)
+	ParseExternalCtx(ctx context.Context, v interface{}) (*ComponentValue, error)
 }
 
 type typeComponent struct {
@@ -55,8 +57,9 @@ type typeComponent struct {
 	elementarySuffix string              // for elementary types - the suffix
 	m                uint16              // M dimension of elementary type suffix
 	n                uint16              // N dimension of elementary type suffix
-	arrayLength      uint32              // The length of a fixed length array
+	arrayLength      int                 // The length of a fixed length array
 	arrayChild       *typeComponent      // For array parameter
+	keyName          string              // For top level ABI entries, and tuple children
 	tupleChildren    []*typeComponent    // For tuple parameters
 }
 
@@ -71,6 +74,7 @@ type elementaryTypeInfo struct {
 	mMod          uint16     // If non-zero, then (M % MMod) == 0 must be true
 	nMin          uint16     // For suffixes with an N dimension, this is the minimum value
 	nMax          uint16     // For suffixes with an N dimension, this is the maximum (inclusive) value
+	readInput     func(ctx context.Context, desc string, input interface{}) (interface{}, error)
 }
 
 func (et *elementaryTypeInfo) String() string {
@@ -115,6 +119,10 @@ type ElementaryTypeInfo interface {
 	String() string // gives a summary of the rules the elemental type (used in error reporting)
 }
 
+// tupleTypeString appears in the same place in the ABI as elementary type strings, but it is not an elementary type.
+// We treat it separately.
+const tupleTypeString = "tuple"
+
 var (
 	ElementaryTypeInt = registerElementaryType(elementaryTypeInfo{
 		name:          "int",
@@ -123,6 +131,9 @@ var (
 		mMin:          8,
 		mMax:          256,
 		mMod:          8,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getIntegerFromInterface(ctx, desc, input)
+		},
 	})
 	ElementaryTypeUint = registerElementaryType(elementaryTypeInfo{
 		name:          "uint",
@@ -131,14 +142,23 @@ var (
 		mMin:          8,
 		mMax:          256,
 		mMod:          8,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getIntegerFromInterface(ctx, desc, input)
+		},
 	})
 	ElementaryTypeAddress = registerElementaryType(elementaryTypeInfo{
 		name:       "address",
 		suffixType: suffixTypeNone,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getBytesFromInterface(ctx, desc, input)
+		},
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
 		name:       "bool",
 		suffixType: suffixTypeNone,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getBoolFromInterface(ctx, desc, input)
+		},
 	})
 	ElementaryTypeFixed = registerElementaryType(elementaryTypeInfo{
 		name:          "fixed",
@@ -149,6 +169,9 @@ var (
 		mMod:          8,
 		nMin:          1,
 		nMax:          80,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getFloatFromInterface(ctx, desc, input)
+		},
 	})
 	ElementaryTypeUfixed = registerElementaryType(elementaryTypeInfo{
 		name:          "ufixed",
@@ -159,24 +182,32 @@ var (
 		mMod:          8,
 		nMin:          1,
 		nMax:          80,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getFloatFromInterface(ctx, desc, input)
+		},
 	})
 	ElementaryTypeBytes = registerElementaryType(elementaryTypeInfo{
 		name:       "bytes",
 		suffixType: suffixTypeMOptional, // note that "bytes" without a suffix is a special dynamic sized byte sequence
 		mMin:       1,
 		mMax:       32,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getBytesFromInterface(ctx, desc, input)
+		},
 	})
 	ElementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
 		name:       "function",
 		suffixType: suffixTypeNone,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getBytesFromInterface(ctx, desc, input)
+		},
 	})
 	ElementaryTypeString = registerElementaryType(elementaryTypeInfo{
 		name:       "string",
 		suffixType: suffixTypeNone,
-	})
-	ElementaryTypeTuple = registerElementaryType(elementaryTypeInfo{
-		name:       "tuple",
-		suffixType: suffixTypeNone,
+		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+			return getStringFromInterface(ctx, desc, input)
+		},
 	})
 )
 
@@ -242,6 +273,18 @@ func (tc *typeComponent) TupleChildren() []TypeComponent {
 	return children
 }
 
+func (tc *typeComponent) ParseExternal(input interface{}) (*ComponentValue, error) {
+	return tc.ParseExternalCtx(context.Background(), input)
+}
+
+func (tc *typeComponent) ParseExternalCtx(ctx context.Context, input interface{}) (*ComponentValue, error) {
+	return tc.parseExternal(ctx, "", input)
+}
+
+func (tc *typeComponent) parseExternal(ctx context.Context, desc string, input interface{}) (*ComponentValue, error) {
+	return walkInput(ctx, desc, input, tc)
+}
+
 func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeComponent, err error) {
 	abiTypeString := p.Type
 
@@ -255,21 +298,15 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 		}
 	}
 	etStr := etBuilder.String()
-	et, ok := elementaryTypes[etStr]
-	if !ok {
-		return nil, i18n.NewError(ctx, i18n.MsgUnsupportedABIType, etStr, abiTypeString)
-	}
 
 	// Split what's left of the string into the suffix, and any array definitions
 	suffix, arrays := splitElementaryTypeSuffix(abiTypeString, len(etStr))
-	if suffix == "" {
-		suffix = et.defaultSuffix
-	}
 
-	if et == ElementaryTypeTuple {
+	if etStr == tupleTypeString {
 		tc = &typeComponent{
 			cType:         TupleComponent,
 			tupleChildren: make([]*typeComponent, len(p.Components)),
+			keyName:       p.Name,
 		}
 		// Process all the components of the tuple
 		for i, c := range p.Components {
@@ -278,10 +315,18 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 			}
 		}
 	} else {
+		et, ok := elementaryTypes[etStr]
+		if !ok {
+			return nil, i18n.NewError(ctx, i18n.MsgUnsupportedABIType, etStr, abiTypeString)
+		}
+		if suffix == "" {
+			suffix = et.defaultSuffix
+		}
 		tc = &typeComponent{
 			cType:            ElementaryComponent,
 			elementaryType:   et,
 			elementarySuffix: suffix,
+			keyName:          p.Name,
 		}
 		// Process any suffix according to the rules of the elementary type
 		switch et.suffixType {
@@ -314,7 +359,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 
 	if arrays != "" {
 		// The component needs to be wrapped in some number of array dimensions
-		return parseArrays(ctx, abiTypeString, tc, arrays)
+		return parseArrays(ctx, abiTypeString, tc, arrays, p.Name)
 	}
 
 	return tc, nil
@@ -385,12 +430,12 @@ func parseArrayM(ctx context.Context, abiTypeString string, ac *typeComponent, m
 	if err != nil {
 		return i18n.WrapError(ctx, err, i18n.MsgInvalidABIArraySpec, abiTypeString)
 	}
-	ac.arrayLength = uint32(val)
+	ac.arrayLength = int(val)
 	return nil
 }
 
 // parseArrays recursively builds arrays for the "[8][]" part of "uint256[8][]" for variable or fixed array types
-func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent, suffix string) (*typeComponent, error) {
+func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent, suffix, keyName string) (*typeComponent, error) {
 
 	pos := 0
 	if pos >= len(suffix) || suffix[pos] != '[' {
@@ -409,11 +454,13 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 		ac = &typeComponent{
 			cType:      VariableArrayComponent,
 			arrayChild: child,
+			keyName:    keyName,
 		}
 	} else {
 		ac = &typeComponent{
 			cType:      FixedArrayComponent,
 			arrayChild: child,
+			keyName:    keyName,
 		}
 		if err := parseArrayM(ctx, abiTypeString, ac, mStr.String()); err != nil {
 			return nil, err
@@ -422,7 +469,7 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 
 	// We might have more dimensions to the array - if so recurse
 	if pos < len(suffix) {
-		return parseArrays(ctx, abiTypeString, ac, suffix[pos:])
+		return parseArrays(ctx, abiTypeString, ac, suffix[pos:], "")
 	}
 
 	// We're the last array in the chain

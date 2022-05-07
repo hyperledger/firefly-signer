@@ -18,38 +18,40 @@ package abi
 
 import (
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+const sampleABI1 = `[
+	{
+	  "name": "foo",
+	  "type": "function",
+	  "inputs": [
+		{
+			"name": "a",
+			"type": "tuple",
+			"components": [
+				{
+					"name": "b",
+					"type": "uint"
+				},
+				{
+					"name": "c",
+					"type": "string[]"
+				}
+			]
+		}
+	  ],
+	  "outputs": []
+	}
+  ]`
+
 func TestABIGetTupleTypeTree(t *testing.T) {
 
-	abiString := `[
-		{
-		  "name": "foo",
-		  "type": "function",
-		  "inputs": [
-			{
-				"name": "a",
-				"type": "tuple",
-				"components": [
-					{
-						"name": "b",
-						"type": "uint"
-					},
-					{
-						"name": "c",
-						"type": "string[]"
-					}
-				]
-			}
-		  ],
-		  "outputs": []
-		}
-	  ]`
 	var abi ABI
-	err := json.Unmarshal([]byte(abiString), &abi)
+	err := json.Unmarshal([]byte(sampleABI1), &abi)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "foo((uint256,string[]))", abi[0].String())
@@ -95,7 +97,7 @@ func TestABIModifyReParse(t *testing.T) {
 	assert.Equal(t, "foo(uint256)", abi[0].String())
 
 	// Re-parse sorts it
-	abi.Parse()
+	abi.Validate()
 	assert.Equal(t, "foo(uint128)", abi[0].String())
 
 }
@@ -121,13 +123,13 @@ func TestABIModifyBadInputs(t *testing.T) {
 
 	assert.Empty(t, abi[0].String())
 
-	err = abi.Parse()
+	err = abi.Validate()
 	assert.Regexp(t, "FF00161", err)
 
-	err = abi[0].Parse()
+	err = abi[0].Validate()
 	assert.Regexp(t, "FF00161", err)
 
-	err = abi[0].Inputs[0].Parse()
+	err = abi[0].Inputs[0].Validate()
 	assert.Regexp(t, "FF00161", err)
 
 	assert.Empty(t, abi[0].Inputs[0].String())
@@ -153,15 +155,80 @@ func TestABIModifyBadOutputs(t *testing.T) {
 	err := json.Unmarshal([]byte(abiString), &abi)
 	assert.NoError(t, err)
 
-	err = abi.Parse()
+	err = abi.Validate()
 	assert.Regexp(t, "FF00161", err)
 
-	err = abi[0].Parse()
+	err = abi[0].Validate()
 	assert.Regexp(t, "FF00161", err)
 
-	err = abi[0].Outputs[0].Parse()
+	err = abi[0].Outputs[0].Validate()
 	assert.Regexp(t, "FF00161", err)
 
 	assert.Empty(t, abi[0].Outputs[0].String())
+
+}
+
+func TestABIParseObjectOk(t *testing.T) {
+
+	var abi ABI
+	err := json.Unmarshal([]byte(sampleABI1), &abi)
+	assert.NoError(t, err)
+	inputs := abi[0].Inputs
+
+	values := `{
+		"a": {
+			"b": 12345,
+			"c": ["string1", "string2"]
+		}
+	}`
+	var jv interface{}
+	err = json.Unmarshal([]byte(values), &jv)
+	assert.NoError(t, err)
+
+	cv, err := inputs.ParseExternalData(jv)
+	assert.NoError(t, err)
+	assert.NotNil(t, cv)
+
+	assert.Equal(t, "12345", cv.Children[0].Children[0].Value.(*big.Int).String())
+	assert.Equal(t, "string1", cv.Children[0].Children[1].Children[0].Value)
+	assert.Equal(t, "string2", cv.Children[0].Children[1].Children[1].Value)
+
+}
+
+func TestABIParseArrayOk(t *testing.T) {
+
+	var abi ABI
+	err := json.Unmarshal([]byte(sampleABI1), &abi)
+	assert.NoError(t, err)
+	inputs := abi[0].Inputs
+
+	values := `[
+		[
+			12345,
+			["string1", "string2"]
+		]
+	]`
+
+	cv, err := inputs.ParseExternalJSON([]byte(values))
+	assert.NoError(t, err)
+	assert.NotNil(t, cv)
+
+	assert.Equal(t, "12345", cv.Children[0].Children[0].Value.(*big.Int).String())
+	assert.Equal(t, "string1", cv.Children[0].Children[1].Children[0].Value)
+	assert.Equal(t, "string2", cv.Children[0].Children[1].Children[1].Value)
+
+}
+
+func TestABIParseMissingRoot(t *testing.T) {
+
+	var abi ABI
+	err := json.Unmarshal([]byte(sampleABI1), &abi)
+	assert.NoError(t, err)
+	inputs := abi[0].Inputs
+
+	values := `{}`
+
+	_, err = inputs.ParseExternalJSON([]byte(values))
+	assert.Regexp(t, "FF00173", err)
 
 }
