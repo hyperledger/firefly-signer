@@ -207,7 +207,7 @@ func TestABIUnknownType(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00158.*lobster", err)
+	assert.Regexp(t, "FF22025.*lobster", err)
 
 }
 
@@ -237,7 +237,7 @@ func TestABIInvalidArrayInNested(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161.*uint{}", err)
+	assert.Regexp(t, "FF22028.*uint{}", err)
 
 }
 
@@ -261,7 +261,7 @@ func TestABIUnexpectedSuffix(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00159", err)
+	assert.Regexp(t, "FF22026", err)
 
 }
 
@@ -289,7 +289,7 @@ func TestABIMissingMSuffix(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00160", err)
+	assert.Regexp(t, "FF22027", err)
 
 }
 
@@ -317,7 +317,7 @@ func TestABIMissingMxNSuffix(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00160", err)
+	assert.Regexp(t, "FF22027", err)
 
 }
 
@@ -341,7 +341,7 @@ func TestABIBadMSuffixTooBig(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -365,7 +365,7 @@ func TestABIBadMSuffixTooSmall(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -389,7 +389,7 @@ func TestABIBadMSuffixNonDecimal(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -413,7 +413,7 @@ func TestABIBadMSuffixNotMod8(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -437,7 +437,7 @@ func TestABIBadNSuffixTooBig(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -461,7 +461,7 @@ func TestABIBadNSuffixTooSmall(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -485,7 +485,7 @@ func TestABIBadMInMxNSuffixNonDecimal(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -509,7 +509,7 @@ func TestABIMissingNInMxNSuffixNonDecimal(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -533,7 +533,7 @@ func TestABIBadNSuffixNonDecimal(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -557,7 +557,7 @@ func TestABIBadNSuffixOptionalTooBig(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -581,7 +581,7 @@ func TestABIBadNSuffixOptionalTooSmall(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 }
 
@@ -605,7 +605,7 @@ func TestABIBadArrayMDimension(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00162", err)
+	assert.Regexp(t, "FF22029", err)
 
 }
 
@@ -629,7 +629,7 @@ func TestABIMissingArrayClose(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00162", err)
+	assert.Regexp(t, "FF22029", err)
 
 }
 
@@ -653,7 +653,7 @@ func TestABIMismatchedArrayClose(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = abi[0].Signature()
-	assert.Regexp(t, "FF00162", err)
+	assert.Regexp(t, "FF22029", err)
 
 }
 
@@ -663,5 +663,17 @@ func TestTypeComponentStringInvalid(t *testing.T) {
 		cType: ComponentType(-1),
 	}
 	assert.Empty(t, tc.String())
+
+}
+
+func TestTypeComponentParseExternalOk(t *testing.T) {
+
+	tc := &typeComponent{
+		cType:          ElementaryComponent,
+		elementaryType: ElementaryTypeString.(*elementaryTypeInfo),
+	}
+	cv, err := tc.ParseExternal("test")
+	assert.NoError(t, err)
+	assert.Equal(t, "test", cv.Value)
 
 }

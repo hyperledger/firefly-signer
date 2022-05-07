@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
 var (
@@ -53,6 +54,9 @@ func getPtrValOrNil(v interface{}) interface{} {
 // getStringIfConvertible returns a string if it can be converted, and a bool with a result
 func getStringIfConvertible(v interface{}) (string, bool) {
 	vt := reflect.TypeOf(v)
+	if vt == nil {
+		return "", false
+	}
 	// We do a kind check here, rather than convertible check, because almost all low level types
 	// are convertible to string - but you get a horrible results for integers etc.
 	if vt.Kind() == reflect.String {
@@ -67,6 +71,9 @@ func getStringIfConvertible(v interface{}) (string, bool) {
 // getBytesIfConvertible returns a byte array if the type has that kind
 func getBytesIfConvertible(v interface{}) []byte {
 	vt := reflect.TypeOf(v)
+	if vt == nil {
+		return nil
+	}
 	if vt.Kind() == reflect.Slice && vt.Elem().Kind() == reflect.Uint8 {
 		return reflect.ValueOf(v).Bytes()
 	}
@@ -75,7 +82,11 @@ func getBytesIfConvertible(v interface{}) []byte {
 
 // getInt64IfConvertible returns an int64 if it can be converted, and a bool with a result
 func getInt64IfConvertible(v interface{}) (int64, bool) {
-	if reflect.TypeOf(v).ConvertibleTo(int64Type) {
+	vt := reflect.TypeOf(v)
+	if vt == nil {
+		return 0, false
+	}
+	if vt.ConvertibleTo(int64Type) {
 		return reflect.ValueOf(v).Convert(int64Type).Interface().(int64), true
 	}
 	return 0, false
@@ -83,7 +94,11 @@ func getInt64IfConvertible(v interface{}) (int64, bool) {
 
 // getFloat64IfConvertible returns a float64 if it can be converted, and a bool with a result
 func getFloat64IfConvertible(v interface{}) (float64, bool) {
-	if reflect.TypeOf(v).ConvertibleTo(float64Type) {
+	vt := reflect.TypeOf(v)
+	if vt == nil {
+		return 0, false
+	}
+	if vt.ConvertibleTo(float64Type) {
 		return reflect.ValueOf(v).Convert(float64Type).Interface().(float64), true
 	}
 	return 0, false
@@ -100,7 +115,7 @@ func getIntegerFromInterface(ctx context.Context, desc string, v interface{}) (*
 		// no prefix means decimal etc.
 		i, ok := i.SetString(vt, 0)
 		if !ok {
-			return nil, i18n.NewError(ctx, i18n.MsgInvalidIntegerABIInput, vt, v, desc)
+			return nil, i18n.NewError(ctx, signermsgs.MsgInvalidIntegerABIInput, vt, v, desc)
 		}
 		return i, nil
 	case *big.Float:
@@ -156,7 +171,7 @@ func getIntegerFromInterface(ctx context.Context, desc string, v interface{}) (*
 		if i64, ok := getInt64IfConvertible(v); ok {
 			return getIntegerFromInterface(ctx, desc, i64)
 		}
-		return nil, i18n.NewError(ctx, i18n.MsgInvalidIntegerABIInput, vt, v, desc)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidIntegerABIInput, vt, v, desc)
 	}
 }
 
@@ -171,7 +186,7 @@ func getFloatFromInterface(ctx context.Context, desc string, v interface{}) (*bi
 		// no prefix means decimal etc.
 		f, _, err := f.Parse(vt, 0)
 		if err != nil {
-			return nil, i18n.WrapError(ctx, err, i18n.MsgInvalidFloatABIInput, vt, v, desc)
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFloatABIInput, vt, v, desc)
 		}
 		return f, nil
 	case *big.Float:
@@ -226,7 +241,7 @@ func getFloatFromInterface(ctx context.Context, desc string, v interface{}) (*bi
 		if f64, ok := getFloat64IfConvertible(v); ok {
 			return getFloatFromInterface(ctx, desc, f64)
 		}
-		return nil, i18n.NewError(ctx, i18n.MsgInvalidFloatABIInput, vt, v, desc)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidFloatABIInput, vt, v, desc)
 	}
 }
 
@@ -246,7 +261,7 @@ func getBoolFromInterface(ctx context.Context, desc string, v interface{}) (bool
 		if vi != nil {
 			return getBoolFromInterface(ctx, desc, vi)
 		}
-		return false, i18n.NewError(ctx, i18n.MsgInvalidBoolABIInput, vt, v, desc)
+		return false, i18n.NewError(ctx, signermsgs.MsgInvalidBoolABIInput, vt, v, desc)
 	}
 }
 
@@ -267,7 +282,7 @@ func getStringFromInterface(ctx context.Context, desc string, v interface{}) (st
 		if vi != nil {
 			return getStringFromInterface(ctx, desc, vi)
 		}
-		return "", i18n.NewError(ctx, i18n.MsgInvalidStringABIInput, vt, v, desc)
+		return "", i18n.NewError(ctx, signermsgs.MsgInvalidStringABIInput, vt, v, desc)
 	}
 }
 
@@ -281,7 +296,7 @@ func getBytesFromInterface(ctx context.Context, desc string, v interface{}) ([]b
 		vt = strings.TrimPrefix(vt, "0x")
 		hb, err := hex.DecodeString(vt)
 		if err != nil {
-			return nil, i18n.WrapError(ctx, err, i18n.MsgInvalidHexABIInput, vt, v, desc)
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidHexABIInput, vt, v, desc)
 		}
 		return hb, nil
 	default:
@@ -295,7 +310,7 @@ func getBytesFromInterface(ctx context.Context, desc string, v interface{}) ([]b
 		if vi != nil {
 			return getBytesFromInterface(ctx, desc, vi)
 		}
-		return nil, i18n.NewError(ctx, i18n.MsgInvalidHexABIInput, vt, v)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidHexABIInput, vt, v)
 	}
 }
 
@@ -344,18 +359,20 @@ func walkInput(ctx context.Context, breadcrumbs string, input interface{}, compo
 		return walkArrayInput(ctx, breadcrumbs, input, component)
 	case TupleComponent:
 		return walkTupleInput(ctx, breadcrumbs, input, component)
+	default:
+		return nil, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, component.cType)
 	}
-	return cv, err
 
 }
 
 func walkArrayInput(ctx context.Context, breadcrumbs string, input interface{}, component *typeComponent) (cv *ComponentValue, err error) {
-	if reflect.TypeOf(input).Kind() != reflect.Slice {
-		return nil, i18n.NewError(ctx, i18n.MsgMustBeSliceABIInput, input, breadcrumbs)
+	vt := reflect.TypeOf(input)
+	if vt == nil || vt.Kind() != reflect.Slice {
+		return nil, i18n.NewError(ctx, signermsgs.MsgMustBeSliceABIInput, input, breadcrumbs)
 	}
 	iArray := getInterfaceArray(input)
 	if component.cType == FixedArrayComponent && len(iArray) != component.arrayLength {
-		return nil, i18n.NewError(ctx, i18n.MsgFixedLengthABIArrayMismatch, len(iArray), component.arrayLength, breadcrumbs)
+		return nil, i18n.NewError(ctx, signermsgs.MsgFixedLengthABIArrayMismatch, len(iArray), component.arrayLength, breadcrumbs)
 	}
 	cv = &ComponentValue{
 		Component: component,
@@ -374,7 +391,7 @@ func walkArrayInput(ctx context.Context, breadcrumbs string, input interface{}, 
 func walkTupleInputArray(ctx context.Context, breadcrumbs string, input interface{}, component *typeComponent) (cv *ComponentValue, err error) {
 	iArray := getInterfaceArray(input)
 	if len(iArray) != len(component.tupleChildren) {
-		return nil, i18n.NewError(ctx, i18n.MsgTupleABIArrayMismatch, len(iArray), component.arrayLength, breadcrumbs)
+		return nil, i18n.NewError(ctx, signermsgs.MsgTupleABIArrayMismatch, len(iArray), len(component.tupleChildren), breadcrumbs)
 	}
 	cv = &ComponentValue{
 		Component: component,
@@ -391,11 +408,12 @@ func walkTupleInputArray(ctx context.Context, breadcrumbs string, input interfac
 }
 
 func walkTupleInput(ctx context.Context, breadcrumbs string, input interface{}, component *typeComponent) (cv *ComponentValue, err error) {
-	if reflect.TypeOf(input).Kind() == reflect.Slice {
+	vt := reflect.TypeOf(input)
+	if vt != nil && vt.Kind() == reflect.Slice {
 		return walkTupleInputArray(ctx, breadcrumbs, input, component)
 	}
-	if reflect.TypeOf(input).Kind() != reflect.Map {
-		return nil, i18n.NewError(ctx, i18n.MsgTupleABINotArrayOrMap, input, breadcrumbs)
+	if vt == nil || vt.Kind() != reflect.Map {
+		return nil, i18n.NewError(ctx, signermsgs.MsgTupleABINotArrayOrMap, input, breadcrumbs)
 	}
 	iMap, err := getStringInterfaceMap(ctx, breadcrumbs, input)
 	if err != nil {
@@ -407,12 +425,12 @@ func walkTupleInput(ctx context.Context, breadcrumbs string, input interface{}, 
 	}
 	for i, tupleChild := range component.tupleChildren {
 		if tupleChild.keyName == "" {
-			return nil, i18n.NewError(ctx, i18n.MsgTupleInABINoName, i, breadcrumbs)
+			return nil, i18n.NewError(ctx, signermsgs.MsgTupleInABINoName, i, breadcrumbs)
 		}
 		childBreadcrumbs := fmt.Sprintf("%s.%s", breadcrumbs, tupleChild.keyName)
 		v, ok := iMap[tupleChild.keyName]
 		if !ok {
-			return nil, i18n.NewError(ctx, i18n.MsgMissingInputKeyABITuple, tupleChild.keyName, childBreadcrumbs)
+			return nil, i18n.NewError(ctx, signermsgs.MsgMissingInputKeyABITuple, tupleChild.keyName, childBreadcrumbs)
 		}
 		cv.Children[i], err = walkInput(ctx, childBreadcrumbs, v, component.tupleChildren[i])
 		if err != nil {
