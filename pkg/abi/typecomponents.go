@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
 // TypeComponent is a modelled representation of a component of an ABI type.
@@ -317,7 +318,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 	} else {
 		et, ok := elementaryTypes[etStr]
 		if !ok {
-			return nil, i18n.NewError(ctx, i18n.MsgUnsupportedABIType, etStr, abiTypeString)
+			return nil, i18n.NewError(ctx, signermsgs.MsgUnsupportedABIType, etStr, abiTypeString)
 		}
 		if suffix == "" {
 			suffix = et.defaultSuffix
@@ -332,11 +333,11 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 		switch et.suffixType {
 		case suffixTypeNone:
 			if suffix != "" {
-				return nil, i18n.NewError(ctx, i18n.MsgUnsupportedABISuffix, suffix, abiTypeString, et)
+				return nil, i18n.NewError(ctx, signermsgs.MsgUnsupportedABISuffix, suffix, abiTypeString, et)
 			}
 		case suffixTypeMRequired:
 			if suffix == "" {
-				return nil, i18n.NewError(ctx, i18n.MsgMissingABISuffix, abiTypeString, et)
+				return nil, i18n.NewError(ctx, signermsgs.MsgMissingABISuffix, abiTypeString, et)
 			}
 			if err := parseMSuffix(ctx, abiTypeString, tc, suffix); err != nil {
 				return nil, err
@@ -349,7 +350,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 			}
 		case suffixTypeMxNRequired:
 			if suffix == "" {
-				return nil, i18n.NewError(ctx, i18n.MsgMissingABISuffix, abiTypeString, et)
+				return nil, i18n.NewError(ctx, signermsgs.MsgMissingABISuffix, abiTypeString, et)
 			}
 			if err := parseMxNSuffix(ctx, abiTypeString, tc, suffix); err != nil {
 				return nil, err
@@ -382,14 +383,14 @@ func splitElementaryTypeSuffix(abiTypeString string, pos int) (string, string) {
 func parseMSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, suffix string) error {
 	val, err := strconv.ParseUint(suffix, 10, 16)
 	if err != nil {
-		return i18n.WrapError(ctx, err, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
+		return i18n.WrapError(ctx, err, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	ec.m = uint16(val)
 	if ec.m < ec.elementaryType.mMin || ec.m > ec.elementaryType.mMax {
-		return i18n.NewError(ctx, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
+		return i18n.NewError(ctx, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	if ec.elementaryType.mMod != 0 && (ec.m%ec.elementaryType.mMod) != 0 {
-		return i18n.NewError(ctx, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
+		return i18n.NewError(ctx, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	return nil
 }
@@ -398,11 +399,11 @@ func parseMSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, 
 func parseNSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, suffix string) error {
 	val, err := strconv.ParseUint(suffix, 10, 16)
 	if err != nil {
-		return i18n.WrapError(ctx, err, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
+		return i18n.WrapError(ctx, err, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	ec.n = uint16(val)
 	if ec.n < ec.elementaryType.nMin || ec.n > ec.elementaryType.nMax {
-		return i18n.NewError(ctx, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
+		return i18n.NewError(ctx, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	return nil
 }
@@ -415,7 +416,7 @@ func parseMxNSuffix(ctx context.Context, abiTypeString string, ec *typeComponent
 		mStr.WriteByte(suffix[pos])
 	}
 	if pos >= (len(suffix) - 1) {
-		return i18n.NewError(ctx, i18n.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
+		return i18n.NewError(ctx, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
 	pos++
 	if err := parseMSuffix(ctx, abiTypeString, ec, mStr.String()); err != nil {
@@ -428,7 +429,7 @@ func parseMxNSuffix(ctx context.Context, abiTypeString string, ec *typeComponent
 func parseArrayM(ctx context.Context, abiTypeString string, ac *typeComponent, mStr string) error {
 	val, err := strconv.ParseUint(mStr, 10, 64)
 	if err != nil {
-		return i18n.WrapError(ctx, err, i18n.MsgInvalidABIArraySpec, abiTypeString)
+		return i18n.WrapError(ctx, err, signermsgs.MsgInvalidABIArraySpec, abiTypeString)
 	}
 	ac.arrayLength = int(val)
 	return nil
@@ -439,14 +440,14 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 
 	pos := 0
 	if pos >= len(suffix) || suffix[pos] != '[' {
-		return nil, i18n.NewError(ctx, i18n.MsgInvalidABIArraySpec, abiTypeString)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidABIArraySpec, abiTypeString)
 	}
 	mStr := new(strings.Builder)
 	for pos++; pos < len(suffix) && suffix[pos] != ']'; pos++ {
 		mStr.WriteByte(suffix[pos])
 	}
 	if pos >= len(suffix) {
-		return nil, i18n.NewError(ctx, i18n.MsgInvalidABIArraySpec, abiTypeString)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidABIArraySpec, abiTypeString)
 	}
 	pos++
 	var ac *typeComponent
@@ -469,7 +470,7 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 
 	// We might have more dimensions to the array - if so recurse
 	if pos < len(suffix) {
-		return parseArrays(ctx, abiTypeString, ac, suffix[pos:], "")
+		return parseArrays(ctx, abiTypeString, ac, suffix[pos:], keyName)
 	}
 
 	// We're the last array in the chain

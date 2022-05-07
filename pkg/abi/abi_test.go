@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +40,11 @@ const sampleABI1 = `[
 				},
 				{
 					"name": "c",
-					"type": "string[]"
+					"type": "string[2]"
+				},
+				{
+					"name": "d",
+					"type": "bytes"
 				}
 			]
 		}
@@ -48,24 +53,80 @@ const sampleABI1 = `[
 	}
   ]`
 
+const sampleABI2 = `[
+	{
+	  "name": "foo",
+	  "type": "function",
+	  "inputs": [
+		{
+			"name": "a",
+			"type": "uint8"
+		},
+		{
+			"name": "b",
+			"type": "int"
+		},
+		{
+			"name": "c",
+			"type": "address"
+		},
+		{
+			"name": "d",
+			"type": "bool"
+		},
+		{
+			"name": "e",
+			"type": "fixed64x10"
+		},
+		{
+			"name": "f",
+			"type": "ufixed"
+		},
+		{
+			"name": "g",
+			"type": "bytes10"
+		},
+		{
+			"name": "h",
+			"type": "bytes"
+		},
+		{
+			"name": "i",
+			"type": "function"
+		},
+		{
+			"name": "j",
+			"type": "string"
+		}
+	  ],
+	  "outputs": []
+	}
+  ]`
+
+func testABI(t *testing.T, abiJSON string) (abi ABI) {
+	err := json.Unmarshal([]byte(abiJSON), &abi)
+	assert.NoError(t, err)
+	return abi
+}
+
 func TestABIGetTupleTypeTree(t *testing.T) {
 
 	var abi ABI
 	err := json.Unmarshal([]byte(sampleABI1), &abi)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "foo((uint256,string[]))", abi[0].String())
+	assert.Equal(t, "foo((uint256,string[2],bytes))", abi[0].String())
 	tc, err := abi[0].Inputs[0].TypeComponentTree()
 	assert.NoError(t, err)
 
 	assert.Equal(t, TupleComponent, tc.ComponentType())
-	assert.Len(t, tc.TupleChildren(), 2)
-	assert.Equal(t, "(uint256,string[])", tc.String())
+	assert.Len(t, tc.TupleChildren(), 3)
+	assert.Equal(t, "(uint256,string[2],bytes)", tc.String())
 
 	assert.Equal(t, ElementaryComponent, tc.TupleChildren()[0].ComponentType())
 	assert.Equal(t, ElementaryTypeUint, tc.TupleChildren()[0].ElementaryType())
 
-	assert.Equal(t, VariableArrayComponent, tc.TupleChildren()[1].ComponentType())
+	assert.Equal(t, FixedArrayComponent, tc.TupleChildren()[1].ComponentType())
 	assert.Equal(t, ElementaryComponent, tc.TupleChildren()[1].ArrayChild().ComponentType())
 	assert.Equal(t, ElementaryTypeString, tc.TupleChildren()[1].ArrayChild().ElementaryType())
 
@@ -124,13 +185,13 @@ func TestABIModifyBadInputs(t *testing.T) {
 	assert.Empty(t, abi[0].String())
 
 	err = abi.Validate()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 	err = abi[0].Validate()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 	err = abi[0].Inputs[0].Validate()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 	assert.Empty(t, abi[0].Inputs[0].String())
 
@@ -156,33 +217,31 @@ func TestABIModifyBadOutputs(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = abi.Validate()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 	err = abi[0].Validate()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 	err = abi[0].Outputs[0].Validate()
-	assert.Regexp(t, "FF00161", err)
+	assert.Regexp(t, "FF22028", err)
 
 	assert.Empty(t, abi[0].Outputs[0].String())
 
 }
 
-func TestABIParseObjectOk(t *testing.T) {
+func TestParseExternalJSONObjectModeOk(t *testing.T) {
 
-	var abi ABI
-	err := json.Unmarshal([]byte(sampleABI1), &abi)
-	assert.NoError(t, err)
-	inputs := abi[0].Inputs
+	inputs := testABI(t, sampleABI1)[0].Inputs
 
 	values := `{
 		"a": {
 			"b": 12345,
-			"c": ["string1", "string2"]
+			"c": ["string1", "string2"],
+			"d": "0xfeedbeef"
 		}
 	}`
 	var jv interface{}
-	err = json.Unmarshal([]byte(values), &jv)
+	err := json.Unmarshal([]byte(values), &jv)
 	assert.NoError(t, err)
 
 	cv, err := inputs.ParseExternalData(jv)
@@ -192,20 +251,19 @@ func TestABIParseObjectOk(t *testing.T) {
 	assert.Equal(t, "12345", cv.Children[0].Children[0].Value.(*big.Int).String())
 	assert.Equal(t, "string1", cv.Children[0].Children[1].Children[0].Value)
 	assert.Equal(t, "string2", cv.Children[0].Children[1].Children[1].Value)
+	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, cv.Children[0].Children[2].Value)
 
 }
 
-func TestABIParseArrayOk(t *testing.T) {
+func TestParseExternalJSONArrayModeOk(t *testing.T) {
 
-	var abi ABI
-	err := json.Unmarshal([]byte(sampleABI1), &abi)
-	assert.NoError(t, err)
-	inputs := abi[0].Inputs
+	inputs := testABI(t, sampleABI1)[0].Inputs
 
 	values := `[
 		[
 			12345,
-			["string1", "string2"]
+			["string1", "string2"],
+			"0xfeedbeef"
 		]
 	]`
 
@@ -216,19 +274,113 @@ func TestABIParseArrayOk(t *testing.T) {
 	assert.Equal(t, "12345", cv.Children[0].Children[0].Value.(*big.Int).String())
 	assert.Equal(t, "string1", cv.Children[0].Children[1].Children[0].Value)
 	assert.Equal(t, "string2", cv.Children[0].Children[1].Children[1].Value)
+	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, cv.Children[0].Children[2].Value)
 
 }
 
-func TestABIParseMissingRoot(t *testing.T) {
+func TestParseExternalJSONMixedModeOk(t *testing.T) {
 
-	var abi ABI
-	err := json.Unmarshal([]byte(sampleABI1), &abi)
+	inputs := testABI(t, sampleABI1)[0].Inputs
+
+	values := `[
+		{
+			"b": 12345,
+			"c": ["string1", "string2"],
+			"d": "feedbeef"
+		}
+	]`
+
+	cv, err := inputs.ParseExternalJSON([]byte(values))
 	assert.NoError(t, err)
-	inputs := abi[0].Inputs
 
-	values := `{}`
+	assert.Equal(t, "12345", cv.Children[0].Children[0].Value.(*big.Int).String())
+	assert.Equal(t, "string1", cv.Children[0].Children[1].Children[0].Value)
+	assert.Equal(t, "string2", cv.Children[0].Children[1].Children[1].Value)
+	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, cv.Children[0].Children[2].Value)
 
-	_, err = inputs.ParseExternalJSON([]byte(values))
-	assert.Regexp(t, "FF00173", err)
+}
+
+func TestABIParseCoerceGoTypes(t *testing.T) {
+
+	inputs := testABI(t, sampleABI1)[0].Inputs
+
+	values := map[interface{}]interface{}{
+		"a": map[interface{}]interface{}{
+			TestStringCustomType("b"): TestInt32CustomType(12345),
+			&TestStringable{"c"}: []*TestStringable{
+				{"string1"},
+				{"string2"},
+			},
+			"d": TestByteArrayCustomType{0xfe, 0xed, 0xbe, 0xef},
+		},
+	}
+
+	cv, err := inputs.ParseExternalData(values)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "12345", cv.Children[0].Children[0].Value.(*big.Int).String())
+	assert.Equal(t, "string1", cv.Children[0].Children[1].Children[0].Value)
+	assert.Equal(t, "string2", cv.Children[0].Children[1].Children[1].Value)
+	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, cv.Children[0].Children[2].Value)
+
+}
+
+func TestParseExternalJSONArrayLotsOfTypes(t *testing.T) {
+
+	inputs := testABI(t, sampleABI2)[0].Inputs
+
+	values := `[
+		"-12345",
+		"0x12345",
+		"0x4a0d852eBb58FC88Cb260Bb270AE240f72EdC45B",
+		true,
+		"-1.2345",
+		1.2345,
+		"0xfeedbeef",
+		"00010203040506070809",
+		"00",
+		"test string"
+	]`
+
+	cv, err := inputs.ParseExternalJSON([]byte(values))
+	assert.NoError(t, err)
+	assert.NotNil(t, cv)
+
+	assert.Equal(t, int64(-12345), cv.Children[0].Value.(*big.Int).Int64())
+	assert.Equal(t, int64(0x12345), cv.Children[1].Value.(*big.Int).Int64())
+	assert.Equal(t, "0x4a0d852ebb58fc88cb260bb270ae240f72edc45b", ethtypes.HexBytes0xPrefix(cv.Children[2].Value.([]byte)).String())
+	assert.True(t, cv.Children[3].Value.(bool))
+	assert.Equal(t, "-1.2345", cv.Children[4].Value.(*big.Float).String())
+	assert.Equal(t, "1.2345", cv.Children[5].Value.(*big.Float).String())
+	assert.Equal(t, "0xfeedbeef", ethtypes.HexBytes0xPrefix(cv.Children[6].Value.([]byte)).String())
+	assert.Equal(t, "0x00010203040506070809", ethtypes.HexBytes0xPrefix(cv.Children[7].Value.([]byte)).String())
+	assert.Equal(t, "0x00", ethtypes.HexBytes0xPrefix(cv.Children[8].Value.([]byte)).String())
+	assert.Equal(t, "test string", cv.Children[9].Value)
+
+}
+
+func TestParseExternalJSONBadData(t *testing.T) {
+	inputs := testABI(t, sampleABI1)[0].Inputs
+	_, err := inputs.ParseExternalJSON([]byte(`{`))
+	assert.Regexp(t, "unexpected end", err)
+
+}
+
+func TestParseExternalJSONBadABI(t *testing.T) {
+	inputs := testABI(t, `[
+		{
+		  "name": "foo",
+		  "type": "function",
+		  "inputs": [
+			{
+				"name": "a",
+				"type": "wrong"
+			}
+		  ],
+		  "outputs": []
+		}
+	  ]`)[0].Inputs
+	_, err := inputs.ParseExternalJSON([]byte(`{}`))
+	assert.Regexp(t, "FF22025", err)
 
 }

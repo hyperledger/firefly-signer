@@ -45,6 +45,32 @@ func (ts *TestStringable) String() string {
 	return ts.s
 }
 
+const sampleABI2NestedTupleArray = `[
+	{
+	  "name": "foo",
+	  "type": "function",
+	  "inputs": [
+		{
+			"name": "a",
+			"type": "tuple",
+			"components": [
+				{
+					"name": "b",
+					"type": "tuple[][]",
+					"components": [
+						{
+							"name": "c",
+							"type": "string"
+						}		
+					]
+				}
+			]
+		}
+	  ],
+	  "outputs": []
+	}
+  ]`
+
 func TestGetIntegerFromInterface(t *testing.T) {
 
 	ctx := context.Background()
@@ -166,11 +192,15 @@ func TestGetIntegerFromInterface(t *testing.T) {
 	assert.Equal(t, "-12345", i.String())
 
 	i, err = getIntegerFromInterface(ctx, "ut", "wrong")
-	assert.Regexp(t, "FF00163", err)
+	assert.Regexp(t, "FF22030", err)
 	assert.Nil(t, i)
 
 	i, err = getIntegerFromInterface(ctx, "ut", []string{"wrong"})
-	assert.Regexp(t, "FF00163", err)
+	assert.Regexp(t, "FF22030", err)
+	assert.Nil(t, i)
+
+	i, err = getIntegerFromInterface(ctx, "ut", nil)
+	assert.Regexp(t, "FF22030", err)
 	assert.Nil(t, i)
 
 }
@@ -292,13 +322,16 @@ func TestGetFloatFromInterface(t *testing.T) {
 	assert.Equal(t, "-12345", i.String())
 
 	i, err = getFloatFromInterface(ctx, "ut", "wrong")
-	assert.Regexp(t, "FF00164", err)
+	assert.Regexp(t, "FF22031", err)
 	assert.Nil(t, i)
 
 	i, err = getFloatFromInterface(ctx, "ut", []string{"wrong"})
-	assert.Regexp(t, "FF00164", err)
+	assert.Regexp(t, "FF22031", err)
 	assert.Nil(t, i)
 
+	i, err = getFloatFromInterface(ctx, "ut", nil)
+	assert.Regexp(t, "FF22031", err)
+	assert.Nil(t, i)
 }
 
 func TestGetBoolFromInterface(t *testing.T) {
@@ -332,10 +365,13 @@ func TestGetBoolFromInterface(t *testing.T) {
 	assert.True(t, v)
 
 	_, err = getBoolFromInterface(ctx, "ut", int(-12345))
-	assert.Regexp(t, "FF00166", err)
+	assert.Regexp(t, "FF22033", err)
 
 	_, err = getBoolFromInterface(ctx, "ut", []bool{true})
-	assert.Regexp(t, "FF00166", err)
+	assert.Regexp(t, "FF22033", err)
+
+	_, err = getBoolFromInterface(ctx, "ut", nil)
+	assert.Regexp(t, "FF22033", err)
 
 }
 
@@ -376,10 +412,13 @@ func TestGetStringFromInterface(t *testing.T) {
 	assert.Equal(t, "test data", s)
 
 	_, err = getStringFromInterface(ctx, "ut", int(-12345))
-	assert.Regexp(t, "FF00165", err)
+	assert.Regexp(t, "FF22032", err)
 
 	_, err = getStringFromInterface(ctx, "ut", []string{"wrong"})
-	assert.Regexp(t, "FF00165", err)
+	assert.Regexp(t, "FF22032", err)
+
+	_, err = getStringFromInterface(ctx, "ut", nil)
+	assert.Regexp(t, "FF22032", err)
 
 }
 
@@ -424,12 +463,200 @@ func TestGetBytesFromInterface(t *testing.T) {
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, s)
 
 	_, err = getBytesFromInterface(ctx, "ut", int(-12345))
-	assert.Regexp(t, "FF00167", err)
+	assert.Regexp(t, "FF22034", err)
 
 	_, err = getBytesFromInterface(ctx, "ut", []string{"wrong"})
-	assert.Regexp(t, "FF00167", err)
+	assert.Regexp(t, "FF22034", err)
 
 	_, err = getBytesFromInterface(ctx, "ut", "wrong")
-	assert.Regexp(t, "FF00167", err)
+	assert.Regexp(t, "FF22034", err)
 
+	_, err = getBytesFromInterface(ctx, "ut", nil)
+	assert.Regexp(t, "FF22034", err)
+
+}
+
+func TestABIParseMissingRoot(t *testing.T) {
+
+	inputs := testABI(t, sampleABI1)[0].Inputs
+
+	values := `{}`
+
+	_, err := inputs.ParseExternalJSON([]byte(values))
+	assert.Regexp(t, "FF22040", err)
+
+}
+
+func TestABIParseCoerceGoMapFail(t *testing.T) {
+
+	inputs := testABI(t, sampleABI1)[0].Inputs
+
+	values := map[interface{}]interface{}{
+		false: true,
+	}
+
+	_, err := inputs.ParseExternalData(values)
+	assert.Regexp(t, "FF22032", err)
+
+}
+
+func TestABIParseBadElementalType(t *testing.T) {
+
+	inputs := testABI(t, sampleABI1)[0].Inputs
+
+	values := map[string]interface{}{
+		"a": []interface{}{
+			nil, nil, nil,
+		},
+	}
+
+	_, err := inputs.ParseExternalData(values)
+	assert.Regexp(t, "FF22030", err)
+
+}
+
+func TestWalkInputBadType(t *testing.T) {
+
+	cv, err := walkInput(context.Background(), "", nil, &typeComponent{
+		cType: ComponentType(99),
+	})
+	assert.Regexp(t, "FF22041", err)
+	assert.Nil(t, cv)
+
+}
+
+func TestWalkArrayInputBadType(t *testing.T) {
+
+	cv, err := walkArrayInput(context.Background(), "", nil, &typeComponent{
+		cType: FixedArrayComponent,
+	})
+	assert.Regexp(t, "FF22035", err)
+	assert.Nil(t, cv)
+
+}
+
+func TestWrongLength(t *testing.T) {
+
+	inputs := testABI(t, sampleABI1)[0].Inputs
+
+	values := `[
+		{
+			"b": 12345,
+			"c": ["string1"],
+			"d": "feedbeef"
+		}
+	]`
+
+	_, err := inputs.ParseExternalJSON([]byte(values))
+	assert.Regexp(t, "FF22036", err)
+
+}
+
+func TestNestedTuplesOk(t *testing.T) {
+
+	inputs := testABI(t, sampleABI2NestedTupleArray)[0].Inputs
+
+	values := `{
+		"a": {
+			"b": [
+				[
+					{
+						"c": "test1"
+					}
+				]
+			]
+		}
+	}`
+
+	cv, err := inputs.ParseExternalJSON([]byte(values))
+	assert.NoError(t, err)
+
+	assert.Equal(t, "test1", cv.Children[0].Children[0].Children[0].Children[0].Children[0].Value)
+
+}
+
+func TestNestedTuplesBadLeaf(t *testing.T) {
+
+	inputs := testABI(t, sampleABI2NestedTupleArray)[0].Inputs
+
+	values := `{
+		"a": {
+			"b": [
+				[
+					{
+						"c": false
+					}
+				]
+			]
+		}
+	}`
+
+	_, err := inputs.ParseExternalJSON([]byte(values))
+	assert.Regexp(t, "FF22032", err)
+
+}
+
+func TestNestedTuplesMissingTupleArrayEntry(t *testing.T) {
+
+	inputs := testABI(t, sampleABI2NestedTupleArray)[0].Inputs
+
+	values := `{
+		"a": {
+			"b": [
+				[
+					[]
+				]
+			]
+		}
+	}`
+
+	_, err := inputs.ParseExternalJSON([]byte(values))
+	assert.Regexp(t, "FF22037", err)
+
+}
+
+func TestTuplesWrongType(t *testing.T) {
+
+	inputs := testABI(t, sampleABI2NestedTupleArray)[0].Inputs
+
+	values := `{
+		"a": false
+	}`
+
+	_, err := inputs.ParseExternalJSON([]byte(values))
+	assert.Regexp(t, "FF22038", err)
+
+}
+
+func TestTuplesMissingName(t *testing.T) {
+	const sample = `[
+		{
+		"name": "foo",
+		"type": "function",
+		"inputs": [
+			{
+				"name": "a",
+				"type": "tuple",
+				"components": [
+					{
+						"type": "uint256"
+					}
+				]
+			}
+		],
+		"outputs": []
+		}
+	]`
+
+	inputs := testABI(t, sample)[0].Inputs
+
+	// Fine if you use the array syntax
+	values := `{ "a": [12345] }`
+	_, err := inputs.ParseExternalJSON([]byte(values))
+	assert.NoError(t, err)
+
+	// But the missing name is a problem for the object syntax
+	values = `{ "a": {"b":12345} }`
+	_, err = inputs.ParseExternalJSON([]byte(values))
+	assert.Regexp(t, "FF22039", err)
 }
