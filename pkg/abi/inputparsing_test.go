@@ -476,6 +476,19 @@ func TestGetBytesFromInterface(t *testing.T) {
 
 }
 
+func TestGetUintBytesFromInterface(t *testing.T) {
+
+	ctx := context.Background()
+
+	i, err := getUintBytesFromInterface(ctx, "ut", "0xfeedbeef")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0xfeedbeef), i.Int64())
+
+	_, err = getUintBytesFromInterface(ctx, "ut", nil)
+	assert.Regexp(t, "FF22034", err)
+
+}
+
 func TestABIParseMissingRoot(t *testing.T) {
 
 	inputs := testABI(t, sampleABI1)[0].Inputs

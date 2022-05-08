@@ -17,6 +17,7 @@
 package abi
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -348,7 +349,10 @@ func TestParseExternalJSONArrayLotsOfTypes(t *testing.T) {
 
 	assert.Equal(t, int64(-12345), cv.Children[0].Value.(*big.Int).Int64())
 	assert.Equal(t, int64(0x12345), cv.Children[1].Value.(*big.Int).Int64())
-	assert.Equal(t, "0x4a0d852ebb58fc88cb260bb270ae240f72edc45b", ethtypes.HexBytes0xPrefix(cv.Children[2].Value.([]byte)).String())
+	addrBytes, err := hex.DecodeString("4a0d852ebb58fc88cb260bb270ae240f72edc45b")
+	assert.NoError(t, err)
+	addrUint := new(big.Int).SetBytes(addrBytes)
+	assert.Equal(t, addrUint.String(), cv.Children[2].Value.(*big.Int).String())
 	assert.True(t, cv.Children[3].Value.(bool))
 	assert.Equal(t, "-1.2345", cv.Children[4].Value.(*big.Float).String())
 	assert.Equal(t, "1.2345", cv.Children[5].Value.(*big.Float).String())

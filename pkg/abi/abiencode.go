@@ -75,16 +75,47 @@ func abiEncodeDynamicBytes(value []byte) (head, tail []byte, err error) {
 
 	// Tail is the actual byte-string, padded ot a multiple of 32
 	tailLen := (len(value) / 32) * 32
-	if (tailLen % 32) != 0 {
+	if (len(value) % 32) != 0 {
 		tailLen += 32
 	}
 	tail = make([]byte, tailLen)
-	copy(head, value)
+	copy(tail, value)
 
 	return head, tail, nil
 
 }
 
 func abiEncodeSignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (head, tail []byte, err error) {
-	return nil, nil, nil
+	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+	i, ok := value.(*big.Int)
+	if !ok {
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Int", value, desc)
+	}
+
+	// Reject integers that do not fit in the specified type
+	if !checkSignedIntFits(i, tc.m) {
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgNumberTooLargeABIEncode, tc.m, desc)
+	}
+
+	head = serializeInt256TwosComplementBytes(i)
+	tail = []byte{}
+	return head, tail, nil
+}
+
+func abiEncodeUnsignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (head, tail []byte, err error) {
+	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+	i, ok := value.(*big.Int)
+	if !ok {
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Int", value, desc)
+	}
+
+	// Reject integers that do not fit in the specified type
+	if i.BitLen() > int(tc.m) {
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgNumberTooLargeABIEncode, tc.m, desc)
+	}
+
+	head = make([]byte, 32)
+	head = i.FillBytes(head)
+	tail = []byte{}
+	return head, tail, nil
 }

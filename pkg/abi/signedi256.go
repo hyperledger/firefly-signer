@@ -22,6 +22,36 @@ var singleBit = big.NewInt(1)
 var oneMoreThanMaxUint256 = new(big.Int).Lsh(singleBit, 256)             // 2^256 - a one then 256 zeros
 var fullBits256 = new(big.Int).Sub(oneMoreThanMaxUint256, big.NewInt(1)) // all ones for 256 bits
 var oneThen255Zeros = new(big.Int).Lsh(singleBit, 255)
+var posMax = map[uint16]*big.Int{}
+var negMax = map[uint16]*big.Int{}
+
+func init() {
+	for i := 8; i <= 256; i += 8 {
+		posMax[uint16(i)] = maxPositiveSignedInt(uint(i))
+		negMax[uint16(i)] = maxNegativeSignedInt(uint(i))
+	}
+}
+
+func maxPositiveSignedInt(bitLen uint) *big.Int {
+	return new(big.Int).Sub(new(big.Int).Lsh(singleBit, bitLen-1), big.NewInt(1))
+}
+
+func maxNegativeSignedInt(bitLen uint) *big.Int {
+	return new(big.Int).Neg(new(big.Int).Lsh(singleBit, bitLen-1))
+}
+
+func checkSignedIntFits(i *big.Int, bitlen uint16) bool {
+	switch i.Sign() {
+	case 0:
+		return true
+	case 1:
+		max, ok := posMax[bitlen]
+		return ok && i.Cmp(max) <= 0
+	default: // -1
+		max, ok := negMax[bitlen]
+		return ok && i.Cmp(max) >= 0
+	}
+}
 
 func serializeInt256TwosComplementBytes(i *big.Int) []byte {
 	// Go doesn't have a function to serialize bytes in two's compliment,

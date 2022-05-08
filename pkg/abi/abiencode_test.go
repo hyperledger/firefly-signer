@@ -17,31 +17,221 @@
 package abi
 
 import (
+	"context"
+	"encoding/hex"
 	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInt256TwosCompliment(t *testing.T) {
+func TestEncodeBytesFixed(t *testing.T) {
 
-	i := big.NewInt(-12345)
-	b := serializeInt256TwosComplementBytes(i)
-	i2 := parseInt256TwosComplementBytes(b)
-	assert.Equal(t, int64(-12345), i2.Int64())
+	bytes32Component, err := (&Parameter{Type: "bytes32"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
 
-	// Largest negative two's compliment - 2^255
-	i = new(big.Int).Exp(big.NewInt(2), big.NewInt(255), nil)
-	i = i.Neg(i)
-	b = serializeInt256TwosComplementBytes(i)
-	i3 := parseInt256TwosComplementBytes(b)
-	assert.Zero(t, i.Cmp(i3))
+	hexStr := "090807060504030201000908070605040302010009080706050403020100feed"
+	b, err := hex.DecodeString(hexStr)
+	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	assert.NoError(t, err)
+	assert.Equal(t, hexStr, hex.EncodeToString(head))
+	assert.Len(t, tail, 0)
 
-	// Largest positive two's compliment - 2^255-1
-	i = new(big.Int).Exp(big.NewInt(2), big.NewInt(255), nil)
-	i = i.Sub(i, big.NewInt(1))
-	b = serializeInt256TwosComplementBytes(i)
-	i4 := parseInt256TwosComplementBytes(b)
-	assert.Zero(t, i.Cmp(i4))
+}
+
+func TestEncodeBytesDynamicExact32(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "bytes"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	lenHexStr := "0000000000000000000000000000000000000000000000000000000000000020"
+	hexStr := "090807060504030201000908070605040302010009080706050403020100feed"
+	b, err := hex.DecodeString(hexStr)
+	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	assert.NoError(t, err)
+	assert.Equal(t, lenHexStr, hex.EncodeToString(head))
+	assert.Equal(t, hexStr, hex.EncodeToString(tail))
+
+}
+
+func TestEncodeBytesDynamicLess32(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "bytes"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	lenHexStr := "0000000000000000000000000000000000000000000000000000000000000004"
+	hexStr := "feedbeef"
+	hexStrPadded := "feedbeef00000000000000000000000000000000000000000000000000000000"
+	b, err := hex.DecodeString(hexStr)
+	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	assert.NoError(t, err)
+	assert.Equal(t, lenHexStr, hex.EncodeToString(head))
+	assert.Equal(t, hexStrPadded, hex.EncodeToString(tail))
+
+}
+
+func TestEncodeBytesDynamicMore32(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "string"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	lenHexStr := "0000000000000000000000000000000000000000000000000000000000000031"
+	hexStr := "09080706050403020100090807060504030201000908070605040302010090807060504030201009080706050403020100"
+	hexStrPadded := "09080706050403020100090807060504030201000908070605040302010090807060504030201009080706050403020100000000000000000000000000000000"
+	b, err := hex.DecodeString(hexStr)
+	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	assert.NoError(t, err)
+	assert.Equal(t, lenHexStr, hex.EncodeToString(head))
+	assert.Equal(t, hexStrPadded, hex.EncodeToString(tail))
+
+}
+
+func TestEncodeStringWrongType(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "string"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	_, _, err = abiEncodeString(context.Background(), "test", bytes32Component, 12345)
+	assert.Regexp(t, "FF22042", err)
+
+}
+
+func TestEncodeStringShort(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "bytes"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	lenHexStr := "000000000000000000000000000000000000000000000000000000000000000d"
+	hexStr := "48656c6c6f2c20776f726c642100000000000000000000000000000000000000"
+	head, tail, err := abiEncodeString(context.Background(), "test", bytes32Component, "Hello, world!")
+	assert.NoError(t, err)
+	assert.Equal(t, lenHexStr, hex.EncodeToString(head))
+	assert.Equal(t, hexStr, hex.EncodeToString(tail))
+
+}
+
+func TestEncodeBytesFunction(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "function"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	hexStr := "72b88e6bd5be978cae4c29f83b0d7d360d255d42fce353f6"
+	b, err := hex.DecodeString(hexStr)
+	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	assert.NoError(t, err)
+	assert.Equal(t, hexStr+"0000000000000000" /* padded 24 to 32 */, hex.EncodeToString(head))
+	assert.Len(t, tail, 0)
+
+}
+
+func TestEncodeBytesFixedInsufficientInput(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "bytes32"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	hexStr := "090807060504030201000908070605040302010009080706050403020100fe" // only 31 bytes
+	b, err := hex.DecodeString(hexStr)
+	_, _, err = abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	assert.Regexp(t, "FF22043", err)
+
+}
+
+func TestEncodeBytesFixedWrongType(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "bytes32"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	_, _, err = abiEncodeBytes(context.Background(), "test", bytes32Component, 12345)
+	assert.Regexp(t, "FF22042", err)
+
+}
+
+func TestEncodeSignedIntegerWrongType(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	_, _, err = abiEncodeSignedInteger(context.Background(), "test", bytes32Component, 12345)
+	assert.Regexp(t, "FF22042", err)
+
+}
+
+func TestEncodeSignedIntegerPositiveOk(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	head, tail, err := abiEncodeSignedInteger(context.Background(), "test", bytes32Component, posMax[256])
+	assert.NoError(t, err)
+	assert.Equal(t, "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", hex.EncodeToString(head))
+	assert.Len(t, tail, 0)
+
+}
+
+func TestEncodeSignedIntegerNegativeOk(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	head, tail, err := abiEncodeSignedInteger(context.Background(), "test", bytes32Component, negMax[256])
+	assert.NoError(t, err)
+	assert.Equal(t, "8000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(head))
+	assert.Len(t, tail, 0)
+
+}
+
+func TestEncodeSignedIntegerTooLarge(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	i := new(big.Int).Add(posMax[256], big.NewInt(1))
+	_, _, err = abiEncodeSignedInteger(context.Background(), "test", bytes32Component, i)
+	assert.Regexp(t, "FF22044", err)
+
+}
+
+func TestEncodeSignedIntegerTooSmall(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	i := new(big.Int).Sub(negMax[256], big.NewInt(1))
+	_, _, err = abiEncodeSignedInteger(context.Background(), "test", bytes32Component, i)
+	assert.Regexp(t, "FF22044", err)
+
+}
+
+func TestEncodeUnsignedIntegerWrongType(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	_, _, err = abiEncodeUnsignedInteger(context.Background(), "test", bytes32Component, 12345)
+	assert.Regexp(t, "FF22042", err)
+
+}
+
+func TestEncodeUnsignedIntegerPositiveOk(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	twoPow256minus1 := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(1))
+	head, tail, err := abiEncodeUnsignedInteger(context.Background(), "test", bytes32Component, twoPow256minus1)
+	assert.NoError(t, err)
+	assert.Equal(t, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", hex.EncodeToString(head))
+	assert.Len(t, tail, 0)
+
+}
+
+func TestEncodeUnsignedIntegerTooLarge(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	twoPow256 := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
+	_, _, err = abiEncodeUnsignedInteger(context.Background(), "test", bytes32Component, twoPow256)
+	assert.Regexp(t, "FF22044", err)
 
 }
