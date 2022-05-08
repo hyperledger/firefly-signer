@@ -32,6 +32,9 @@ func (cv *ComponentValue) EncodeABIDataCtx(ctx context.Context) ([]byte, error) 
 
 func (cv *ComponentValue) encodeABIData(ctx context.Context, desc string) ([]byte, bool, error) {
 
+	if cv == nil || cv.Component == nil {
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, "nil")
+	}
 	tc := cv.Component.(*typeComponent)
 	switch tc.cType {
 	case ElementaryComponent:
@@ -65,9 +68,6 @@ func (cv *ComponentValue) encodeABIChildren(ctx context.Context, desc string, kn
 	headLen := 0
 	tailLen := 0
 	dynamic = knownDynamic // if we're a tuple, or variable length array, we're known to be dynamic
-	if includeLen {
-		headLen += 32
-	}
 	for i := range cv.Children {
 		if cDynamic[i] {
 			headLen += 32
@@ -80,24 +80,29 @@ func (cv *ComponentValue) encodeABIChildren(ctx context.Context, desc string, kn
 	}
 
 	// Pass 3 writes all the data into a single block
-	data = make([]byte, headLen+tailLen)
+	startOffset := 0
+	if includeLen {
+		startOffset = 32
+	}
+	data = make([]byte, startOffset+headLen+tailLen)
+	wData := data // where the head starts (might be after the length)
 	headOffset := 0
 	tailOffset := headLen
 	if includeLen {
 		big.NewInt(int64(len(cv.Children))).FillBytes(data[0:32])
-		headOffset += 32
+		wData = data[32:]
 	}
 	for i := range cv.Children {
 		if cDynamic[i] {
 			// Write the offset of the data as uint256 in the head
-			big.NewInt(int64(tailOffset)).FillBytes(data[headOffset : headOffset+32])
+			big.NewInt(int64(tailOffset)).FillBytes(wData[headOffset : headOffset+32])
 			headOffset += 32
 			// Write the data itself at that offset
-			copy(data[tailOffset:], cData[i])
+			copy(wData[tailOffset:], cData[i])
 			tailOffset += len(cData[i])
 		} else {
 			// Write the data itself in the head
-			copy(data[headOffset:], cData[i])
+			copy(wData[headOffset:], cData[i])
 			headOffset += len(cData[i])
 		}
 	}
@@ -120,7 +125,7 @@ func encodeABIBytes(ctx context.Context, desc string, tc *typeComponent, value i
 
 	// Belt and braces length check, although responsibility for generation of all the input data is within this package
 	if len(b) < fixedLength || fixedLength > 32 {
-		return nil, false, i18n.NewError(ctx, signermsgs.MsgInsufficientDataABIEncode, int(fixedLength), len(b), desc)
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgInsufficientDataABIEncode, fixedLength, len(b), desc)
 	}
 
 	// Copy into the front of a 32byte block, with trailing zeros.
@@ -130,7 +135,7 @@ func encodeABIBytes(ctx context.Context, desc string, tc *typeComponent, value i
 	return data, false, nil
 }
 
-func encodeABIString(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+func encodeABIString(ctx context.Context, desc string, value interface{}) (data []byte, dynamic bool, err error) {
 	s, ok := value.(string)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "string", value, desc)
@@ -166,7 +171,7 @@ func encodeABISignedInteger(ctx context.Context, desc string, tc *typeComponent,
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgNumberTooLargeABIEncode, tc.m, desc)
 	}
 
-	return serializeInt256TwosComplementBytes(i), false, nil
+	return SerializeInt256TwosComplementBytes(i), false, nil
 }
 
 func encodeABIUnsignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {

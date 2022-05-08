@@ -390,3 +390,27 @@ func TestParseExternalJSONBadABI(t *testing.T) {
 	assert.Regexp(t, "FF22025", err)
 
 }
+
+func TestEncodeABIDataCtxBadABI(t *testing.T) {
+	f := testABI(t, `[
+		{
+		  "name": "foo",
+		  "type": "function",
+		  "inputs": [
+			{
+				"name": "a",
+				"type": "wrong"
+			}
+		  ],
+		  "outputs": []
+		}
+	  ]`)[0]
+	_, err := f.EncodeABIData(nil)
+	assert.Regexp(t, "FF22025", err)
+}
+
+func TestEncodeABIDataCtxBadInputs(t *testing.T) {
+	f := testABI(t, sampleABI1)[0]
+	_, err := f.EncodeABIData(nil)
+	assert.Regexp(t, "FF22041", err)
+}
