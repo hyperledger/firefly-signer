@@ -67,15 +67,16 @@ type typeComponent struct {
 // elementaryTypeInfo defines the string parsing rules, as well as a pointer to the functions for
 // serialization to a set of bytes, and back again
 type elementaryTypeInfo struct {
-	name          string     // The name of the type - the alphabetic characters up to an optional suffix
-	suffixType    suffixType // Whether there is a length suffix, and its type
-	defaultSuffix string     // If set and there is no suffix supplied, the following suffix is used
-	mMin          uint16     // For suffixes with an M dimension, this is the minimum value
-	mMax          uint16     // For suffixes with an M dimension, this is the maximum (inclusive) value
-	mMod          uint16     // If non-zero, then (M % MMod) == 0 must be true
-	nMin          uint16     // For suffixes with an N dimension, this is the minimum value
-	nMax          uint16     // For suffixes with an N dimension, this is the maximum (inclusive) value
-	readInput     func(ctx context.Context, desc string, input interface{}) (interface{}, error)
+	name             string     // The name of the type - the alphabetic characters up to an optional suffix
+	suffixType       suffixType // Whether there is a length suffix, and its type
+	defaultSuffix    string     // If set and there is no suffix supplied, the following suffix is used
+	mMin             uint16     // For suffixes with an M dimension, this is the minimum value
+	mMax             uint16     // For suffixes with an M dimension, this is the maximum (inclusive) value
+	mMod             uint16     // If non-zero, then (M % MMod) == 0 must be true
+	nMin             uint16     // For suffixes with an N dimension, this is the minimum value
+	nMax             uint16     // For suffixes with an N dimension, this is the maximum (inclusive) value
+	readExternalData func(ctx context.Context, desc string, input interface{}) (interface{}, error)
+	getABIData       func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (head, tail []byte, err error)
 }
 
 func (et *elementaryTypeInfo) String() string {
@@ -132,7 +133,7 @@ var (
 		mMin:          8,
 		mMax:          256,
 		mMod:          8,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
 		},
 	})
@@ -143,21 +144,21 @@ var (
 		mMin:          8,
 		mMax:          256,
 		mMod:          8,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
 		},
 	})
 	ElementaryTypeAddress = registerElementaryType(elementaryTypeInfo{
 		name:       "address",
 		suffixType: suffixTypeNone,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
 		name:       "bool",
 		suffixType: suffixTypeNone,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBoolFromInterface(ctx, desc, input)
 		},
 	})
@@ -170,7 +171,7 @@ var (
 		mMod:          8,
 		nMin:          1,
 		nMax:          80,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
 		},
 	})
@@ -183,7 +184,7 @@ var (
 		mMod:          8,
 		nMin:          1,
 		nMax:          80,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
 		},
 	})
@@ -192,21 +193,21 @@ var (
 		suffixType: suffixTypeMOptional, // note that "bytes" without a suffix is a special dynamic sized byte sequence
 		mMin:       1,
 		mMax:       32,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
 	})
 	ElementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
 		name:       "function",
 		suffixType: suffixTypeNone,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
 	})
 	ElementaryTypeString = registerElementaryType(elementaryTypeInfo{
 		name:       "string",
 		suffixType: suffixTypeNone,
-		readInput: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
+		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getStringFromInterface(ctx, desc, input)
 		},
 	})

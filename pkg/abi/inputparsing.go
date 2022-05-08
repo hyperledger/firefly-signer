@@ -346,7 +346,7 @@ func getStringInterfaceMap(ctx context.Context, breadcrumbs string, input interf
 func walkInput(ctx context.Context, breadcrumbs string, input interface{}, component *typeComponent) (cv *ComponentValue, err error) {
 	switch component.cType {
 	case ElementaryComponent:
-		value, err := component.elementaryType.readInput(ctx, breadcrumbs, input)
+		value, err := component.elementaryType.readExternalData(ctx, breadcrumbs, input)
 		if err != nil {
 			return nil, err
 		}
