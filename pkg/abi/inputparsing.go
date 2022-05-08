@@ -245,23 +245,26 @@ func getFloatFromInterface(ctx context.Context, desc string, v interface{}) (*bi
 	}
 }
 
-// getBoolFromInterface handles bool or string values - no attempt made to map
+// getBoolAsUnsignedIntegerFromInterface handles bool or string values - no attempt made to map
 // integer types to bool
-func getBoolFromInterface(ctx context.Context, desc string, v interface{}) (bool, error) {
+func getBoolAsUnsignedIntegerFromInterface(ctx context.Context, desc string, v interface{}) (*big.Int, error) {
 	switch vt := v.(type) {
 	case bool:
-		return vt, nil
+		if vt {
+			return big.NewInt(1), nil
+		}
+		return big.NewInt(0), nil
 	case string:
-		return strings.EqualFold(vt, "true"), nil
+		return getBoolAsUnsignedIntegerFromInterface(ctx, desc, strings.EqualFold(vt, "true"))
 	default:
 		if str, ok := getStringIfConvertible(v); ok {
-			return getBoolFromInterface(ctx, desc, str)
+			return getBoolAsUnsignedIntegerFromInterface(ctx, desc, str)
 		}
 		vi := getPtrValOrNil(v)
 		if vi != nil {
-			return getBoolFromInterface(ctx, desc, vi)
+			return getBoolAsUnsignedIntegerFromInterface(ctx, desc, vi)
 		}
-		return false, i18n.NewError(ctx, signermsgs.MsgInvalidBoolABIInput, vt, v, desc)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidBoolABIInput, vt, v, desc)
 	}
 }
 

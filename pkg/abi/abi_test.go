@@ -161,6 +161,7 @@ func TestABIModifyReParse(t *testing.T) {
 	// Re-parse sorts it
 	abi.Validate()
 	assert.Equal(t, "foo(uint128)", abi[0].String())
+	assert.Equal(t, "c56cb6b0", abi[0].ID())
 
 }
 
@@ -195,6 +196,7 @@ func TestABIModifyBadInputs(t *testing.T) {
 	assert.Regexp(t, "FF22028", err)
 
 	assert.Empty(t, abi[0].Inputs[0].String())
+	assert.Empty(t, abi[0].ID())
 
 }
 
@@ -353,7 +355,7 @@ func TestParseExternalJSONArrayLotsOfTypes(t *testing.T) {
 	assert.NoError(t, err)
 	addrUint := new(big.Int).SetBytes(addrBytes)
 	assert.Equal(t, addrUint.String(), cv.Children[2].Value.(*big.Int).String())
-	assert.True(t, cv.Children[3].Value.(bool))
+	assert.Equal(t, "1", cv.Children[3].Value.(*big.Int).String())
 	assert.Equal(t, "-1.2345", cv.Children[4].Value.(*big.Float).String())
 	assert.Equal(t, "1.2345", cv.Children[5].Value.(*big.Float).String())
 	assert.Equal(t, "0xfeedbeef", ethtypes.HexBytes0xPrefix(cv.Children[6].Value.([]byte)).String())

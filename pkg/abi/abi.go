@@ -18,10 +18,12 @@ package abi
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"strings"
 
 	"github.com/hyperledger/firefly-common/pkg/log"
+	"golang.org/x/crypto/sha3"
 )
 
 // ABI "Application Binary Interface" is a list of the methods and events
@@ -169,6 +171,55 @@ func (e *Entry) String() string {
 
 func (e *Entry) Signature() (string, error) {
 	return e.SignatureCtx(context.Background())
+}
+
+func (e *Entry) GenerateID() ([]byte, error) {
+	return e.GenerateIDCtx(context.Background())
+}
+
+func (e *Entry) GenerateIDCtx(ctx context.Context) ([]byte, error) {
+	hash := sha3.NewLegacyKeccak256()
+	sig, err := e.SignatureCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hash.Write([]byte(sig))
+	k := hash.Sum(nil)
+	return k[0:4], nil
+}
+
+// ID is a convenience function to get the ID as a hex string (no 0x prefix), which will
+// return the empty string on failure
+func (e *Entry) ID() string {
+	id, err := e.GenerateID()
+	if err != nil {
+		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
+		return ""
+	}
+	return hex.EncodeToString(id)
+}
+
+func (e *Entry) EncodeABIData(cv *ComponentValue) ([]byte, error) {
+	return e.EncodeABIDataCtx(context.Background(), cv)
+}
+
+func (e *Entry) EncodeABIDataCtx(ctx context.Context, cv *ComponentValue) ([]byte, error) {
+
+	id, err := e.GenerateIDCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	cvData, err := cv.EncodeABIDataCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	data := make([]byte, len(id)+len(cvData))
+	copy(data, id)
+	copy(data[len(id):], cvData)
+	return data, nil
+
 }
 
 func (e *Entry) SignatureCtx(ctx context.Context) (string, error) {
