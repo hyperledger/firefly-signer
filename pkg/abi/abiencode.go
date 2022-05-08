@@ -24,11 +24,11 @@ import (
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
-func abiEncodeBytes(ctx context.Context, desc string, tc *typeComponent, value interface{}) (head, tail []byte, err error) {
+func abiEncodeBytes(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	// Belt and braces type check, although responsibility for generation of all the input data is within this package
 	b, ok := value.([]byte)
 	if !ok {
-		return nil, nil, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "[]byte", value, desc)
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "[]byte", value, desc)
 	}
 
 	var fixedLength int
@@ -45,77 +45,70 @@ func abiEncodeBytes(ctx context.Context, desc string, tc *typeComponent, value i
 
 	// Belt and braces length check, although responsibility for generation of all the input data is within this package
 	if len(b) < fixedLength || fixedLength > 32 {
-		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInsufficientDataABIEncode, int(fixedLength), len(b), desc)
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgInsufficientDataABIEncode, int(fixedLength), len(b), desc)
 	}
 
 	// Copy into the front of a 32byte block, with trailing zeros.
-	// That is the head, the tail is empty
-	head = make([]byte, 32)
-	copy(head, b[0:fixedLength])
-	tail = []byte{}
-	return head, tail, nil
+	// That is the head, the data is empty
+	data = make([]byte, 32)
+	copy(data, b[0:fixedLength])
+	return data, false, nil
 }
 
-func abiEncodeString(ctx context.Context, desc string, tc *typeComponent, value interface{}) (head, tail []byte, err error) {
+func abiEncodeString(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	// Belt and braces type check, although responsibility for generation of all the input data is within this package
 	s, ok := value.(string)
 	if !ok {
-		return nil, nil, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "string", value, desc)
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "string", value, desc)
 	}
 
 	// Note we assume UTF-8 encoding has been assured of all input strings. No special handling here.
 	return abiEncodeDynamicBytes([]byte(s))
 }
 
-func abiEncodeDynamicBytes(value []byte) (head, tail []byte, err error) {
+func abiEncodeDynamicBytes(value []byte) (data []byte, dynamic bool, err error) {
 
-	// Head is big-endian left padded 32byte integer of the length of the byte string
-	head = make([]byte, 32)
-	head = big.NewInt(int64(len(value))).FillBytes(head)
-
-	// Tail is the actual byte-string, padded ot a multiple of 32
-	tailLen := (len(value) / 32) * 32
+	dataLen := 32 + // length is prefixed as uint256
+		(len(value)/32)*32 // count of whole 32 byte chunks
 	if (len(value) % 32) != 0 {
-		tailLen += 32
+		dataLen += 32 // add 32 byte chunk for remainder
 	}
-	tail = make([]byte, tailLen)
-	copy(tail, value)
+	data = make([]byte, dataLen)
+	_ = big.NewInt(int64(len(value))).FillBytes(data[0:32])
+	copy(data[32:], value)
 
-	return head, tail, nil
+	return data, true, nil
 
 }
 
-func abiEncodeSignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (head, tail []byte, err error) {
+func abiEncodeSignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	// Belt and braces type check, although responsibility for generation of all the input data is within this package
 	i, ok := value.(*big.Int)
 	if !ok {
-		return nil, nil, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Int", value, desc)
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Int", value, desc)
 	}
 
 	// Reject integers that do not fit in the specified type
 	if !checkSignedIntFits(i, tc.m) {
-		return nil, nil, i18n.NewError(ctx, signermsgs.MsgNumberTooLargeABIEncode, tc.m, desc)
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgNumberTooLargeABIEncode, tc.m, desc)
 	}
 
-	head = serializeInt256TwosComplementBytes(i)
-	tail = []byte{}
-	return head, tail, nil
+	return serializeInt256TwosComplementBytes(i), false, nil
 }
 
-func abiEncodeUnsignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (head, tail []byte, err error) {
+func abiEncodeUnsignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	// Belt and braces type check, although responsibility for generation of all the input data is within this package
 	i, ok := value.(*big.Int)
 	if !ok {
-		return nil, nil, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Int", value, desc)
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Int", value, desc)
 	}
 
 	// Reject integers that do not fit in the specified type
 	if i.BitLen() > int(tc.m) {
-		return nil, nil, i18n.NewError(ctx, signermsgs.MsgNumberTooLargeABIEncode, tc.m, desc)
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgNumberTooLargeABIEncode, tc.m, desc)
 	}
 
-	head = make([]byte, 32)
-	head = i.FillBytes(head)
-	tail = []byte{}
-	return head, tail, nil
+	data = make([]byte, 32)
+	_ = i.FillBytes(data)
+	return data, false, nil
 }
