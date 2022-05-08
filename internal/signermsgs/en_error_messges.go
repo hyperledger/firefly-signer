@@ -56,4 +56,5 @@ var (
 	MsgBadABITypeComponent         = ffe("FF22041", "Bad ABI type component: %s")
 	MsgWrongTypeComponentABIEncode = ffe("FF22042", "Incorrect type expected=%s found=%T for ABI encoding of component %s")
 	MsgInsufficientDataABIEncode   = ffe("FF22043", "Insufficient data elements on input expected=%d found=%d for ABI encoding of component %s")
+	MsgNumberTooLargeABIEncode     = ffe("FF22044", "Numeric value does not fit in bit length %d for ABI encoding of component %s")
 )

@@ -152,7 +152,7 @@ var (
 		name:       "address",
 		suffixType: suffixTypeNone,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
-			return getBytesFromInterface(ctx, desc, input)
+			return getUintBytesFromInterface(ctx, desc, input)
 		},
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{

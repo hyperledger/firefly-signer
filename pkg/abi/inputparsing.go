@@ -314,6 +314,19 @@ func getBytesFromInterface(ctx context.Context, desc string, v interface{}) ([]b
 	}
 }
 
+// getUintBytesFromInterface converts input from all the options supported as bytes,
+// then takes that input and turns it into a big-endian unsigned integer.
+// Used for address (encoded as uint160)
+func getUintBytesFromInterface(ctx context.Context, desc string, v interface{}) (*big.Int, error) {
+	b, err := getBytesFromInterface(ctx, desc, v)
+	if err != nil {
+		return nil, err
+	}
+	i := new(big.Int)
+	i = i.SetBytes(b)
+	return i, nil
+}
+
 func getInterfaceArray(input interface{}) []interface{} {
 	iArray, ok := input.([]interface{})
 	if !ok {
