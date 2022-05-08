@@ -32,10 +32,10 @@ func TestEncodeBytesFixed(t *testing.T) {
 
 	hexStr := "090807060504030201000908070605040302010009080706050403020100feed"
 	b, err := hex.DecodeString(hexStr)
-	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	data, dynamic, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
 	assert.NoError(t, err)
-	assert.Equal(t, hexStr, hex.EncodeToString(head))
-	assert.Len(t, tail, 0)
+	assert.False(t, dynamic)
+	assert.Equal(t, hexStr, hex.EncodeToString(data))
 
 }
 
@@ -47,10 +47,10 @@ func TestEncodeBytesDynamicExact32(t *testing.T) {
 	lenHexStr := "0000000000000000000000000000000000000000000000000000000000000020"
 	hexStr := "090807060504030201000908070605040302010009080706050403020100feed"
 	b, err := hex.DecodeString(hexStr)
-	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	data, dynamic, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
 	assert.NoError(t, err)
-	assert.Equal(t, lenHexStr, hex.EncodeToString(head))
-	assert.Equal(t, hexStr, hex.EncodeToString(tail))
+	assert.True(t, dynamic)
+	assert.Equal(t, lenHexStr+hexStr, hex.EncodeToString(data))
 
 }
 
@@ -63,10 +63,10 @@ func TestEncodeBytesDynamicLess32(t *testing.T) {
 	hexStr := "feedbeef"
 	hexStrPadded := "feedbeef00000000000000000000000000000000000000000000000000000000"
 	b, err := hex.DecodeString(hexStr)
-	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	data, dynamic, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
 	assert.NoError(t, err)
-	assert.Equal(t, lenHexStr, hex.EncodeToString(head))
-	assert.Equal(t, hexStrPadded, hex.EncodeToString(tail))
+	assert.True(t, dynamic)
+	assert.Equal(t, lenHexStr+hexStrPadded, hex.EncodeToString(data))
 
 }
 
@@ -79,10 +79,10 @@ func TestEncodeBytesDynamicMore32(t *testing.T) {
 	hexStr := "09080706050403020100090807060504030201000908070605040302010090807060504030201009080706050403020100"
 	hexStrPadded := "09080706050403020100090807060504030201000908070605040302010090807060504030201009080706050403020100000000000000000000000000000000"
 	b, err := hex.DecodeString(hexStr)
-	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	data, dynamic, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
 	assert.NoError(t, err)
-	assert.Equal(t, lenHexStr, hex.EncodeToString(head))
-	assert.Equal(t, hexStrPadded, hex.EncodeToString(tail))
+	assert.True(t, dynamic)
+	assert.Equal(t, lenHexStr+hexStrPadded, hex.EncodeToString(data))
 
 }
 
@@ -103,10 +103,10 @@ func TestEncodeStringShort(t *testing.T) {
 
 	lenHexStr := "000000000000000000000000000000000000000000000000000000000000000d"
 	hexStr := "48656c6c6f2c20776f726c642100000000000000000000000000000000000000"
-	head, tail, err := abiEncodeString(context.Background(), "test", bytes32Component, "Hello, world!")
+	data, dynamic, err := abiEncodeString(context.Background(), "test", bytes32Component, "Hello, world!")
 	assert.NoError(t, err)
-	assert.Equal(t, lenHexStr, hex.EncodeToString(head))
-	assert.Equal(t, hexStr, hex.EncodeToString(tail))
+	assert.True(t, dynamic)
+	assert.Equal(t, lenHexStr+hexStr, hex.EncodeToString(data))
 
 }
 
@@ -117,10 +117,10 @@ func TestEncodeBytesFunction(t *testing.T) {
 
 	hexStr := "72b88e6bd5be978cae4c29f83b0d7d360d255d42fce353f6"
 	b, err := hex.DecodeString(hexStr)
-	head, tail, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
+	data, dynamic, err := abiEncodeBytes(context.Background(), "test", bytes32Component, b)
 	assert.NoError(t, err)
-	assert.Equal(t, hexStr+"0000000000000000" /* padded 24 to 32 */, hex.EncodeToString(head))
-	assert.Len(t, tail, 0)
+	assert.False(t, dynamic)
+	assert.Equal(t, hexStr+"0000000000000000" /* padded 24 to 32 */, hex.EncodeToString(data))
 
 }
 
@@ -161,10 +161,10 @@ func TestEncodeSignedIntegerPositiveOk(t *testing.T) {
 	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
 	assert.NoError(t, err)
 
-	head, tail, err := abiEncodeSignedInteger(context.Background(), "test", bytes32Component, posMax[256])
+	data, dynamic, err := abiEncodeSignedInteger(context.Background(), "test", bytes32Component, posMax[256])
 	assert.NoError(t, err)
-	assert.Equal(t, "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", hex.EncodeToString(head))
-	assert.Len(t, tail, 0)
+	assert.False(t, dynamic)
+	assert.Equal(t, "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", hex.EncodeToString(data))
 
 }
 
@@ -173,10 +173,10 @@ func TestEncodeSignedIntegerNegativeOk(t *testing.T) {
 	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
 	assert.NoError(t, err)
 
-	head, tail, err := abiEncodeSignedInteger(context.Background(), "test", bytes32Component, negMax[256])
+	data, dynamic, err := abiEncodeSignedInteger(context.Background(), "test", bytes32Component, negMax[256])
 	assert.NoError(t, err)
-	assert.Equal(t, "8000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(head))
-	assert.Len(t, tail, 0)
+	assert.False(t, dynamic)
+	assert.Equal(t, "8000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(data))
 
 }
 
@@ -218,10 +218,10 @@ func TestEncodeUnsignedIntegerPositiveOk(t *testing.T) {
 	assert.NoError(t, err)
 
 	twoPow256minus1 := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(1))
-	head, tail, err := abiEncodeUnsignedInteger(context.Background(), "test", bytes32Component, twoPow256minus1)
+	data, dynamic, err := abiEncodeUnsignedInteger(context.Background(), "test", bytes32Component, twoPow256minus1)
 	assert.NoError(t, err)
-	assert.Equal(t, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", hex.EncodeToString(head))
-	assert.Len(t, tail, 0)
+	assert.False(t, dynamic)
+	assert.Equal(t, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", hex.EncodeToString(data))
 
 }
 
