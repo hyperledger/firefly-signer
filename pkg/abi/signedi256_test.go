@@ -26,22 +26,22 @@ import (
 func TestInt256TwosCompliment(t *testing.T) {
 
 	i := big.NewInt(-12345)
-	b := serializeInt256TwosComplementBytes(i)
-	i2 := parseInt256TwosComplementBytes(b)
+	b := SerializeInt256TwosComplementBytes(i)
+	i2 := ParseInt256TwosComplementBytes(b)
 	assert.Equal(t, int64(-12345), i2.Int64())
 
 	// Largest negative two's compliment - 2^255
 	i = new(big.Int).Exp(big.NewInt(2), big.NewInt(255), nil)
 	i = i.Neg(i)
-	b = serializeInt256TwosComplementBytes(i)
-	i3 := parseInt256TwosComplementBytes(b)
+	b = SerializeInt256TwosComplementBytes(i)
+	i3 := ParseInt256TwosComplementBytes(b)
 	assert.Zero(t, i.Cmp(i3))
 
 	// Largest positive two's compliment - 2^255-1
 	i = new(big.Int).Exp(big.NewInt(2), big.NewInt(255), nil)
 	i = i.Sub(i, big.NewInt(1))
-	b = serializeInt256TwosComplementBytes(i)
-	i4 := parseInt256TwosComplementBytes(b)
+	b = SerializeInt256TwosComplementBytes(i)
+	i4 := ParseInt256TwosComplementBytes(b)
 	assert.Zero(t, i.Cmp(i4))
 
 }

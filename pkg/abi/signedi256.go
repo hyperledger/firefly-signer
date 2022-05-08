@@ -53,7 +53,7 @@ func checkSignedIntFits(i *big.Int, bitlen uint16) bool {
 	}
 }
 
-func serializeInt256TwosComplementBytes(i *big.Int) []byte {
+func SerializeInt256TwosComplementBytes(i *big.Int) []byte {
 	// Go doesn't have a function to serialize bytes in two's compliment,
 	// but you can do a bitwise AND to get a positive integer containing
 	// the bits of the two's compliment value (for the number of bits you provide)
@@ -62,7 +62,7 @@ func serializeInt256TwosComplementBytes(i *big.Int) []byte {
 	return tcI.FillBytes(b)
 }
 
-func parseInt256TwosComplementBytes(b []byte) *big.Int {
+func ParseInt256TwosComplementBytes(b []byte) *big.Int {
 	// Parse the two's complement bytes as a positive number
 	i := new(big.Int).SetBytes(b)
 	// If the sign bit is not set, this is a positive number

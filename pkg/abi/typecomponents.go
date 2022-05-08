@@ -137,9 +137,7 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABISignedInteger(ctx, desc, tc, value)
-		},
+		encodeABIData: encodeABISignedInteger,
 	})
 	ElementaryTypeUint = registerElementaryType(elementaryTypeInfo{
 		name:          "uint",
@@ -151,9 +149,7 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABIUnsignedInteger(ctx, desc, tc, value)
-		},
+		encodeABIData: encodeABIUnsignedInteger,
 	})
 	ElementaryTypeAddress = registerElementaryType(elementaryTypeInfo{
 		name:       "address",
@@ -162,9 +158,7 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getUintBytesFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABIUnsignedInteger(ctx, desc, tc, value)
-		},
+		encodeABIData: encodeABIUnsignedInteger,
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
 		name:       "bool",
@@ -173,9 +167,7 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBoolAsUnsignedIntegerFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABIUnsignedInteger(ctx, desc, tc, value)
-		},
+		encodeABIData: encodeABIUnsignedInteger,
 	})
 	ElementaryTypeFixed = registerElementaryType(elementaryTypeInfo{
 		name:          "fixed",
@@ -189,9 +181,7 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABISignedFloat(ctx, desc, tc, value)
-		},
+		encodeABIData: encodeABISignedFloat,
 	})
 	ElementaryTypeUfixed = registerElementaryType(elementaryTypeInfo{
 		name:          "ufixed",
@@ -205,9 +195,7 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABIUnsignedFloat(ctx, desc, tc, value)
-		},
+		encodeABIData: encodeABIUnsignedFloat,
 	})
 	ElementaryTypeBytes = registerElementaryType(elementaryTypeInfo{
 		name:       "bytes",
@@ -217,9 +205,7 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABIBytes(ctx, desc, tc, value)
-		},
+		encodeABIData: encodeABIBytes,
 	})
 	ElementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
 		name:       "function",
@@ -228,9 +214,7 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABIBytes(ctx, desc, tc, value)
-		},
+		encodeABIData: encodeABIBytes,
 	})
 	ElementaryTypeString = registerElementaryType(elementaryTypeInfo{
 		name:       "string",
@@ -239,7 +223,7 @@ var (
 			return getStringFromInterface(ctx, desc, input)
 		},
 		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABIString(ctx, desc, tc, value)
+			return encodeABIString(ctx, desc, value)
 		},
 	})
 )
