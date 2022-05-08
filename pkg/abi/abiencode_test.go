@@ -235,3 +235,54 @@ func TestEncodeUnsignedIntegerTooLarge(t *testing.T) {
 	assert.Regexp(t, "FF22044", err)
 
 }
+
+func TestEncodeUnsignedFloatPositiveOk(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "ufixed128x18"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	f, _ := new(big.Float).SetString("1.012345678901234567")
+	data, dynamic, err := abiEncodeUnsignedFloat(context.Background(), "test", bytes32Component, f)
+	assert.NoError(t, err)
+	assert.False(t, dynamic)
+	i, _ := new(big.Int).SetString("1012345678901234567", 10)
+	ib32 := make([]byte, 32)
+	i.FillBytes(ib32)
+	assert.Equal(t, hex.EncodeToString(ib32), hex.EncodeToString(data))
+
+}
+
+func TestEncodeUnsignedFloatNegativeOk(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "fixed128x18"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	f, _ := new(big.Float).SetString("-1.012345678901234567")
+	data, dynamic, err := abiEncodeSignedFloat(context.Background(), "test", bytes32Component, f)
+	assert.NoError(t, err)
+	assert.False(t, dynamic)
+	i, _ := new(big.Int).SetString("1012345678901234567", 10)
+	ib32 := serializeInt256TwosComplementBytes(i)
+	assert.Equal(t, hex.EncodeToString(ib32), hex.EncodeToString(data))
+
+}
+
+func TestEncodeSignedFlowWrongType(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "fixed128x18"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	_, _, err = abiEncodeSignedFloat(context.Background(), "test", bytes32Component, 12345)
+	assert.Regexp(t, "FF22042", err)
+
+}
+
+func TestEncodeUnsignedFlowWrongType(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "ufixed128x18"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	_, _, err = abiEncodeUnsignedFloat(context.Background(), "test", bytes32Component, 12345)
+	assert.Regexp(t, "FF22042", err)
+
+}

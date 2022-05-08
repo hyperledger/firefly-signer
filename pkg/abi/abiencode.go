@@ -112,3 +112,33 @@ func abiEncodeUnsignedInteger(ctx context.Context, desc string, tc *typeComponen
 	_ = i.FillBytes(data)
 	return data, false, nil
 }
+
+func abiEncodeSignedFloat(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+	f, ok := value.(*big.Float)
+	if !ok {
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Float", value, desc)
+	}
+
+	// Encoded as X * 10**N
+	fN := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tc.n)), nil)
+	f1 := new(big.Float).Mul(f, new(big.Float).SetInt(fN))
+	i, _ := f1.Abs(f1).Int(nil)
+	return abiEncodeSignedInteger(ctx, desc, tc, i)
+
+}
+
+func abiEncodeUnsignedFloat(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+	f, ok := value.(*big.Float)
+	if !ok {
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Float", value, desc)
+	}
+
+	// Encoded as X * 10**N
+	fN := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tc.n)), nil)
+	f1 := new(big.Float).Mul(f, new(big.Float).SetInt(fN))
+	i, _ := f1.Abs(f1).Int(nil)
+	return abiEncodeUnsignedInteger(ctx, desc, tc, i)
+
+}
