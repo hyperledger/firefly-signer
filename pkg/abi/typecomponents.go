@@ -70,13 +70,14 @@ type elementaryTypeInfo struct {
 	name             string     // The name of the type - the alphabetic characters up to an optional suffix
 	suffixType       suffixType // Whether there is a length suffix, and its type
 	defaultSuffix    string     // If set and there is no suffix supplied, the following suffix is used
+	defaultM         uint16     // If the type implicitly has an M value that is not expressed (such as "function")
 	mMin             uint16     // For suffixes with an M dimension, this is the minimum value
 	mMax             uint16     // For suffixes with an M dimension, this is the maximum (inclusive) value
 	mMod             uint16     // If non-zero, then (M % MMod) == 0 must be true
 	nMin             uint16     // For suffixes with an N dimension, this is the minimum value
 	nMax             uint16     // For suffixes with an N dimension, this is the maximum (inclusive) value
 	readExternalData func(ctx context.Context, desc string, input interface{}) (interface{}, error)
-	getABIData       func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (head, tail []byte, err error)
+	encodeABIData    func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error)
 }
 
 func (et *elementaryTypeInfo) String() string {
@@ -136,6 +137,9 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
 		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABISignedInteger(ctx, desc, tc, value)
+		},
 	})
 	ElementaryTypeUint = registerElementaryType(elementaryTypeInfo{
 		name:          "uint",
@@ -147,19 +151,30 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
 		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABIUnsignedInteger(ctx, desc, tc, value)
+		},
 	})
 	ElementaryTypeAddress = registerElementaryType(elementaryTypeInfo{
 		name:       "address",
 		suffixType: suffixTypeNone,
+		defaultM:   160, // encoded as "uint160"
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getUintBytesFromInterface(ctx, desc, input)
+		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABIUnsignedInteger(ctx, desc, tc, value)
 		},
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
 		name:       "bool",
 		suffixType: suffixTypeNone,
+		defaultM:   8, // encoded as "uint8"
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
-			return getBoolFromInterface(ctx, desc, input)
+			return getBoolAsUnsignedIntegerFromInterface(ctx, desc, input)
+		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABIUnsignedInteger(ctx, desc, tc, value)
 		},
 	})
 	ElementaryTypeFixed = registerElementaryType(elementaryTypeInfo{
@@ -174,6 +189,9 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
 		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABISignedFloat(ctx, desc, tc, value)
+		},
 	})
 	ElementaryTypeUfixed = registerElementaryType(elementaryTypeInfo{
 		name:          "ufixed",
@@ -187,6 +205,9 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
 		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABIUnsignedFloat(ctx, desc, tc, value)
+		},
 	})
 	ElementaryTypeBytes = registerElementaryType(elementaryTypeInfo{
 		name:       "bytes",
@@ -196,12 +217,19 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABIBytes(ctx, desc, tc, value)
+		},
 	})
 	ElementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
 		name:       "function",
 		suffixType: suffixTypeNone,
+		defaultM:   24, // encoded as "bytes24"
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
+		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABIBytes(ctx, desc, tc, value)
 		},
 	})
 	ElementaryTypeString = registerElementaryType(elementaryTypeInfo{
@@ -209,6 +237,9 @@ var (
 		suffixType: suffixTypeNone,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getStringFromInterface(ctx, desc, input)
+		},
+		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+			return encodeABIString(ctx, desc, tc, value)
 		},
 	})
 )
@@ -329,6 +360,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 			elementaryType:   et,
 			elementarySuffix: suffix,
 			keyName:          p.Name,
+			m:                et.defaultM,
 		}
 		// Process any suffix according to the rules of the elementary type
 		switch et.suffixType {

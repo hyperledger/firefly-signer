@@ -338,39 +338,39 @@ func TestGetBoolFromInterface(t *testing.T) {
 
 	ctx := context.Background()
 
-	v, err := getBoolFromInterface(ctx, "ut", "true")
+	v, err := getBoolAsUnsignedIntegerFromInterface(ctx, "ut", "true")
 	assert.NoError(t, err)
-	assert.True(t, v)
+	assert.Equal(t, int64(1), v.Int64())
 
-	v, err = getBoolFromInterface(ctx, "ut", "false")
+	v, err = getBoolAsUnsignedIntegerFromInterface(ctx, "ut", "false")
 	assert.NoError(t, err)
-	assert.False(t, v)
+	assert.Equal(t, int64(0), v.Int64())
 
-	v, err = getBoolFromInterface(ctx, "ut", true)
+	v, err = getBoolAsUnsignedIntegerFromInterface(ctx, "ut", true)
 	assert.NoError(t, err)
-	assert.True(t, v)
+	assert.Equal(t, int64(1), v.Int64())
 
-	v, err = getBoolFromInterface(ctx, "ut", false)
+	v, err = getBoolAsUnsignedIntegerFromInterface(ctx, "ut", false)
 	assert.NoError(t, err)
-	assert.False(t, v)
+	assert.Equal(t, int64(0), v.Int64())
 
 	vTrue := true
-	v, err = getBoolFromInterface(ctx, "ut", &vTrue)
+	v, err = getBoolAsUnsignedIntegerFromInterface(ctx, "ut", &vTrue)
 	assert.NoError(t, err)
-	assert.True(t, v)
+	assert.Equal(t, int64(1), v.Int64())
 
 	var is TestStringCustomType = "true"
-	v, err = getBoolFromInterface(ctx, "ut", &is)
+	v, err = getBoolAsUnsignedIntegerFromInterface(ctx, "ut", &is)
 	assert.NoError(t, err)
-	assert.True(t, v)
+	assert.Equal(t, int64(1), v.Int64())
 
-	_, err = getBoolFromInterface(ctx, "ut", int(-12345))
+	_, err = getBoolAsUnsignedIntegerFromInterface(ctx, "ut", int(-12345))
 	assert.Regexp(t, "FF22033", err)
 
-	_, err = getBoolFromInterface(ctx, "ut", []bool{true})
+	_, err = getBoolAsUnsignedIntegerFromInterface(ctx, "ut", []bool{true})
 	assert.Regexp(t, "FF22033", err)
 
-	_, err = getBoolFromInterface(ctx, "ut", nil)
+	_, err = getBoolAsUnsignedIntegerFromInterface(ctx, "ut", nil)
 	assert.Regexp(t, "FF22033", err)
 
 }

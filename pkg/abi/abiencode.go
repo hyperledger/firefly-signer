@@ -18,30 +18,105 @@ package abi
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
-func abiEncodeBytes(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+func (cv *ComponentValue) EncodeABIDataCtx(ctx context.Context) ([]byte, error) {
+	data, _, err := cv.encodeABIData(ctx, "")
+	return data, err
+}
+
+func (cv *ComponentValue) encodeABIData(ctx context.Context, desc string) ([]byte, bool, error) {
+
+	tc := cv.Component.(*typeComponent)
+	switch tc.cType {
+	case ElementaryComponent:
+		return tc.elementaryType.encodeABIData(ctx, desc, tc, cv.Value)
+	case FixedArrayComponent:
+		return cv.encodeABIChildren(ctx, desc, false /* only dynamic if the children are dynamic */, false /* no length */)
+	case VariableArrayComponent:
+		return cv.encodeABIChildren(ctx, desc, true /* always dynamic */, true /* need length */)
+	case TupleComponent:
+		return cv.encodeABIChildren(ctx, desc, true /* always dynamic */, false /* no length */)
+	default:
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, tc.cType)
+	}
+
+}
+
+func (cv *ComponentValue) encodeABIChildren(ctx context.Context, desc string, knownDynamic, includeLen bool) (data []byte, dynamic bool, err error) {
+
+	cData := make([][]byte, len(cv.Children))
+	cDynamic := make([]bool, len(cv.Children))
+
+	// Pass 1 generates the data
+	for i, child := range cv.Children {
+		cData[i], cDynamic[i], err = child.encodeABIData(ctx, fmt.Sprintf("%s[%d]", desc, i))
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	// Pass 2 calculates the length of the head
+	headLen := 0
+	tailLen := 0
+	dynamic = knownDynamic // if we're a tuple, or variable length array, we're known to be dynamic
+	if includeLen {
+		headLen += 32
+	}
+	for i := range cv.Children {
+		if cDynamic[i] {
+			headLen += 32
+			tailLen += len(cData[i])
+			// If any child is dynamic, we are dynamic
+			dynamic = true
+		} else {
+			headLen += len(cData[i])
+		}
+	}
+
+	// Pass 3 writes all the data into a single block
+	data = make([]byte, headLen+tailLen)
+	headOffset := 0
+	tailOffset := headLen
+	if includeLen {
+		big.NewInt(int64(len(cv.Children))).FillBytes(data[0:32])
+		headOffset += 32
+	}
+	for i := range cv.Children {
+		if cDynamic[i] {
+			// Write the offset of the data as uint256 in the head
+			big.NewInt(int64(tailOffset)).FillBytes(data[headOffset : headOffset+32])
+			headOffset += 32
+			// Write the data itself at that offset
+			copy(data[tailOffset:], cData[i])
+			tailOffset += len(cData[i])
+		} else {
+			// Write the data itself in the head
+			copy(data[headOffset:], cData[i])
+			headOffset += len(cData[i])
+		}
+	}
+	return data, dynamic, nil
+
+}
+
+func encodeABIBytes(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	b, ok := value.([]byte)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "[]byte", value, desc)
 	}
 
-	var fixedLength int
-	switch tc.elementaryType {
-	case ElementaryTypeFunction:
-		fixedLength = 24
-	default: // ElementaryTypeBytes
-		// The type "bytes" (without a length suffix) is a variable encoding
-		if tc.elementarySuffix == "" {
-			return abiEncodeDynamicBytes(b)
-		}
-		fixedLength = int(tc.m)
+	// The type "bytes" (without a length suffix) is a variable encoding.
+	// This comes out with a zero M value as the way we distinguish it from "function" which has default M of 24 (and also no suffix)
+	if tc.m == 0 {
+		return encodeABIDynamicBytes(b)
 	}
+	fixedLength := int(tc.m)
 
 	// Belt and braces length check, although responsibility for generation of all the input data is within this package
 	if len(b) < fixedLength || fixedLength > 32 {
@@ -55,18 +130,17 @@ func abiEncodeBytes(ctx context.Context, desc string, tc *typeComponent, value i
 	return data, false, nil
 }
 
-func abiEncodeString(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+func encodeABIString(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	s, ok := value.(string)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "string", value, desc)
 	}
 
 	// Note we assume UTF-8 encoding has been assured of all input strings. No special handling here.
-	return abiEncodeDynamicBytes([]byte(s))
+	return encodeABIDynamicBytes([]byte(s))
 }
 
-func abiEncodeDynamicBytes(value []byte) (data []byte, dynamic bool, err error) {
+func encodeABIDynamicBytes(value []byte) (data []byte, dynamic bool, err error) {
 
 	dataLen := 32 + // length is prefixed as uint256
 		(len(value)/32)*32 // count of whole 32 byte chunks
@@ -81,8 +155,7 @@ func abiEncodeDynamicBytes(value []byte) (data []byte, dynamic bool, err error) 
 
 }
 
-func abiEncodeSignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+func encodeABISignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	i, ok := value.(*big.Int)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Int", value, desc)
@@ -96,8 +169,7 @@ func abiEncodeSignedInteger(ctx context.Context, desc string, tc *typeComponent,
 	return serializeInt256TwosComplementBytes(i), false, nil
 }
 
-func abiEncodeUnsignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+func encodeABIUnsignedInteger(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	i, ok := value.(*big.Int)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Int", value, desc)
@@ -113,8 +185,7 @@ func abiEncodeUnsignedInteger(ctx context.Context, desc string, tc *typeComponen
 	return data, false, nil
 }
 
-func abiEncodeSignedFloat(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+func encodeABISignedFloat(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	f, ok := value.(*big.Float)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Float", value, desc)
@@ -124,12 +195,11 @@ func abiEncodeSignedFloat(ctx context.Context, desc string, tc *typeComponent, v
 	fN := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tc.n)), nil)
 	f1 := new(big.Float).Mul(f, new(big.Float).SetInt(fN))
 	i, _ := f1.Abs(f1).Int(nil)
-	return abiEncodeSignedInteger(ctx, desc, tc, i)
+	return encodeABISignedInteger(ctx, desc, tc, i)
 
 }
 
-func abiEncodeUnsignedFloat(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-	// Belt and braces type check, although responsibility for generation of all the input data is within this package
+func encodeABIUnsignedFloat(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	f, ok := value.(*big.Float)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Float", value, desc)
@@ -139,6 +209,6 @@ func abiEncodeUnsignedFloat(ctx context.Context, desc string, tc *typeComponent,
 	fN := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tc.n)), nil)
 	f1 := new(big.Float).Mul(f, new(big.Float).SetInt(fN))
 	i, _ := f1.Abs(f1).Int(nil)
-	return abiEncodeUnsignedInteger(ctx, desc, tc, i)
+	return encodeABIUnsignedInteger(ctx, desc, tc, i)
 
 }
