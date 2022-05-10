@@ -187,7 +187,7 @@ func (pa ParameterArray) DecodeABIDataCtx(ctx context.Context, b []byte, offset 
 	if err != nil {
 		return nil, err
 	}
-	_, cv, err = decodeABIElement(ctx, "<root>", b, offset, offset, component.(*typeComponent))
+	_, cv, err = decodeABIElement(ctx, "", b, offset, offset, component.(*typeComponent))
 	return cv, err
 }
 

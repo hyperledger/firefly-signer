@@ -17,6 +17,7 @@
 package abi
 
 import (
+	"context"
 	"encoding/hex"
 	"math/big"
 	"testing"
@@ -196,4 +197,298 @@ func TestExampleABIDecode5(t *testing.T) {
 	assert.Equal(t, "two", cv.Children[1].Children[1].Value)
 	assert.Equal(t, "three", cv.Children[1].Children[2].Value)
 
+}
+
+func TestDecodeABISignedIntOk(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "int"},
+	}
+	d, err := hex.DecodeString("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffedcbb")
+	assert.NoError(t, err)
+
+	tc, err := p.TypeComponentTree()
+	assert.NoError(t, err)
+	cv, err := tc.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, ElementaryTypeInt, cv.Children[0].Component.ElementaryType())
+	assert.Equal(t, int64(-0x12345), cv.Children[0].Value.(*big.Int).Int64())
+
+}
+
+func TestDecodeABISignedIntTooFewBytes(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "int"},
+	}
+	d, err := hex.DecodeString("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffedc")
+	assert.NoError(t, err)
+
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22047", err)
+
+}
+
+func TestDecodeABIUnsignedIntOk(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "uint"},
+	}
+	d, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000012345")
+	assert.NoError(t, err)
+
+	cv, err := p.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, ElementaryTypeUint, cv.Children[0].Component.ElementaryType())
+	assert.Equal(t, int64(0x12345), cv.Children[0].Value.(*big.Int).Int64())
+
+}
+
+func TestDecodeABIUnsignedIntTooFewBytes(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "uint"},
+	}
+	d, err := hex.DecodeString("00000000000000000000000000000000000000000000000000000000000123")
+	assert.NoError(t, err)
+
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22047", err)
+
+}
+
+func TestDecodeABIFixedOk(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "fixed64x4"},
+	}
+	d, err := hex.DecodeString("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffedcbb")
+	assert.NoError(t, err)
+
+	cv, err := p.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, ElementaryTypeFixed, cv.Children[0].Component.ElementaryType())
+	assert.Equal(t, "-7.4565", cv.Children[0].Value.(*big.Float).String())
+
+}
+
+func TestDecodeABIFixedTooFewBytes(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "fixed64x4"},
+	}
+	d, err := hex.DecodeString("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffedc")
+	assert.NoError(t, err)
+
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22047", err)
+
+}
+
+func TestDecodeABIUfixedOk(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "ufixed64x4"},
+	}
+	d, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000012345")
+	assert.NoError(t, err)
+
+	cv, err := p.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, ElementaryTypeUfixed, cv.Children[0].Component.ElementaryType())
+	assert.Equal(t, "7.4565", cv.Children[0].Value.(*big.Float).String())
+
+}
+
+func TestDecodeABIUfixedTooFewBytes(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "ufixed64x4"},
+	}
+	d, err := hex.DecodeString("00000000000000000000000000000000000000000000000000000000000123")
+	assert.NoError(t, err)
+
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22047", err)
+
+}
+
+func TestIntToFixedBadComponent(t *testing.T) {
+	_, err := intToFixed(context.Background(), &typeComponent{cType: TupleComponent}, &ComponentValue{})
+	assert.Regexp(t, "FF22041", err)
+}
+
+func TestDecodeABIDynamicArrayTooFewBytes(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "uint256[]"},
+	}
+	d, err := hex.DecodeString("00000000000000000000000000000000000000000000000000000000000123")
+	assert.NoError(t, err)
+
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22045", err)
+
+}
+
+func TestDecodeABIDynamicArrayTooLong(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "uint256[]"},
+	}
+	d, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020" +
+		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+	assert.NoError(t, err)
+
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22046", err)
+
+}
+
+func TestDecodeABIBytesFixedOk(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "bytes13"},
+	}
+	d, err := hex.DecodeString("48656c6c6f2c20776f726c642100000000000000000000000000000000000000")
+	assert.NoError(t, err)
+
+	cv, err := p.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hello, world!", string(cv.Children[0].Value.([]byte)))
+
+}
+
+func TestDecodeABIStringVariableOk(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "string"},
+	}
+	d, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020" +
+		"000000000000000000000000000000000000000000000000000000000000000d" +
+		"48656c6c6f2c20776f726c642100000000000000000000000000000000000000")
+	assert.NoError(t, err)
+
+	cv, err := p.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hello, world!", cv.Children[0].Value)
+
+}
+
+func TestDecodeABIStringVariableInsufficientBytesForLength(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "string"},
+	}
+	d, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020" +
+		"00000000000000000000000000000000000000000000000000000000000000")
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22045", err)
+
+}
+
+func TestDecodeABIStringVariableInsufficientBytesForOffset(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "string"},
+	}
+	d, err := hex.DecodeString("00000000000000000000000000000000000000000000000000000000000000")
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22045", err)
+
+}
+
+func TestDecodeABIStringVariableInsufficientBytesForValue(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "string"},
+	}
+	d, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020" +
+		"00000000000000000000000000000000000000000000000000000000000000ff")
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22047", err)
+
+}
+
+func TestDecodeABIFixedArrayTooFewBytes(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "uint256[1]"},
+	}
+	d, err := hex.DecodeString("00000000000000000000000000000000000000000000000000000000000000")
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22047", err)
+
+}
+
+func TestDecodeABIDynamicArrayTooFewBytesForValue(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "uint256[]"},
+	}
+	d, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020" +
+		"0000000000000000000000000000000000000000000000000000000000000020")
+	_, err = p.DecodeABIData(d, 0)
+	assert.Regexp(t, "FF22047", err)
+
+}
+
+func TestDecodeABIElementBadComponent(t *testing.T) {
+	_, _, err := decodeABIElement(context.Background(), "", []byte{}, 0, 0, &typeComponent{
+		cType: 99,
+	})
+	assert.Regexp(t, "FF22041", err)
+}
+
+func TestDecodeABIDataBadParam(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "wrong"},
+	}
+
+	_, err := p.DecodeABIData([]byte{}, 0)
+	assert.Regexp(t, "FF22025", err)
+
+}
+
+func TestDecodeABIInputsInsufficientSigBytes(t *testing.T) {
+
+	f := &Entry{
+		Name:   "doit",
+		Inputs: ParameterArray{},
+	}
+
+	d, err := hex.DecodeString("ffffff")
+	assert.NoError(t, err)
+	_, err = f.DecodeABIInputs(d)
+	assert.Regexp(t, "FF22048", err)
+}
+
+func TestDecodeABIInputsWrongSigBytes(t *testing.T) {
+
+	f := &Entry{
+		Name:   "doit",
+		Inputs: ParameterArray{},
+	}
+
+	d, err := hex.DecodeString("ffffffff")
+	assert.NoError(t, err)
+	_, err = f.DecodeABIInputs(d)
+	assert.Regexp(t, "FF22049", err)
+}
+
+func TestDecodeABIInputsSigGenerationFailed(t *testing.T) {
+
+	f := &Entry{
+		Name: "doit",
+		Inputs: ParameterArray{
+			{Type: "wrong"},
+		},
+	}
+
+	d, err := hex.DecodeString("ffffffff")
+	assert.NoError(t, err)
+	_, err = f.DecodeABIInputs(d)
+	assert.Regexp(t, "FF22025", err)
 }
