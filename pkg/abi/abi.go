@@ -17,12 +17,15 @@
 package abi
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
 	"strings"
 
+	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-common/pkg/log"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -146,7 +149,12 @@ func (pa ParameterArray) ParseExternalData(input interface{}) (cv *ComponentValu
 	return pa.ParseExternalDataCtx(context.Background(), input)
 }
 
-func (pa ParameterArray) ParseExternalDataCtx(ctx context.Context, input interface{}) (cv *ComponentValue, err error) {
+// TypeComponentTree returns the type component tree for the array (tuple) of individually typed parameters
+func (pa ParameterArray) TypeComponentTree() (component TypeComponent, err error) {
+	return pa.TypeComponentTreeCtx(context.Background())
+}
+
+func (pa ParameterArray) TypeComponentTreeCtx(ctx context.Context) (tc TypeComponent, err error) {
 	component := &typeComponent{
 		cType:         TupleComponent,
 		tupleChildren: make([]*typeComponent, len(pa)),
@@ -156,7 +164,31 @@ func (pa ParameterArray) ParseExternalDataCtx(ctx context.Context, input interfa
 			return nil, err
 		}
 	}
-	return walkInput(ctx, "<root>", input, component)
+	return component, nil
+}
+
+func (pa ParameterArray) ParseExternalDataCtx(ctx context.Context, input interface{}) (cv *ComponentValue, err error) {
+	component, err := pa.TypeComponentTreeCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return walkInput(ctx, "<root>", input, component.(*typeComponent))
+}
+
+// DecodeABIData takes ABI encoded bytes that conform to the parameter array, and decodes them
+// into a value tree. We take the offset (rather than requiring you to generate a slice at the
+// given offset) so that errors in parsing can be reported at an absolute offset.
+func (pa ParameterArray) DecodeABIData(b []byte, offset int) (cv *ComponentValue, err error) {
+	return pa.DecodeABIDataCtx(context.Background(), b, offset)
+}
+
+func (pa ParameterArray) DecodeABIDataCtx(ctx context.Context, b []byte, offset int) (cv *ComponentValue, err error) {
+	component, err := pa.TypeComponentTreeCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	_, cv, err = decodeABIElement(ctx, "<root>", b, offset, offset, component.(*typeComponent))
+	return cv, err
 }
 
 // String returns the signature string. If a Validate needs to be initiated, and that
@@ -219,6 +251,27 @@ func (e *Entry) EncodeABIDataCtx(ctx context.Context, cv *ComponentValue) ([]byt
 	copy(data, id)
 	copy(data[len(id):], cvData)
 	return data, nil
+
+}
+
+func (e *Entry) DecodeABIInputs(b []byte) (*ComponentValue, error) {
+	return e.DecodeABIInputsCtx(context.Background(), b)
+}
+
+func (e *Entry) DecodeABIInputsCtx(ctx context.Context, b []byte) (*ComponentValue, error) {
+
+	id, err := e.GenerateIDCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) < 4 {
+		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABISignature)
+	}
+	if !bytes.Equal(id, b[0:4]) {
+		return nil, i18n.NewError(ctx, signermsgs.MsgIncorrectABISignatureID, e.String(), hex.EncodeToString(id), hex.EncodeToString(b[0:4]))
+	}
+
+	return e.Inputs.DecodeABIDataCtx(ctx, b, 4)
 
 }
 

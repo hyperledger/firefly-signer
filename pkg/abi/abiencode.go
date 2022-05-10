@@ -41,7 +41,7 @@ func (cv *ComponentValue) encodeABIData(ctx context.Context, desc string) ([]byt
 		return tc.elementaryType.encodeABIData(ctx, desc, tc, cv.Value)
 	case FixedArrayComponent:
 		return cv.encodeABIChildren(ctx, desc, false /* only dynamic if the children are dynamic */, false /* no length */)
-	case VariableArrayComponent:
+	case DynamicArrayComponent:
 		return cv.encodeABIChildren(ctx, desc, true /* always dynamic */, true /* need length */)
 	case TupleComponent:
 		return cv.encodeABIChildren(ctx, desc, true /* always dynamic */, false /* no length */)
@@ -135,7 +135,7 @@ func encodeABIBytes(ctx context.Context, desc string, tc *typeComponent, value i
 	return data, false, nil
 }
 
-func encodeABIString(ctx context.Context, desc string, value interface{}) (data []byte, dynamic bool, err error) {
+func encodeABIString(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	s, ok := value.(string)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "string", value, desc)
@@ -190,18 +190,20 @@ func encodeABIUnsignedInteger(ctx context.Context, desc string, tc *typeComponen
 	return data, false, nil
 }
 
+func encodeFixed(ctx context.Context, desc string, tc *typeComponent, f *big.Float) (data []byte, dynamic bool, err error) {
+	// Encoded as X * 10**N integer
+	fN := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tc.n)), nil)
+	f1 := new(big.Float).Mul(f, new(big.Float).SetInt(fN))
+	i, _ := f1.Abs(f1).Int(nil)
+	return encodeABISignedInteger(ctx, desc, tc, i)
+}
+
 func encodeABISignedFloat(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	f, ok := value.(*big.Float)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Float", value, desc)
 	}
-
-	// Encoded as X * 10**N
-	fN := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tc.n)), nil)
-	f1 := new(big.Float).Mul(f, new(big.Float).SetInt(fN))
-	i, _ := f1.Abs(f1).Int(nil)
-	return encodeABISignedInteger(ctx, desc, tc, i)
-
+	return encodeFixed(ctx, desc, tc, f)
 }
 
 func encodeABIUnsignedFloat(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
@@ -209,11 +211,5 @@ func encodeABIUnsignedFloat(ctx context.Context, desc string, tc *typeComponent,
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "*big.Float", value, desc)
 	}
-
-	// Encoded as X * 10**N
-	fN := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tc.n)), nil)
-	f1 := new(big.Float).Mul(f, new(big.Float).SetInt(fN))
-	i, _ := f1.Abs(f1).Int(nil)
-	return encodeABIUnsignedInteger(ctx, desc, tc, i)
-
+	return encodeFixed(ctx, desc, tc, f)
 }

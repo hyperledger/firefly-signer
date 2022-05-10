@@ -371,7 +371,7 @@ func walkInput(ctx context.Context, breadcrumbs string, input interface{}, compo
 			Value:     value,
 			Leaf:      true,
 		}, nil
-	case FixedArrayComponent, VariableArrayComponent:
+	case FixedArrayComponent, DynamicArrayComponent:
 		return walkArrayInput(ctx, breadcrumbs, input, component)
 	case TupleComponent:
 		return walkTupleInput(ctx, breadcrumbs, input, component)

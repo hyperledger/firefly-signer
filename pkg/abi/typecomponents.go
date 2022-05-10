@@ -78,6 +78,7 @@ type elementaryTypeInfo struct {
 	nMax             uint16     // For suffixes with an N dimension, this is the maximum (inclusive) value
 	readExternalData func(ctx context.Context, desc string, input interface{}) (interface{}, error)
 	encodeABIData    func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error)
+	decodeABIData    func(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error)
 }
 
 func (et *elementaryTypeInfo) String() string {
@@ -138,6 +139,7 @@ var (
 			return getIntegerFromInterface(ctx, desc, input)
 		},
 		encodeABIData: encodeABISignedInteger,
+		decodeABIData: decodeABISignedInt,
 	})
 	ElementaryTypeUint = registerElementaryType(elementaryTypeInfo{
 		name:          "uint",
@@ -150,6 +152,7 @@ var (
 			return getIntegerFromInterface(ctx, desc, input)
 		},
 		encodeABIData: encodeABIUnsignedInteger,
+		decodeABIData: decodeABIUnsignedInt,
 	})
 	ElementaryTypeAddress = registerElementaryType(elementaryTypeInfo{
 		name:       "address",
@@ -159,6 +162,7 @@ var (
 			return getUintBytesFromInterface(ctx, desc, input)
 		},
 		encodeABIData: encodeABIUnsignedInteger,
+		decodeABIData: decodeABIUnsignedInt,
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
 		name:       "bool",
@@ -168,6 +172,7 @@ var (
 			return getBoolAsUnsignedIntegerFromInterface(ctx, desc, input)
 		},
 		encodeABIData: encodeABIUnsignedInteger,
+		decodeABIData: decodeABIUnsignedInt,
 	})
 	ElementaryTypeFixed = registerElementaryType(elementaryTypeInfo{
 		name:          "fixed",
@@ -182,6 +187,7 @@ var (
 			return getFloatFromInterface(ctx, desc, input)
 		},
 		encodeABIData: encodeABISignedFloat,
+		decodeABIData: decodeABISignedFloat,
 	})
 	ElementaryTypeUfixed = registerElementaryType(elementaryTypeInfo{
 		name:          "ufixed",
@@ -196,6 +202,7 @@ var (
 			return getFloatFromInterface(ctx, desc, input)
 		},
 		encodeABIData: encodeABIUnsignedFloat,
+		decodeABIData: decodeABIUnsignedFloat,
 	})
 	ElementaryTypeBytes = registerElementaryType(elementaryTypeInfo{
 		name:       "bytes",
@@ -206,6 +213,7 @@ var (
 			return getBytesFromInterface(ctx, desc, input)
 		},
 		encodeABIData: encodeABIBytes,
+		decodeABIData: decodeABIBytes,
 	})
 	ElementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
 		name:       "function",
@@ -215,6 +223,7 @@ var (
 			return getBytesFromInterface(ctx, desc, input)
 		},
 		encodeABIData: encodeABIBytes,
+		decodeABIData: decodeABIBytes,
 	})
 	ElementaryTypeString = registerElementaryType(elementaryTypeInfo{
 		name:       "string",
@@ -222,9 +231,8 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getStringFromInterface(ctx, desc, input)
 		},
-		encodeABIData: func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
-			return encodeABIString(ctx, desc, value)
-		},
+		encodeABIData: encodeABIString,
+		decodeABIData: decodeABIString,
 	})
 )
 
@@ -242,7 +250,7 @@ type ComponentType int
 const (
 	ElementaryComponent ComponentType = iota
 	FixedArrayComponent
-	VariableArrayComponent
+	DynamicArrayComponent
 	TupleComponent
 )
 
@@ -252,7 +260,7 @@ func (tc *typeComponent) String() string {
 		return fmt.Sprintf("%s%s", tc.elementaryType.name, tc.elementarySuffix)
 	case FixedArrayComponent:
 		return fmt.Sprintf("%s[%d]", tc.arrayChild.String(), tc.arrayLength)
-	case VariableArrayComponent:
+	case DynamicArrayComponent:
 		return fmt.Sprintf("%s[]", tc.arrayChild.String())
 	case TupleComponent:
 		buff := new(strings.Builder)
@@ -470,7 +478,7 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 	var ac *typeComponent
 	if mStr.Len() == 0 {
 		ac = &typeComponent{
-			cType:      VariableArrayComponent,
+			cType:      DynamicArrayComponent,
 			arrayChild: child,
 			keyName:    keyName,
 		}
