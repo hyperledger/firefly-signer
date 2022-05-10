@@ -50,6 +50,8 @@ type TypeComponent interface {
 	TupleChildren() []TypeComponent     // only non-nil for tuple components
 	ParseExternal(v interface{}) (*ComponentValue, error)
 	ParseExternalCtx(ctx context.Context, v interface{}) (*ComponentValue, error)
+	DecodeABIData(d []byte, offset int) (*ComponentValue, error)
+	DecodeABIDataCtx(ctx context.Context, d []byte, offest int) (*ComponentValue, error)
 }
 
 type typeComponent struct {
@@ -304,6 +306,15 @@ func (tc *typeComponent) ParseExternal(input interface{}) (*ComponentValue, erro
 
 func (tc *typeComponent) ParseExternalCtx(ctx context.Context, input interface{}) (*ComponentValue, error) {
 	return tc.parseExternal(ctx, "", input)
+}
+
+func (tc *typeComponent) DecodeABIData(b []byte, offset int) (*ComponentValue, error) {
+	return tc.DecodeABIDataCtx(context.Background(), b, offset)
+}
+
+func (tc *typeComponent) DecodeABIDataCtx(ctx context.Context, b []byte, offset int) (*ComponentValue, error) {
+	_, cv, err := decodeABIElement(ctx, "", b, offset, offset, tc)
+	return cv, err
 }
 
 func (tc *typeComponent) parseExternal(ctx context.Context, desc string, input interface{}) (*ComponentValue, error) {
