@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExample1(t *testing.T) {
+func TestExampleABIEncode1(t *testing.T) {
 
 	f := &Entry{
 		Name: "baz",
@@ -51,7 +51,7 @@ func TestExample1(t *testing.T) {
 
 }
 
-func TestExample2(t *testing.T) {
+func TestExampleABIEncode2(t *testing.T) {
 
 	f := &Entry{
 		Name: "bar",
@@ -75,7 +75,7 @@ func TestExample2(t *testing.T) {
 
 }
 
-func TestExample3(t *testing.T) {
+func TestExampleABIEncode3(t *testing.T) {
 
 	f := &Entry{
 		Name: "sam",
@@ -113,7 +113,7 @@ func TestExample3(t *testing.T) {
 
 }
 
-func TestExample4(t *testing.T) {
+func TestExampleABIEncode4(t *testing.T) {
 
 	f := &Entry{
 		Name: "f",
@@ -153,7 +153,7 @@ func TestExample4(t *testing.T) {
 
 }
 
-func TestExample5(t *testing.T) {
+func TestExampleABIEncode5(t *testing.T) {
 
 	f := &Entry{
 		Name: "g",
@@ -261,7 +261,7 @@ func TestEncodeBytesDynamicMore32(t *testing.T) {
 
 func TestEncodeStringWrongType(t *testing.T) {
 
-	_, _, err := encodeABIString(context.Background(), "test", 12345)
+	_, _, err := encodeABIString(context.Background(), "test", nil, 12345)
 	assert.Regexp(t, "FF22042", err)
 
 }
@@ -270,7 +270,7 @@ func TestEncodeStringShort(t *testing.T) {
 
 	lenHexStr := "000000000000000000000000000000000000000000000000000000000000000d"
 	hexStr := "48656c6c6f2c20776f726c642100000000000000000000000000000000000000"
-	data, dynamic, err := encodeABIString(context.Background(), "test", "Hello, world!")
+	data, dynamic, err := encodeABIString(context.Background(), "test", nil, "Hello, world!")
 	assert.NoError(t, err)
 	assert.True(t, dynamic)
 	assert.Equal(t, lenHexStr+hexStr, hex.EncodeToString(data))
