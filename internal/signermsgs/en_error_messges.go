@@ -62,4 +62,6 @@ var (
 	MsgNotEnoughtBytesABIValue      = ffe("FF22047", "Insufficient bytes to read %s value %s")
 	MsgNotEnoughtBytesABISignature  = ffe("FF22048", "Insufficient bytes to read signature")
 	MsgIncorrectABISignatureID      = ffe("FF22049", "Incorrect ID for signature %s expected=%s found=%s")
+	MsgUnknownABIElementaryType     = ffe("FF22050", "Unknown elementary type %s for component %s")
+	MsgUnknownTupleSerializer       = ffe("FF22051", "Unknown tuple serialization option %d")
 )

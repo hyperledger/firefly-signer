@@ -133,12 +133,16 @@ func (e *Entry) ValidateCtx(ctx context.Context) (err error) {
 //
 // The component value tree can then be serialized to binary ABI data.
 func (pa ParameterArray) ParseExternalJSON(data []byte) (*ComponentValue, error) {
+	return pa.ParseExternalJSONCtx(context.Background(), data)
+}
+
+func (pa ParameterArray) ParseExternalJSONCtx(ctx context.Context, data []byte) (*ComponentValue, error) {
 	var jsonTree interface{}
 	err := json.Unmarshal(data, &jsonTree)
 	if err != nil {
 		return nil, err
 	}
-	return pa.ParseExternalDataCtx(context.Background(), jsonTree)
+	return pa.ParseExternalDataCtx(ctx, jsonTree)
 }
 
 // ParseExternalData takes (non-ABI encoded) data input, such as an unmarshalled JSON structure,
@@ -172,7 +176,7 @@ func (pa ParameterArray) ParseExternalDataCtx(ctx context.Context, input interfa
 	if err != nil {
 		return nil, err
 	}
-	return walkInput(ctx, "<root>", input, component.(*typeComponent))
+	return walkInput(ctx, "", input, component.(*typeComponent))
 }
 
 // DecodeABIData takes ABI encoded bytes that conform to the parameter array, and decodes them

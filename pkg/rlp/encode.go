@@ -23,7 +23,6 @@ func encodeBytes(inBytes []byte, isList bool) []byte {
 	}
 	if len(inBytes) == 1 &&
 		!isList &&
-		inBytes[0] >= 0x00 &&
 		inBytes[0] <= 0x7f {
 		// We don't need the offset, this can be sent as a single byte
 		return inBytes
