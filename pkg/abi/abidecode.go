@@ -66,7 +66,7 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 }
 
 func decodeABISignedInt(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
-	cv = &ComponentValue{Component: component, Leaf: true}
+	cv = &ComponentValue{Component: component}
 	if headPosition+32 > len(block) {
 		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABIValue, component, desc)
 	}
@@ -75,7 +75,7 @@ func decodeABISignedInt(ctx context.Context, desc string, block []byte, headStar
 }
 
 func decodeABIUnsignedInt(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
-	cv = &ComponentValue{Component: component, Leaf: true}
+	cv = &ComponentValue{Component: component}
 	if headPosition+32 > len(block) {
 		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABIValue, component, desc)
 	}
@@ -139,7 +139,7 @@ func decodeABIBytes(ctx context.Context, desc string, block []byte, headStart, h
 	} else {
 		byteLength = int(component.m)
 	}
-	cv = &ComponentValue{Component: component, Leaf: true}
+	cv = &ComponentValue{Component: component}
 	if dataOffset+byteLength > len(block) {
 		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABIValue, component, desc)
 	}

@@ -37,9 +37,16 @@ var (
 // ComponentValue is a the ABI matched data associated with the TypeComponent tree of the ABI.
 type ComponentValue struct {
 	Component TypeComponent
-	Leaf      bool
 	Children  []*ComponentValue
 	Value     interface{}
+}
+
+// JSON is a convenience helper for NewSerializer().Serialize(cv), to perform default serialization
+// See Serializer builder for configuration options.
+// See Serializer.SerializeInterface() to obtain the interface to serialize to other binary formats
+// (YAML, TOML etc.).
+func (cv *ComponentValue) JSON() ([]byte, error) {
+	return NewSerializer().SerializeJSON(cv)
 }
 
 // getPtrValOrRawTypeNil sees if v is a pointer, with a non-nil value. If so returns that value, else nil
@@ -369,7 +376,6 @@ func walkInput(ctx context.Context, breadcrumbs string, input interface{}, compo
 		return &ComponentValue{
 			Component: component,
 			Value:     value,
-			Leaf:      true,
 		}, nil
 	case FixedArrayComponent, DynamicArrayComponent:
 		return walkArrayInput(ctx, breadcrumbs, input, component)
