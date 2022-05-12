@@ -31,7 +31,7 @@ import (
 // Serializer contains a set of options for how to serialize an parsed
 // ABI value tree, into JSON.
 type Serializer struct {
-	ts TupleSerializationMode
+	ts FormattingMode
 	is IntSerializer
 	fs FloatSerializer
 	bs ByteSerializer
@@ -39,7 +39,7 @@ type Serializer struct {
 
 // NewSerializer creates a new ABI value tree serializer, with the default
 // configuration.
-// - TupleSerializationMode: SerializeAsObjects
+// - FormattingMode: FormatAsObjects
 // - IntSerializer: DecimalStringIntSerializer
 // - FloatSerializer: DecimalStringFloatSerializer
 // - ByteSerializer: HexByteSerializer
@@ -51,16 +51,16 @@ func NewSerializer() *Serializer {
 	}
 }
 
-// TupleSerializationMode affects how function parameters, and child tuples, are serialized.
-type TupleSerializationMode int
+// FormattingMode affects how function parameters, and child tuples, are serialized.
+type FormattingMode int
 
 const (
-	// SerializeAsObjects uses the names of the function / event / tuple parameters as keys in an object
-	SerializeAsObjects TupleSerializationMode = iota
-	// SerializeAsFlatArrays uses flat arrays of flat values
-	SerializeAsFlatArrays
-	// SerializeAsSelfDescribingArrays uses arrays of structures with {"name":"arg1","type":"uint256","value":...}
-	SerializeAsSelfDescribingArrays
+	// FormatAsObjects uses the names of the function / event / tuple parameters as keys in an object
+	FormatAsObjects FormattingMode = iota
+	// FormatAsFlatArrays uses flat arrays of flat values
+	FormatAsFlatArrays
+	// FormatAsSelfDescribingArrays uses arrays of structures with {"name":"arg1","type":"uint256","value":...}
+	FormatAsSelfDescribingArrays
 )
 
 var (
@@ -76,7 +76,7 @@ type FloatSerializer func(f *big.Float) interface{}
 
 type ByteSerializer func(b []byte) interface{}
 
-func (s *Serializer) SetTupleSerializationMode(ts TupleSerializationMode) *Serializer {
+func (s *Serializer) SetFormattingMode(ts FormattingMode) *Serializer {
 	s.ts = ts
 	return s
 }
@@ -204,7 +204,7 @@ func (s *Serializer) serializeArray(ctx context.Context, breadcrumbs string, cv 
 
 func (s *Serializer) serializeTuple(ctx context.Context, breadcrumbs string, cv *ComponentValue) (interface{}, error) {
 	switch s.ts {
-	case SerializeAsObjects:
+	case FormatAsObjects:
 		out := make(map[string]interface{})
 		for i, child := range cv.Children {
 			if child.Component != nil {
@@ -220,7 +220,7 @@ func (s *Serializer) serializeTuple(ctx context.Context, breadcrumbs string, cv 
 			}
 		}
 		return out, nil
-	case SerializeAsFlatArrays:
+	case FormatAsFlatArrays:
 		out := make([]interface{}, len(cv.Children))
 		for i, child := range cv.Children {
 			v, err := s.walkOutput(ctx, fmt.Sprintf("%s[%d]", breadcrumbs, i), child)
@@ -230,7 +230,7 @@ func (s *Serializer) serializeTuple(ctx context.Context, breadcrumbs string, cv 
 			out[i] = v
 		}
 		return out, nil
-	case SerializeAsSelfDescribingArrays:
+	case FormatAsSelfDescribingArrays:
 		out := make([]interface{}, len(cv.Children))
 		for i, child := range cv.Children {
 			vm := make(map[string]interface{})
