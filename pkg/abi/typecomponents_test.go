@@ -60,6 +60,8 @@ func TestABISignatures1(t *testing.T) {
 	var abi ABI
 	err := json.Unmarshal([]byte(abiString), &abi)
 	assert.NoError(t, err)
+	assert.NotNil(t, abi.Events()["Event2"])
+	assert.Nil(t, abi.Functions()["Event2"])
 
 	sig0, err := abi[0].Signature()
 	assert.NoError(t, err)

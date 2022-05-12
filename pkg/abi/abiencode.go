@@ -25,6 +25,10 @@ import (
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
+func (cv *ComponentValue) EncodeABIData() ([]byte, error) {
+	return cv.EncodeABIDataCtx(context.Background())
+}
+
 func (cv *ComponentValue) EncodeABIDataCtx(ctx context.Context) ([]byte, error) {
 	data, _, err := cv.encodeABIData(ctx, "")
 	return data, err
