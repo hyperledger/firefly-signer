@@ -40,7 +40,7 @@ func TestExampleABIDecode1(t *testing.T) {
 		"0000000000000000000000000000000000000000000000000000000000000001")
 	assert.NoError(t, err)
 
-	cv, err := f.DecodeABIInputs(d)
+	cv, err := f.DecodeCallData(d)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "69", cv.Children[0].Value.(*big.Int).String())
@@ -63,7 +63,7 @@ func TestExampleABIDecode2(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	cv, err := f.DecodeABIInputs(d)
+	cv, err := f.DecodeCallData(d)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "abc", string(cv.Children[0].Children[0].Value.([]byte)))
@@ -98,7 +98,7 @@ func TestExampleABIDecode3(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	cv, err := f.DecodeABIInputs(d)
+	cv, err := f.DecodeCallData(d)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "dave", string(cv.Children[0].Value.([]byte)))
@@ -138,7 +138,7 @@ func TestExampleABIDecode4(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	cv, err := f.DecodeABIInputs(d)
+	cv, err := f.DecodeCallData(d)
 	assert.NoError(t, err)
 
 	assert.Equal(t, int64(0x123), cv.Children[0].Value.(*big.Int).Int64())
@@ -185,7 +185,7 @@ func TestExampleABIDecode5(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	cv, err := f.DecodeABIInputs(d)
+	cv, err := f.DecodeCallData(d)
 	assert.NoError(t, err)
 
 	assert.Len(t, cv.Children[0].Children, 2)
@@ -452,7 +452,7 @@ func TestDecodeABIDataBadParam(t *testing.T) {
 
 }
 
-func TestDecodeABIInputsInsufficientSigBytes(t *testing.T) {
+func TestDecodeCallDataInsufficientSigBytes(t *testing.T) {
 
 	f := &Entry{
 		Name:   "doit",
@@ -461,11 +461,11 @@ func TestDecodeABIInputsInsufficientSigBytes(t *testing.T) {
 
 	d, err := hex.DecodeString("ffffff")
 	assert.NoError(t, err)
-	_, err = f.DecodeABIInputs(d)
+	_, err = f.DecodeCallData(d)
 	assert.Regexp(t, "FF22048", err)
 }
 
-func TestDecodeABIInputsWrongSigBytes(t *testing.T) {
+func TestDecodeCallDataWrongSigBytes(t *testing.T) {
 
 	f := &Entry{
 		Name:   "doit",
@@ -474,11 +474,11 @@ func TestDecodeABIInputsWrongSigBytes(t *testing.T) {
 
 	d, err := hex.DecodeString("ffffffff")
 	assert.NoError(t, err)
-	_, err = f.DecodeABIInputs(d)
+	_, err = f.DecodeCallData(d)
 	assert.Regexp(t, "FF22049", err)
 }
 
-func TestDecodeABIInputsSigGenerationFailed(t *testing.T) {
+func TestDecodeCallDataSigGenerationFailed(t *testing.T) {
 
 	f := &Entry{
 		Name: "doit",
@@ -489,6 +489,6 @@ func TestDecodeABIInputsSigGenerationFailed(t *testing.T) {
 
 	d, err := hex.DecodeString("ffffffff")
 	assert.NoError(t, err)
-	_, err = f.DecodeABIInputs(d)
+	_, err = f.DecodeCallData(d)
 	assert.Regexp(t, "FF22025", err)
 }
