@@ -105,7 +105,8 @@ Example:
 
 The package deliberately gives you access to perform all of the transitions individually.
 
-For example, if you want to traverse the type tree itself to generate metadata for the ABI, you can do that.
+For example, if you want to traverse the type tree itself to generate metadata for the ABI,
+you can do that by calling TypeComponentTree() on the inputs/outputs of a function/event.
 
 External data parsing tries to be flexible when coercing JSON data into a value tree:
 
