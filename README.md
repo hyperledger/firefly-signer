@@ -6,6 +6,10 @@
 A set of Ethereum transaction signing utilities designed for use across projects:
 
 - RLP Encoding and Decoding
+- ABI Encoding and Decoding
+  - Validation of ABI definitions
+  - JSON <-> Value Tree <-> ABI Bytes
+  - Model API exposed, as well as encode/decode APIs
 - Secp256k1 transaction signing for Ethereum transactions
   - Original
   - EIP-155

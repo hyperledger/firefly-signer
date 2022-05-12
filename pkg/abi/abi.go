@@ -14,6 +14,69 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+
+The abi package allows encoding and decoding of ABI encoded bytes, for the inputs/outputs
+to EVM functions, and the parsing of EVM logs/events.
+
+A high level summary of the API is as follows:
+
+						 [ ABI ]        - simple model of the JSON format
+							↓
+						(validate)      - all types in functions (methods), events and errors are validated
+							↓
+				[ ComponentType tree ]  - to build a "type tree" of all the arrays/tuples/elementary
+							↓
+	[ JSON ] →	[ ComponentValue tree ]	- which you combine with data (JSON or Go types) to get a "value tree"
+							↓
+					     (encode)       - the value tree can then be serialized into ABI encoded bytes
+							↓
+	              [ ABI encoded bytes ]	- so you can use these bytes to invoke EVM functions (signatures supported)
+							↓
+					     (decode)       - then you can decode ABI bytes from function outputs, or logs (event data)
+							↓
+	[ JSON ] ←	[ ComponentValue tree ]	- then this value tree can be serialized to JSON
+
+The package deliberately gives you access to perform all of the transitions individually.
+
+For example, if you want to traverse the type tree itself to generate metadata for the ABI, you can do that.
+
+External data parsing tries to be flexible when coercing JSON data into a value tree:
+
+- Bytes and Addresses can be any of:
+  - Hex string without any prefix
+  - Hex string with an "0x" prefix
+  - A byte array
+- Numbers can be any of:
+  - A base10 formatted string without any prefix
+  - A hex formatted string with an "0x" prefix
+  - A number
+  - Negative numbers are supported
+  - Floating point numbers are supported (for ABI fixed/ufixed types)
+- Boolean values can be any of:
+  - A boolean
+  - A string "true"/"false"
+- Strings must be a string
+
+When passing in an interface{} (instead of JSON directly) efforts are made to follow pointers,
+and resolve types down to the basic types. For example detecting whether a struct conforms to
+the fmt.Stringer interface.
+
+For serialization back out from the value tree, to JSON, there is a pluggable formatting interface
+with a number of built-in options as follows:
+
+- Parameter serialization for function outputs / event log data (and nested tuples) can be:
+  - Object based {"key1":"val1"}
+  - Flat ordered array based ["val1"]
+  - Self describing array based [{"name":"key1","type":"string","value":"val1"}]
+- Number serialization can be:
+  - Base 10 formatted string
+  - Hex with "0x" prefix
+  - Numeric up to the maximum safe Javscript values, then automatically switching to string
+- Byte serialization can be:
+  - Hex with "0x" prefix
+  - Hex without any prefix
+*/
 package abi
 
 import (
