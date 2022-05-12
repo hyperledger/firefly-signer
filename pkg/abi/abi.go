@@ -21,21 +21,79 @@ to EVM functions, and the parsing of EVM logs/events.
 
 A high level summary of the API is as follows:
 
-						 [ ABI ]        - simple model of the JSON format
-							↓
-						(validate)      - all types in functions (methods), events and errors are validated
-							↓
-				[ ComponentType tree ]  - to build a "type tree" of all the arrays/tuples/elementary
-							↓
-	[ JSON ] →	[ ComponentValue tree ]	- which you combine with data (JSON or Go types) to get a "value tree"
-							↓
-					     (encode)       - the value tree can then be serialized into ABI encoded bytes
-							↓
-	              [ ABI encoded bytes ]	- so you can use these bytes to invoke EVM functions (signatures supported)
-							↓
-					     (decode)       - then you can decode ABI bytes from function outputs, or logs (event data)
-							↓
-	[ JSON ] ←	[ ComponentValue tree ]	- then this value tree can be serialized to JSON
+                         [ ABI ]        - parse your ABI definition, using the Go model of the JSON format
+                            ↓
+                        (validate)      - all types in functions (methods), events and errors are validated
+                            ↓
+                [ ComponentType tree ]  - to build a "type tree" of all the arrays/tuples/elementary
+                            ↓
+    [ JSON ] →  [ ComponentValue tree ] - which you combine with data (JSON or Go types) to get a "value tree"
+                            ↓
+                         (encode)       - the value tree can then be serialized into ABI encoded bytes
+                            ↓
+                  [ ABI encoded bytes ] - so you can use these bytes to invoke EVM functions (signatures supported)
+                            ↓
+                         (decode)       - then you can decode ABI bytes from function outputs, or logs (event data)
+                            ↓
+    [ JSON ] ← [ ComponentValue tree ]  - the value tree can be serialized back to JSON
+
+Example:
+
+	transferABI := `[
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "recipient",
+					"type": "address"
+				},
+				{
+					"internalType": "uint256",
+					"name": "amount",
+					"type": "uint256"
+				}
+			],
+			"name": "transfer",
+			"outputs": [
+				{
+					"internalType": "bool",
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		}
+	]`
+
+	// Parse the ABI definition
+	var abi ABI
+	_ = json.Unmarshal([]byte(transferABI), &abi)
+	f := abi.Functions()["transfer"]
+
+	// Parse some JSON input data conforming to the ABI
+	encodedValueTree, _ := f.Inputs.ParseJSON([]byte(`{
+		"recipient": "0x03706Ff580119B130E7D26C5e816913123C24d89",
+		"amount": "1000000000000000000"
+	}`))
+
+	// We can serialize this directly to abi bytes
+	abiData, _ := encodedValueTree.EncodeABIData()
+	fmt.Println(hex.EncodeToString(abiData))
+	// 00000000000000000000000003706ff580119b130e7d26c5e816913123c24d890000000000000000000000000000000000000000000000000de0b6b3a7640000
+
+	// We can also serialize that to function call data, with the function selector prefix
+	abiCallData, _ := f.EncodeCallData(encodedValueTree)
+
+	// Decode those ABI bytes back again, verifying the function selector
+	decodedValueTree, _ := f.DecodeABIInputs(abiCallData)
+
+	// Serialize back to JSON
+	jsonData, _ := decodedValueTree.JSON()
+
+	// Output
+	fmt.Println(string(jsonData))
+	// {"amount":"1000000000000000000","recipient":"03706ff580119b130e7d26c5e816913123c24d89"}
 
 The package deliberately gives you access to perform all of the transitions individually.
 
@@ -172,6 +230,26 @@ func (a ABI) ValidateCtx(ctx context.Context) (err error) {
 	return nil
 }
 
+func (a ABI) Functions() map[string]*Entry {
+	m := make(map[string]*Entry)
+	for _, e := range a {
+		if e.Name != "" && e.IsFunction() {
+			m[e.Name] = e
+		}
+	}
+	return m
+}
+
+func (a ABI) Events() map[string]*Entry {
+	m := make(map[string]*Entry)
+	for _, e := range a {
+		if e.Name != "" && e.Type == Event {
+			m[e.Name] = e
+		}
+	}
+	return m
+}
+
 // Validate processes all the components of all the parameters in this ABI entry
 func (e *Entry) Validate() (err error) {
 	return e.ValidateCtx(context.Background())
@@ -191,15 +269,15 @@ func (e *Entry) ValidateCtx(ctx context.Context) (err error) {
 	return nil
 }
 
-// ParseExternalJSON takes external JSON data, and parses againt the ABI to generate
+// ParseJSON takes external JSON data, and parses againt the ABI to generate
 // a component value tree.
 //
 // The component value tree can then be serialized to binary ABI data.
-func (pa ParameterArray) ParseExternalJSON(data []byte) (*ComponentValue, error) {
-	return pa.ParseExternalJSONCtx(context.Background(), data)
+func (pa ParameterArray) ParseJSON(data []byte) (*ComponentValue, error) {
+	return pa.ParseJSONCtx(context.Background(), data)
 }
 
-func (pa ParameterArray) ParseExternalJSONCtx(ctx context.Context, data []byte) (*ComponentValue, error) {
+func (pa ParameterArray) ParseJSONCtx(ctx context.Context, data []byte) (*ComponentValue, error) {
 	var jsonTree interface{}
 	err := json.Unmarshal(data, &jsonTree)
 	if err != nil {
@@ -298,11 +376,12 @@ func (e *Entry) ID() string {
 	return hex.EncodeToString(id)
 }
 
-func (e *Entry) EncodeABIData(cv *ComponentValue) ([]byte, error) {
-	return e.EncodeABIDataCtx(context.Background(), cv)
+// EncodeCallData serializes the inputs of the entry, prefixed with the function selector
+func (e *Entry) EncodeCallData(cv *ComponentValue) ([]byte, error) {
+	return e.EncodeCallDataCtx(context.Background(), cv)
 }
 
-func (e *Entry) EncodeABIDataCtx(ctx context.Context, cv *ComponentValue) ([]byte, error) {
+func (e *Entry) EncodeCallDataCtx(ctx context.Context, cv *ComponentValue) ([]byte, error) {
 
 	id, err := e.GenerateIDCtx(ctx)
 	if err != nil {

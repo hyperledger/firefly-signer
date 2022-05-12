@@ -30,7 +30,7 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 	abi := testABI(t, sampleABI1)
 	assert.NotNil(t, abi)
 
-	v, err := abi[0].Inputs.ParseExternalJSON([]byte(`{
+	v, err := abi[0].Inputs.ParseJSON([]byte(`{
 		"a": {
 			"b": 12345,
 			"c": [
@@ -115,7 +115,7 @@ func TestJSONSerializationForTypes(t *testing.T) {
 	abi := testABI(t, sampleABI2)
 	assert.NotNil(t, abi)
 
-	v, err := abi[0].Inputs.ParseExternalJSON([]byte(`{
+	v, err := abi[0].Inputs.ParseJSON([]byte(`{
 		"a": 128,
 		"b": -128,
 		"c": "0xABCA79A8Ac11452F263A9861624c498220980Ca7",
@@ -178,7 +178,7 @@ func TestNumberIfPossibleSerialization(t *testing.T) {
 	  ]`)
 	assert.NotNil(t, abi)
 
-	v, err := abi[0].Inputs.ParseExternalJSON([]byte(`{
+	v, err := abi[0].Inputs.ParseJSON([]byte(`{
 		"a": 9007199254740991,
 		"b": -9007199254740991,
 		"c": 9007199254740991,
@@ -199,7 +199,7 @@ func TestNumberIfPossibleSerialization(t *testing.T) {
 		"d": -9007199254740991
 	}`, string(j1))
 
-	v, err = abi[0].Inputs.ParseExternalJSON([]byte(`{
+	v, err = abi[0].Inputs.ParseJSON([]byte(`{
 		"a": 9007199254740992,
 		"b": -9007199254740992,
 		"c": 9007199254740992,
@@ -281,7 +281,7 @@ func TestJSONSerializationFormatsAnonymousTuple(t *testing.T) {
 	  ]`)
 	assert.NotNil(t, abi)
 
-	v, err := abi[0].Inputs.ParseExternalJSON([]byte(`[
+	v, err := abi[0].Inputs.ParseJSON([]byte(`[
 		"0x6c26465984ac94713E83300d1F002296772eBB64",
 		1
 	]`))

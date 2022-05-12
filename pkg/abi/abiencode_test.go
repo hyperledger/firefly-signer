@@ -35,13 +35,13 @@ func TestExampleABIEncode1(t *testing.T) {
 		},
 	}
 
-	cv, err := f.Inputs.ParseExternalJSON([]byte(`[
+	cv, err := f.Inputs.ParseJSON([]byte(`[
 		69,
 		true
 	]`))
 	assert.NoError(t, err)
 
-	data, err := f.EncodeABIData(cv)
+	data, err := f.EncodeCallData(cv)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "cdcd77c0"+
@@ -60,12 +60,12 @@ func TestExampleABIEncode2(t *testing.T) {
 		},
 	}
 
-	cv, err := f.Inputs.ParseExternalJSON([]byte(`[
+	cv, err := f.Inputs.ParseJSON([]byte(`[
 		["` + hex.EncodeToString([]byte("abc")) + `", "` + hex.EncodeToString([]byte("def")) + `"]
 	]`))
 	assert.NoError(t, err)
 
-	data, err := f.EncodeABIData(cv)
+	data, err := f.EncodeCallData(cv)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "fce353f6"+
@@ -86,14 +86,14 @@ func TestExampleABIEncode3(t *testing.T) {
 		},
 	}
 
-	cv, err := f.Inputs.ParseExternalJSON([]byte(`[
+	cv, err := f.Inputs.ParseJSON([]byte(`[
 		"` + hex.EncodeToString([]byte("dave")) + `",
 		true,
 		[ 1, 2, 3 ]
 	]`))
 	assert.NoError(t, err)
 
-	data, err := f.EncodeABIData(cv)
+	data, err := f.EncodeCallData(cv)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "a5643bf2"+
@@ -125,7 +125,7 @@ func TestExampleABIEncode4(t *testing.T) {
 		},
 	}
 
-	cv, err := f.Inputs.ParseExternalJSON([]byte(`[
+	cv, err := f.Inputs.ParseJSON([]byte(`[
 		"0x123",
 		["0x456","0x789"],
 		"` + hex.EncodeToString([]byte("1234567890")) + `",
@@ -133,7 +133,7 @@ func TestExampleABIEncode4(t *testing.T) {
 	]`))
 	assert.NoError(t, err)
 
-	data, err := f.EncodeABIData(cv)
+	data, err := f.EncodeCallData(cv)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "8be65246"+
@@ -163,13 +163,13 @@ func TestExampleABIEncode5(t *testing.T) {
 		},
 	}
 
-	cv, err := f.Inputs.ParseExternalJSON([]byte(`[
+	cv, err := f.Inputs.ParseJSON([]byte(`[
 		[ [1,2], [3] ],
 		[ "one", "two", "three" ]
 	]`))
 	assert.NoError(t, err)
 
-	data, err := f.EncodeABIData(cv)
+	data, err := f.EncodeCallData(cv)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "2289b18c"+

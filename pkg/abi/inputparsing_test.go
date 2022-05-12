@@ -495,7 +495,7 @@ func TestABIParseMissingRoot(t *testing.T) {
 
 	values := `{}`
 
-	_, err := inputs.ParseExternalJSON([]byte(values))
+	_, err := inputs.ParseJSON([]byte(values))
 	assert.Regexp(t, "FF22040", err)
 
 }
@@ -560,7 +560,7 @@ func TestWrongLength(t *testing.T) {
 		}
 	]`
 
-	_, err := inputs.ParseExternalJSON([]byte(values))
+	_, err := inputs.ParseJSON([]byte(values))
 	assert.Regexp(t, "FF22036", err)
 
 }
@@ -581,7 +581,7 @@ func TestNestedTuplesOk(t *testing.T) {
 		}
 	}`
 
-	cv, err := inputs.ParseExternalJSON([]byte(values))
+	cv, err := inputs.ParseJSON([]byte(values))
 	assert.NoError(t, err)
 
 	assert.Equal(t, "test1", cv.Children[0].Children[0].Children[0].Children[0].Children[0].Value)
@@ -604,7 +604,7 @@ func TestNestedTuplesBadLeaf(t *testing.T) {
 		}
 	}`
 
-	_, err := inputs.ParseExternalJSON([]byte(values))
+	_, err := inputs.ParseJSON([]byte(values))
 	assert.Regexp(t, "FF22032", err)
 
 }
@@ -623,7 +623,7 @@ func TestNestedTuplesMissingTupleArrayEntry(t *testing.T) {
 		}
 	}`
 
-	_, err := inputs.ParseExternalJSON([]byte(values))
+	_, err := inputs.ParseJSON([]byte(values))
 	assert.Regexp(t, "FF22037", err)
 
 }
@@ -636,7 +636,7 @@ func TestTuplesWrongType(t *testing.T) {
 		"a": false
 	}`
 
-	_, err := inputs.ParseExternalJSON([]byte(values))
+	_, err := inputs.ParseJSON([]byte(values))
 	assert.Regexp(t, "FF22038", err)
 
 }
@@ -665,11 +665,11 @@ func TestTuplesMissingName(t *testing.T) {
 
 	// Fine if you use the array syntax
 	values := `{ "a": [12345] }`
-	_, err := inputs.ParseExternalJSON([]byte(values))
+	_, err := inputs.ParseJSON([]byte(values))
 	assert.NoError(t, err)
 
 	// But the missing name is a problem for the object syntax
 	values = `{ "a": {"b":12345} }`
-	_, err = inputs.ParseExternalJSON([]byte(values))
+	_, err = inputs.ParseJSON([]byte(values))
 	assert.Regexp(t, "FF22039", err)
 }

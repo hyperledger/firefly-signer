@@ -19,6 +19,7 @@ package abi
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -108,6 +109,69 @@ func testABI(t *testing.T, abiJSON string) (abi ABI) {
 	err := json.Unmarshal([]byte(abiJSON), &abi)
 	assert.NoError(t, err)
 	return abi
+}
+
+func TestDocsFunctionCallExample(t *testing.T) {
+
+	transferABI := `[
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "recipient",
+					"type": "address"
+				},
+				{
+					"internalType": "uint256",
+					"name": "amount",
+					"type": "uint256"
+				}
+			],
+			"name": "transfer",
+			"outputs": [
+				{
+					"internalType": "bool",
+					"name": "",
+					"type": "bool"
+				}
+			],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		}
+	]`
+
+	// Parse the ABI definition
+	var abi ABI
+	_ = json.Unmarshal([]byte(transferABI), &abi)
+	f := abi.Functions()["transfer"]
+
+	// Parse some JSON input data conforming to the ABI
+	encodedValueTree, _ := f.Inputs.ParseJSON([]byte(`{
+		"recipient": "0x03706Ff580119B130E7D26C5e816913123C24d89",
+		"amount": "1000000000000000000"
+	}`))
+
+	// We can serialize this directly to abi bytes
+	abiData, _ := encodedValueTree.EncodeABIData()
+	fmt.Println(hex.EncodeToString(abiData))
+	// 00000000000000000000000003706ff580119b130e7d26c5e816913123c24d890000000000000000000000000000000000000000000000000de0b6b3a7640000
+
+	// We can also serialize that to function call data, with the function selector prefix
+	abiCallData, _ := f.EncodeCallData(encodedValueTree)
+
+	// Decode those ABI bytes back again, verifying the function selector
+	decodedValueTree, _ := f.DecodeABIInputs(abiCallData)
+
+	// Serialize back to JSON
+	jsonData, _ := decodedValueTree.JSON()
+
+	// Output
+	fmt.Println(string(jsonData))
+	// {"amount":"1000000000000000000","recipient":"03706ff580119b130e7d26c5e816913123c24d89"}
+
+	// Test validation - not for copy/paste to docs
+	assert.Equal(t, `00000000000000000000000003706ff580119b130e7d26c5e816913123c24d890000000000000000000000000000000000000000000000000de0b6b3a7640000`, hex.EncodeToString(abiData))
+	assert.Equal(t, `{"amount":"1000000000000000000","recipient":"03706ff580119b130e7d26c5e816913123c24d89"}`, string(jsonData))
 }
 
 func TestABIGetTupleTypeTree(t *testing.T) {
@@ -232,7 +296,7 @@ func TestABIModifyBadOutputs(t *testing.T) {
 
 }
 
-func TestParseExternalJSONObjectModeOk(t *testing.T) {
+func TestParseJSONObjectModeOk(t *testing.T) {
 
 	inputs := testABI(t, sampleABI1)[0].Inputs
 
@@ -258,7 +322,7 @@ func TestParseExternalJSONObjectModeOk(t *testing.T) {
 
 }
 
-func TestParseExternalJSONArrayModeOk(t *testing.T) {
+func TestParseJSONArrayModeOk(t *testing.T) {
 
 	inputs := testABI(t, sampleABI1)[0].Inputs
 
@@ -270,7 +334,7 @@ func TestParseExternalJSONArrayModeOk(t *testing.T) {
 		]
 	]`
 
-	cv, err := inputs.ParseExternalJSON([]byte(values))
+	cv, err := inputs.ParseJSON([]byte(values))
 	assert.NoError(t, err)
 	assert.NotNil(t, cv)
 
@@ -281,7 +345,7 @@ func TestParseExternalJSONArrayModeOk(t *testing.T) {
 
 }
 
-func TestParseExternalJSONMixedModeOk(t *testing.T) {
+func TestParseJSONMixedModeOk(t *testing.T) {
 
 	inputs := testABI(t, sampleABI1)[0].Inputs
 
@@ -293,7 +357,7 @@ func TestParseExternalJSONMixedModeOk(t *testing.T) {
 		}
 	]`
 
-	cv, err := inputs.ParseExternalJSON([]byte(values))
+	cv, err := inputs.ParseJSON([]byte(values))
 	assert.NoError(t, err)
 
 	assert.Equal(t, "12345", cv.Children[0].Children[0].Value.(*big.Int).String())
@@ -328,7 +392,7 @@ func TestABIParseCoerceGoTypes(t *testing.T) {
 
 }
 
-func TestParseExternalJSONArrayLotsOfTypes(t *testing.T) {
+func TestParseJSONArrayLotsOfTypes(t *testing.T) {
 
 	inputs := testABI(t, sampleABI2)[0].Inputs
 
@@ -345,7 +409,7 @@ func TestParseExternalJSONArrayLotsOfTypes(t *testing.T) {
 		"test string"
 	]`
 
-	cv, err := inputs.ParseExternalJSON([]byte(values))
+	cv, err := inputs.ParseJSON([]byte(values))
 	assert.NoError(t, err)
 	assert.NotNil(t, cv)
 
@@ -365,14 +429,14 @@ func TestParseExternalJSONArrayLotsOfTypes(t *testing.T) {
 
 }
 
-func TestParseExternalJSONBadData(t *testing.T) {
+func TestParseJSONBadData(t *testing.T) {
 	inputs := testABI(t, sampleABI1)[0].Inputs
-	_, err := inputs.ParseExternalJSON([]byte(`{`))
+	_, err := inputs.ParseJSON([]byte(`{`))
 	assert.Regexp(t, "unexpected end", err)
 
 }
 
-func TestParseExternalJSONBadABI(t *testing.T) {
+func TestParseJSONBadABI(t *testing.T) {
 	inputs := testABI(t, `[
 		{
 		  "name": "foo",
@@ -386,7 +450,7 @@ func TestParseExternalJSONBadABI(t *testing.T) {
 		  "outputs": []
 		}
 	  ]`)[0].Inputs
-	_, err := inputs.ParseExternalJSON([]byte(`{}`))
+	_, err := inputs.ParseJSON([]byte(`{}`))
 	assert.Regexp(t, "FF22025", err)
 
 }
@@ -405,12 +469,12 @@ func TestEncodeABIDataCtxBadABI(t *testing.T) {
 		  "outputs": []
 		}
 	  ]`)[0]
-	_, err := f.EncodeABIData(nil)
+	_, err := f.EncodeCallData(nil)
 	assert.Regexp(t, "FF22025", err)
 }
 
 func TestEncodeABIDataCtxBadInputs(t *testing.T) {
 	f := testABI(t, sampleABI1)[0]
-	_, err := f.EncodeABIData(nil)
+	_, err := f.EncodeCallData(nil)
 	assert.Regexp(t, "FF22041", err)
 }
