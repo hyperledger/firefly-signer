@@ -5,30 +5,40 @@
 
 A set of Ethereum transaction signing utilities designed for use across projects:
 
+## Go API libraries
+
 - RLP Encoding and Decoding
+  - See `pkg/rlp` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/rlp)
 - ABI Encoding and Decoding
   - Validation of ABI definitions
   - JSON <-> Value Tree <-> ABI Bytes
   - Model API exposed, as well as encode/decode APIs
+  - See `pkg/abi` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/abi)
 - Secp256k1 transaction signing for Ethereum transactions
   - Original
   - EIP-155
   - EIP-1559
+  - See `pkg/ethsigner` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/ethsigner)
 - Keystore V3 wallet implementation
   - Scrypt - read/write
   - pbkdf2 - read
+  - See `pkg/keystorev3` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/keystorev3)
 
-A runtime JSON/RPC server/proxy to intercept `eth_sendTransaction` JSON/RPC calls
+## JSON/RPC proxy server
+
+A runtime JSON/RPC server/proxy to intercept `eth_sendTransaction` JSON/RPC calls, and pass other
+calls through unchanged.
 
 - Lightweight fast-starting runtime
 - HTTP/HTTPS server
   - All HTTPS/CORS etc. features from FireFly Microservice framework
   - Configured via YAML
+  - Batch JSON/RPC support
 - `eth_sendTransaction` implementation to sign transactions
   - If EIP-1559 gas price fields are specified uses `0x02` transactions, otherwise EIP-155
 - Makes some JSON/RPC calls on application's behalf
   - Queries Chain ID via `net_version` on startup
-  - `eth_account` support
+  - `eth_accounts` JSON/RPC method support
   - Trivial nonce management built-in (calls `eth_getTransactionCount` for each request)
 - File based wallet
   - Configurable caching for in-memory keys
@@ -37,15 +47,7 @@ A runtime JSON/RPC server/proxy to intercept `eth_sendTransaction` JSON/RPC call
   - Files can be TOML/YAML/JSON metadata pointing to Keystore V3 files + password files
   - Files can be Keystore V3 files directly, with accompanying `{{ADDRESS}}.pass` files
 
-Potential future contributions:
-
-- WebSockets support
-- Tessera private transaction signing for Quorum / Hyperledger Besu
-- Loading keys on startup
-- Caching list of keys in-memory
-- Regular expression to match address anywhere in filename (depends on caching list of keys)
-
-# Configuration
+## JSON/RPC proxy server configuration
 
 For a full list of configuration options see [config.md](./config.md)
 
@@ -109,7 +111,7 @@ Apache 2.0
 
 ### JSON/RPC proxy
 
-The JSON/RPC proxy code was contributed by Kaleido, Inc.
+The JSON/RPC proxy and RLP encoding code was contributed by Kaleido, Inc.
 
 ### Cryptography
 
