@@ -160,7 +160,7 @@ func TestDocsFunctionCallExample(t *testing.T) {
 	abiCallData, _ := f.EncodeCallData(encodedValueTree)
 
 	// Decode those ABI bytes back again, verifying the function selector
-	decodedValueTree, _ := f.DecodeABIInputs(abiCallData)
+	decodedValueTree, _ := f.DecodeCallData(abiCallData)
 
 	// Serialize back to JSON
 	jsonData, _ := decodedValueTree.JSON()

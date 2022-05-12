@@ -86,7 +86,7 @@ Example:
 	abiCallData, _ := f.EncodeCallData(encodedValueTree)
 
 	// Decode those ABI bytes back again, verifying the function selector
-	decodedValueTree, _ := f.DecodeABIInputs(abiCallData)
+	decodedValueTree, _ := f.DecodeCallData(abiCallData)
 
 	// Serialize back to JSON
 	jsonData, _ := decodedValueTree.JSON()
@@ -400,11 +400,11 @@ func (e *Entry) EncodeCallDataCtx(ctx context.Context, cv *ComponentValue) ([]by
 
 }
 
-func (e *Entry) DecodeABIInputs(b []byte) (*ComponentValue, error) {
-	return e.DecodeABIInputsCtx(context.Background(), b)
+func (e *Entry) DecodeCallData(b []byte) (*ComponentValue, error) {
+	return e.DecodeCallDataCtx(context.Background(), b)
 }
 
-func (e *Entry) DecodeABIInputsCtx(ctx context.Context, b []byte) (*ComponentValue, error) {
+func (e *Entry) DecodeCallDataCtx(ctx context.Context, b []byte) (*ComponentValue, error) {
 
 	id, err := e.GenerateIDCtx(ctx)
 	if err != nil {
