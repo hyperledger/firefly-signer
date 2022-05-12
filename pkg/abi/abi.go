@@ -88,12 +88,20 @@ Example:
 	// Decode those ABI bytes back again, verifying the function selector
 	decodedValueTree, _ := f.DecodeCallData(abiCallData)
 
-	// Serialize back to JSON
+	// Serialize back to JSON with default formatting - note the keys are alphabetically ordered
 	jsonData, _ := decodedValueTree.JSON()
-
-	// Output
 	fmt.Println(string(jsonData))
 	// {"amount":"1000000000000000000","recipient":"03706ff580119b130e7d26c5e816913123c24d89"}
+
+	// Use a custom serializer to get ordered array output, hex integers, and 0x prefixes
+	// - Check out FormatAsSelfDescribingArrays for a format with embedded type information
+	jsonData2, _ := NewSerializer().
+		SetFormattingMode(FormatAsFlatArrays).
+		SetIntSerializer(HexIntSerializer0xPrefix).
+		SetByteSerializer(HexByteSerializer0xPrefix).
+		SerializeJSON(decodedValueTree)
+	fmt.Println(string(jsonData2))
+	// ["0x03706ff580119b130e7d26c5e816913123c24d89","0xde0b6b3a7640000"]
 
 The package deliberately gives you access to perform all of the transitions individually.
 

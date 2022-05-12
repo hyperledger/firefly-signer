@@ -56,7 +56,7 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 	}`, string(j1))
 
 	j2, err := NewSerializer().
-		SetTupleSerializationMode(SerializeAsFlatArrays).
+		SetFormattingMode(FormatAsFlatArrays).
 		SetIntSerializer(HexIntSerializer0xPrefix).
 		SetByteSerializer(HexByteSerializer0xPrefix).
 		SerializeJSON(v)
@@ -73,7 +73,7 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 	]`, string(j2))
 
 	j3, err := NewSerializer().
-		SetTupleSerializationMode(SerializeAsSelfDescribingArrays).
+		SetFormattingMode(FormatAsSelfDescribingArrays).
 		SetIntSerializer(func(i *big.Int) interface{} {
 			return "0o" + i.Text(8)
 		}).
@@ -254,11 +254,11 @@ func TestSerializeJSONBadComponent(t *testing.T) {
 	}
 	_, err = NewSerializer().SerializeJSON(badTuple)
 	assert.Regexp(t, "FF22050", err)
-	_, err = NewSerializer().SetTupleSerializationMode(SerializeAsFlatArrays).SerializeJSON(badTuple)
+	_, err = NewSerializer().SetFormattingMode(FormatAsFlatArrays).SerializeJSON(badTuple)
 	assert.Regexp(t, "FF22050", err)
-	_, err = NewSerializer().SetTupleSerializationMode(SerializeAsSelfDescribingArrays).SerializeJSON(badTuple)
+	_, err = NewSerializer().SetFormattingMode(FormatAsSelfDescribingArrays).SerializeJSON(badTuple)
 	assert.Regexp(t, "FF22050", err)
-	_, err = NewSerializer().SetTupleSerializationMode(999).SerializeJSON(badTuple)
+	_, err = NewSerializer().SetFormattingMode(999).SerializeJSON(badTuple)
 	assert.Regexp(t, "FF22051", err)
 }
 
@@ -295,7 +295,7 @@ func TestJSONSerializationFormatsAnonymousTuple(t *testing.T) {
 	}`, string(j1))
 
 	j2, err := NewSerializer().
-		SetTupleSerializationMode(SerializeAsFlatArrays).
+		SetFormattingMode(FormatAsFlatArrays).
 		SerializeJSON(v)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `[
@@ -304,7 +304,7 @@ func TestJSONSerializationFormatsAnonymousTuple(t *testing.T) {
 	]`, string(j2))
 
 	j3, err := NewSerializer().
-		SetTupleSerializationMode(SerializeAsSelfDescribingArrays).
+		SetFormattingMode(FormatAsSelfDescribingArrays).
 		SerializeJSON(v)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `[
