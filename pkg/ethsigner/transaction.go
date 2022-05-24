@@ -17,6 +17,7 @@
 package ethsigner
 
 import (
+	"encoding/json"
 	"math/big"
 
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
@@ -31,7 +32,7 @@ const (
 )
 
 type Transaction struct {
-	From                 *ethtypes.Address0xHex    `json:"from,omitempty"` // only here as a possible input to signing key selection (eth_sendTransaction)
+	From                 json.RawMessage           `json:"from,omitempty"` // only here as a possible input to signing key selection (eth_sendTransaction)
 	Nonce                *ethtypes.HexInteger      `json:"nonce,omitempty"`
 	GasPrice             *ethtypes.HexInteger      `json:"gasPrice,omitempty"`
 	MaxPriorityFeePerGas *ethtypes.HexInteger      `json:"maxPriorityFeePerGas,omitempty"`

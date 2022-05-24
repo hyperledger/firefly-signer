@@ -52,11 +52,11 @@ var (
 	FileWalletMetadataPasswordFileProperty = ffc("fileWallet.metadata.passwordFileProperty")
 )
 
-var ServerPrefix config.Prefix
+var ServerConfig config.Section
 
-var CorsPrefix config.Prefix
+var CorsConfig config.Section
 
-var BackendPrefix config.Prefix
+var BackendConfig config.Section
 
 func setDefaults() {
 	viper.SetDefault(string(BackendChainID), -1)
@@ -69,12 +69,12 @@ func setDefaults() {
 func Reset() {
 	config.RootConfigReset(setDefaults)
 
-	ServerPrefix = config.NewPluginConfig("server")
-	httpserver.InitHTTPConfPrefix(ServerPrefix, 8545)
+	ServerConfig = config.RootSection("server")
+	httpserver.InitHTTPConfig(ServerConfig, 8545)
 
-	CorsPrefix = config.NewPluginConfig("cors")
-	httpserver.InitCORSConfig(CorsPrefix)
+	CorsConfig = config.RootSection("cors")
+	httpserver.InitCORSConfig(CorsConfig)
 
-	BackendPrefix = config.NewPluginConfig("backend")
-	wsclient.InitPrefix(BackendPrefix)
+	BackendConfig = config.RootSection("backend")
+	wsclient.InitConfig(BackendConfig)
 }

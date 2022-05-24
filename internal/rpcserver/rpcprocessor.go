@@ -81,7 +81,12 @@ func (s *rpcServer) processEthSendTransaction(ctx context.Context, rpcReq *rpcba
 	// to the up-stream node. This should not be relied upon for production use cases.
 	// See FireFly Transaction Manager, or FireFly EthConnect, for more advanced nonce management capabilities.
 	if txn.Nonce == nil {
-		err = s.backend.CallRPC(ctx, &txn.Nonce, "eth_getTransactionCount", txn.From, "pending")
+		var from ethtypes.Address0xHex
+		err := json.Unmarshal(txn.From, &from)
+		if err != nil {
+			return nil, err
+		}
+		err = s.backend.CallRPC(ctx, &txn.Nonce, "eth_getTransactionCount", &from, "pending")
 		if err != nil {
 			return rpcbackend.RPCErrorResponse(err, rpcReq.ID, rpcbackend.RPCCodeInternalError), err
 		}

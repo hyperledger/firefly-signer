@@ -144,6 +144,27 @@ func TestSignMissingFrom(t *testing.T) {
 
 }
 
+func TestSignGetNonceBadAddress(t *testing.T) {
+
+	_, s, done := newTestServer(t)
+	defer done()
+
+	bm := s.backend.(*rpcbackendmocks.Backend)
+	bm.On("CallRPC", mock.Anything, mock.Anything, "eth_getTransactionCount", mock.Anything, "pending").Return(fmt.Errorf("pop"))
+
+	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
+		ID:     fftypes.JSONAnyPtr("1"),
+		Method: "eth_sendTransaction",
+		Params: []*fftypes.JSONAny{
+			fftypes.JSONAnyPtr(`{
+				"from": "bad address"
+			}`),
+		},
+	})
+	assert.Regexp(t, "bad address", err)
+
+}
+
 func TestSignGetNonceFail(t *testing.T) {
 
 	_, s, done := newTestServer(t)

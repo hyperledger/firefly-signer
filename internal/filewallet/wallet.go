@@ -137,9 +137,16 @@ func (w *fileWallet) Close() error {
 	return nil
 }
 
-func (w *fileWallet) getSignerForAccount(ctx context.Context, addr *ethtypes.Address0xHex) (*secp256k1.KeyPair, error) {
+func (w *fileWallet) getSignerForAccount(ctx context.Context, addr json.RawMessage) (*secp256k1.KeyPair, error) {
 
-	addrString := addr.String()
+	// We require an ethereum address in the "from" field
+	var from ethtypes.Address0xHex
+	err := json.Unmarshal(addr, &from)
+	if err != nil {
+		return nil, err
+	}
+
+	addrString := from.String()
 	if !w.filenames0xPrefix {
 		addrString = strings.TrimPrefix(addrString, "0x")
 	}
