@@ -57,7 +57,7 @@ func newTestServer(t *testing.T, rpcHandler testRPCHander) (context.Context, *rp
 	}))
 
 	signerconfig.Reset()
-	prefix := signerconfig.BackendPrefix
+	prefix := signerconfig.BackendConfig
 	prefix.Set(ffresty.HTTPConfigURL, fmt.Sprintf("http://%s", server.Listener.Addr()))
 
 	rb := NewRPCBackend(ctx).(*rpcBackend)

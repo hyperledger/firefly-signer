@@ -39,8 +39,8 @@ func newTestServer(t *testing.T) (string, *rpcServer, func()) {
 	assert.NoError(t, err)
 	serverPort := strings.Split(ln.Addr().String(), ":")[1]
 	ln.Close()
-	signerconfig.ServerPrefix.Set(httpserver.HTTPConfPort, serverPort)
-	signerconfig.ServerPrefix.Set(httpserver.HTTPConfAddress, "127.0.0.1")
+	signerconfig.ServerConfig.Set(httpserver.HTTPConfPort, serverPort)
+	signerconfig.ServerConfig.Set(httpserver.HTTPConfAddress, "127.0.0.1")
 
 	w := &ethsignermocks.Wallet{}
 
@@ -115,7 +115,7 @@ func TestStartFailInitialize(t *testing.T) {
 func TestBadConfig(t *testing.T) {
 
 	signerconfig.Reset()
-	signerconfig.ServerPrefix.Set(httpserver.HTTPConfAddress, ":::::")
+	signerconfig.ServerConfig.Set(httpserver.HTTPConfAddress, ":::::")
 	_, err := NewServer(context.Background(), &ethsignermocks.Wallet{})
 	assert.Error(t, err)
 

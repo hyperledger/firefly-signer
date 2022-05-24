@@ -48,7 +48,7 @@ type Backend interface {
 // NewRPCBackend Constructor
 func NewRPCBackend(ctx context.Context) Backend {
 	return &rpcBackend{
-		client: ffresty.New(ctx, signerconfig.BackendPrefix),
+		client: ffresty.New(ctx, signerconfig.BackendConfig),
 	}
 }
 

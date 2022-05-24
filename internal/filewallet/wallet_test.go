@@ -18,12 +18,12 @@ package filewallet
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/hyperledger/firefly-common/pkg/config"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
-	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,7 +61,7 @@ func TestGetAccountSimpleFilenamesOK(t *testing.T) {
 	ctx, f, done := newTestFilenameOnlyWallet(t)
 	defer done()
 
-	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22015", err)
 
 }
@@ -111,7 +111,7 @@ func TestSignOK(t *testing.T) {
 	assert.NoError(t, err)
 
 	b, err := f.Sign(ctx, &ethsigner.Transaction{
-		From: ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"),
+		From: json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`),
 	}, 2022)
 	assert.NoError(t, err)
 	assert.NotNil(t, b)
@@ -124,7 +124,7 @@ func TestSignNotFound(t *testing.T) {
 	defer done()
 
 	_, err := f.Sign(ctx, &ethsigner.Transaction{
-		From: ethtypes.MustNewAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+		From: json.RawMessage(`"0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"`),
 	}, 2022)
 	assert.Regexp(t, "FF22014", err)
 
@@ -135,12 +135,12 @@ func TestGetAccountCached(t *testing.T) {
 	ctx, f, done := newTestTOMLMetadataWallet(t)
 	defer done()
 
-	s, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	s, err := f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
 	// 2nd time is cached
-	s, err = f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	s, err = f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -152,8 +152,18 @@ func TestGetAccountBadYAML(t *testing.T) {
 	defer done()
 	f.metadataFormat = "yaml"
 
-	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22015", err)
+
+}
+
+func TestGetAccountBadAddress(t *testing.T) {
+
+	ctx, f, done := newTestTOMLMetadataWallet(t)
+	defer done()
+
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"bad address"`))
+	assert.Regexp(t, "bad address", err)
 
 }
 
@@ -163,7 +173,7 @@ func TestGetAccountBadJSON(t *testing.T) {
 	defer done()
 	f.metadataFormat = "json"
 
-	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22015", err)
 
 }
@@ -208,7 +218,7 @@ func TestGetAccountBadTOMLRefKey(t *testing.T) {
 	assert.NoError(t, err)
 	f := ff.(*fileWallet)
 
-	_, err = f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	_, err = f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22015", err)
 }
 
@@ -224,7 +234,7 @@ func TestGetAccountNoTemplates(t *testing.T) {
 	assert.NoError(t, err)
 	f := ff.(*fileWallet)
 
-	_, err = f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	_, err = f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22015", err)
 }
 
@@ -236,7 +246,7 @@ func TestGetAccountBadKeyfile(t *testing.T) {
 	f.metadataPasswordFileProperty = nil
 	f.defaultPasswordFile = "../../test/keystore_toml/1f185718734552d08278aa70f804580bab5fd2b4.pwd"
 
-	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22015", err)
 
 }
@@ -249,7 +259,7 @@ func TestGetAccountBadDefaultPasswordfile(t *testing.T) {
 	f.metadataPasswordFileProperty = nil
 	f.defaultPasswordFile = "!!!"
 
-	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22015", err)
 
 }
@@ -260,7 +270,7 @@ func TestGetAccountNoPassword(t *testing.T) {
 	defer done()
 	f.metadataPasswordFileProperty = nil
 
-	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0x1f185718734552d08278aa70f804580bab5fd2b4"))
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"0x1f185718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22015", err)
 
 }
@@ -271,7 +281,7 @@ func TestGetAccountWrongPath(t *testing.T) {
 	defer done()
 	f.metadataPasswordFileProperty = nil
 
-	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("5d093e9b41911be5f5c4cf91b108bac5d130fa83"))
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"5d093e9b41911be5f5c4cf91b108bac5d130fa83"`))
 	assert.Regexp(t, "FF22015", err)
 
 }
@@ -284,7 +294,7 @@ func TestGetAccountNotFound(t *testing.T) {
 	f.metadataPasswordFileProperty = nil
 	f.defaultPasswordFile = "!!!"
 
-	_, err := f.getSignerForAccount(ctx, ethtypes.MustNewAddress("0xFFFF5718734552d08278aa70f804580bab5fd2b4"))
+	_, err := f.getSignerForAccount(ctx, json.RawMessage(`"0xFFFF5718734552d08278aa70f804580bab5fd2b4"`))
 	assert.Regexp(t, "FF22014", err)
 
 }

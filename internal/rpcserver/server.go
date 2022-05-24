@@ -47,7 +47,7 @@ func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err err
 	}
 	s.ctx, s.cancelCtx = context.WithCancel(ctx)
 
-	s.apiServer, err = httpserver.NewHTTPServer(ctx, "server", s.router(), s.apiServerDone, signerconfig.ServerPrefix, signerconfig.CorsPrefix)
+	s.apiServer, err = httpserver.NewHTTPServer(ctx, "server", s.router(), s.apiServerDone, signerconfig.ServerConfig, signerconfig.CorsConfig)
 	if err != nil {
 		return nil, err
 	}

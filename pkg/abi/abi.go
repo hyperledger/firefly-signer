@@ -374,6 +374,17 @@ func (e *Entry) GenerateIDCtx(ctx context.Context) ([]byte, error) {
 	return k[0:4], nil
 }
 
+// IDBytes is a convenience function to get the ID as bytes.
+// Will return a nil 4 bytes on error
+func (e *Entry) IDBytes() []byte {
+	id, err := e.GenerateID()
+	if err != nil {
+		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
+		return []byte{0, 0, 0, 0}
+	}
+	return id
+}
+
 // ID is a convenience function to get the ID as a hex string (no 0x prefix), which will
 // return the empty string on failure
 func (e *Entry) ID() string {

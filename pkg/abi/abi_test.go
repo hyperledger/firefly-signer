@@ -235,6 +235,7 @@ func TestABIModifyReParse(t *testing.T) {
 	abi.Validate()
 	assert.Equal(t, "foo(uint128)", abi[0].String())
 	assert.Equal(t, "c56cb6b0", abi[0].ID())
+	assert.Equal(t, []byte{0xc5, 0x6c, 0xb6, 0xb0}, abi[0].IDBytes())
 
 }
 
@@ -270,6 +271,7 @@ func TestABIModifyBadInputs(t *testing.T) {
 
 	assert.Empty(t, abi[0].Inputs[0].String())
 	assert.Empty(t, abi[0].ID())
+	assert.Equal(t, []byte{0x00, 0x00, 0x00, 0x00}, abi[0].IDBytes())
 
 }
 
