@@ -134,10 +134,10 @@ func HexByteSerializer0xPrefix(b []byte) interface{} {
 }
 
 func (s *Serializer) SerializeInterface(cv *ComponentValue) (interface{}, error) {
-	return s.SerializeInterfacetCtx(context.Background(), cv)
+	return s.SerializeInterfaceCtx(context.Background(), cv)
 }
 
-func (s *Serializer) SerializeInterfacetCtx(ctx context.Context, cv *ComponentValue) (interface{}, error) {
+func (s *Serializer) SerializeInterfaceCtx(ctx context.Context, cv *ComponentValue) (interface{}, error) {
 	return s.walkOutput(ctx, "", cv)
 }
 
