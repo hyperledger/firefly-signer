@@ -18,6 +18,7 @@ package keystorev3
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
@@ -34,6 +35,7 @@ const (
 
 type WalletFile interface {
 	KeyPair() *secp256k1.KeyPair
+	JSON() []byte
 }
 
 type kdfParamsScrypt struct {
@@ -98,6 +100,16 @@ type walletFileScrypt struct {
 
 func (w *walletFileBase) KeyPair() *secp256k1.KeyPair {
 	return w.keypair
+}
+
+func (w *walletFilePbkdf2) JSON() []byte {
+	b, _ := json.Marshal(w)
+	return b
+}
+
+func (w *walletFileScrypt) JSON() []byte {
+	b, _ := json.Marshal(w)
+	return b
 }
 
 func (c *cryptoCommon) decryptCommon(derivedKey []byte) ([]byte, error) {
