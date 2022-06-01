@@ -49,6 +49,27 @@ const sampleWallet = `{
 	"version": 3
   }`
 
+const sampleWalletPbkdf2 = `{
+    "address": "08327c2085530f3a90db40174beff14f1fc96b22",
+    "id": "174d997a-d737-4cf4-b8ff-d26eaf1b9201",
+    "version": 3,
+    "crypto": {
+        "cipher": "es-128-ctr",
+        "ciphertext": "ff36c3ad1dfda68ef4f65f62b6101638b6ed8fcb61954ae058a690d4ed8c4563",
+        "cipherparams": {
+            "iv": "169c176944db19d27b2e297c4e3f0f1c"
+        },
+        "kdf": "pbkdf2",
+        "mac": "5b403923bc4945264dad3043da1a90adef979f97c2c353f1ba8cdb0123831fd0",
+        "kdfparams": {
+            "dklen": 32,
+            "c": 4096,
+            "prf": "hmac-sha256",
+            "salt": "3f395aa93f6dc374081d19931dc3d98b61f935d2e8dd54df60f27685716dd1f9"
+        }
+    }
+}`
+
 func TestLoadSampleWallet(t *testing.T) {
 	w, err := ReadWalletFile([]byte(sampleWallet), []byte("correcthorsebatterystaple"))
 	assert.NoError(t, err)
@@ -83,4 +104,22 @@ func TestReadWalletFileBadKDF(t *testing.T) {
 		"kdf": "unknown"
 	}}`), []byte(""))
 	assert.Regexp(t, "unsupported kdf", err)
+}
+
+func TestWalletFileScryptJSON(t *testing.T) {
+	w, err := ReadWalletFile([]byte(sampleWallet), []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	j := w.JSON()
+	w2, err := ReadWalletFile(j, []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	assert.Equal(t, w, w2)
+}
+
+func TestWalletFilePbkdf2JSON(t *testing.T) {
+	w, err := ReadWalletFile([]byte(sampleWalletPbkdf2), []byte("myPrecious"))
+	assert.NoError(t, err)
+	j := w.JSON()
+	w2, err := ReadWalletFile(j, []byte("myPrecious"))
+	assert.NoError(t, err)
+	assert.Equal(t, w, w2)
 }
