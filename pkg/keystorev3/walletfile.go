@@ -28,7 +28,7 @@ import (
 
 const (
 	version3        = 3
-	cipherAES128ctr = "es-128-ctr"
+	cipherAES128ctr = "aes-128-ctr"
 	kdfTypeScrypt   = "scrypt"
 	kdfTypePbkdf2   = "pbkdf2"
 )
