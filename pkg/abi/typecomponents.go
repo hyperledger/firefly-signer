@@ -53,6 +53,7 @@ type TypeComponent interface {
 	ParseExternalCtx(ctx context.Context, v interface{}) (*ComponentValue, error)
 	DecodeABIData(d []byte, offset int) (*ComponentValue, error)
 	DecodeABIDataCtx(ctx context.Context, d []byte, offest int) (*ComponentValue, error)
+	Parameter() *Parameter
 }
 
 type typeComponent struct {
@@ -65,6 +66,7 @@ type typeComponent struct {
 	arrayChild       *typeComponent      // For array parameter
 	keyName          string              // For top level ABI entries, and tuple children
 	tupleChildren    []*typeComponent    // For tuple parameters
+	parameter        *Parameter          // The original ABI parameter for this typeComponent
 }
 
 // elementaryTypeInfo defines the string parsing rules, as well as a pointer to the functions for
@@ -322,6 +324,10 @@ func (tc *typeComponent) DecodeABIDataCtx(ctx context.Context, b []byte, offset 
 	return cv, err
 }
 
+func (tc *typeComponent) Parameter() *Parameter {
+	return tc.parameter
+}
+
 func (tc *typeComponent) parseExternal(ctx context.Context, desc string, input interface{}) (*ComponentValue, error) {
 	return walkInput(ctx, desc, input, tc)
 }
@@ -348,6 +354,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 			cType:         TupleComponent,
 			tupleChildren: make([]*typeComponent, len(p.Components)),
 			keyName:       p.Name,
+			parameter:     p,
 		}
 		// Process all the components of the tuple
 		for i, c := range p.Components {
@@ -369,6 +376,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 			elementarySuffix: suffix,
 			keyName:          p.Name,
 			m:                et.defaultM,
+			parameter:        p,
 		}
 		// Process any suffix according to the rules of the elementary type
 		switch et.suffixType {
@@ -401,7 +409,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 
 	if arrays != "" {
 		// The component needs to be wrapped in some number of array dimensions
-		return parseArrays(ctx, abiTypeString, tc, arrays, p.Name)
+		return p.parseArrays(ctx, abiTypeString, tc, arrays, p.Name)
 	}
 
 	return tc, nil
@@ -477,7 +485,7 @@ func parseArrayM(ctx context.Context, abiTypeString string, ac *typeComponent, m
 }
 
 // parseArrays recursively builds arrays for the "[8][]" part of "uint256[8][]" for variable or fixed array types
-func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent, suffix, keyName string) (*typeComponent, error) {
+func (p *Parameter) parseArrays(ctx context.Context, abiTypeString string, child *typeComponent, suffix, keyName string) (*typeComponent, error) {
 
 	pos := 0
 	if pos >= len(suffix) || suffix[pos] != '[' {
@@ -497,12 +505,14 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 			cType:      DynamicArrayComponent,
 			arrayChild: child,
 			keyName:    keyName,
+			parameter:  p,
 		}
 	} else {
 		ac = &typeComponent{
 			cType:      FixedArrayComponent,
 			arrayChild: child,
 			keyName:    keyName,
+			parameter:  p,
 		}
 		if err := parseArrayM(ctx, abiTypeString, ac, mStr.String()); err != nil {
 			return nil, err
@@ -511,7 +521,7 @@ func parseArrays(ctx context.Context, abiTypeString string, child *typeComponent
 
 	// We might have more dimensions to the array - if so recurse
 	if pos < len(suffix) {
-		return parseArrays(ctx, abiTypeString, ac, suffix[pos:], keyName)
+		return p.parseArrays(ctx, abiTypeString, ac, suffix[pos:], keyName)
 	}
 
 	// We're the last array in the chain
