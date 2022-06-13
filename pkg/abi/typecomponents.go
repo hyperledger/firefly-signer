@@ -48,12 +48,12 @@ type TypeComponent interface {
 	ElementaryType() ElementaryTypeInfo // only non-nil for elementary components
 	ArrayChild() TypeComponent          // only non-nil for array components
 	TupleChildren() []TypeComponent     // only non-nil for tuple components
-	KeyName() string                    // the name of the ABI property/component
+	KeyName() string                    // the name of the ABI property/component, only set for top-level parameters and tuple entries
+	Parameter() *Parameter              // the ABI property/component, only set for top-level parameters and tuple entries
 	ParseExternal(v interface{}) (*ComponentValue, error)
 	ParseExternalCtx(ctx context.Context, v interface{}) (*ComponentValue, error)
 	DecodeABIData(d []byte, offset int) (*ComponentValue, error)
 	DecodeABIDataCtx(ctx context.Context, d []byte, offest int) (*ComponentValue, error)
-	Parameter() *Parameter
 }
 
 type typeComponent struct {
