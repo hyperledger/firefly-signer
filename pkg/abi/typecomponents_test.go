@@ -679,3 +679,34 @@ func TestTypeComponentParseExternalOk(t *testing.T) {
 	assert.Equal(t, "test", cv.Value)
 
 }
+
+func TestTypeInternalTypeIndexed(t *testing.T) {
+
+	abiString := `[
+		{
+		  "name": "f",
+		  "type": "function",
+		  "inputs": [
+			{
+				"name": "a",
+				"type": "uint256[]",
+				"internalType": "uint256[]",
+				"indexed": true
+
+			}
+		  ],
+		  "outputs": []
+		}
+	  ]`
+	var abi ABI
+	err := json.Unmarshal([]byte(abiString), &abi)
+	assert.NoError(t, err)
+	err = abi.Validate()
+	assert.NoError(t, err)
+
+	tc, err := abi.Functions()["f"].Inputs[0].TypeComponentTree()
+	assert.NoError(t, err)
+	assert.Equal(t, "uint256[]", tc.Parameter().Type)
+	assert.Equal(t, "uint256[]", tc.Parameter().InternalType)
+	assert.Equal(t, true, tc.Parameter().Indexed)
+}
