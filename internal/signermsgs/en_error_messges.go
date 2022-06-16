@@ -69,4 +69,5 @@ var (
 	MsgIncorrectABISignatureID      = ffe("FF22049", "Incorrect ID for signature %s expected=%s found=%s")
 	MsgUnknownABIElementaryType     = ffe("FF22050", "Unknown elementary type %s for component %s")
 	MsgUnknownTupleSerializer       = ffe("FF22051", "Unknown tuple serialization option %d")
+	MsgInvalidFFIDetailsSchema      = ffe("FF22052", "Invalid FFI details schema for '%s'")
 )
