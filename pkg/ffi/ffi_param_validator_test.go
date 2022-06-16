@@ -296,6 +296,25 @@ func TestInputInvalidNestedBlockchainType(t *testing.T) {
 	assert.Regexp(t, "cannot cast integer to string", err)
 }
 
+func TestValidOneOf(t *testing.T) {
+	_, err := NewTestSchema(`
+	{
+		"oneOf": [
+			{
+				"type": "string"
+			},
+			{
+				"type": "integer"
+			}
+		],
+		"details": {
+			"type": "uint256",
+			"internalType": "uint256"
+		}
+	}`)
+	assert.NoError(t, err)
+}
+
 func TestInputInvalidOneOf(t *testing.T) {
 	_, err := NewTestSchema(`
 	{
