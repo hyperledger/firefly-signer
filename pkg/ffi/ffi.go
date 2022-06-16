@@ -76,10 +76,7 @@ type SchemaType struct {
 }
 
 func (s *Schema) ToJSON() string {
-	b, err := json.Marshal(s)
-	if err != nil {
-		panic(err)
-	}
+	b, _ := json.Marshal(s)
 	return string(b)
 }
 
@@ -272,7 +269,7 @@ func convertFFIParamsToABIParameters(ctx context.Context, params fftypes.FFIPara
 	for i, param := range params {
 		var s *Schema
 		if err := json.Unmarshal(param.Schema.Bytes(), &s); err != nil {
-			return nil, err
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
 		}
 
 		abiParamList[i], err = processField(ctx, param.Name, s)
@@ -314,10 +311,35 @@ func processField(ctx context.Context, name string, schema *Schema) (*abi.Parame
 			parameter.Components, err = buildABIParameterArrayForObject(ctx, schema.Items.Properties)
 		}
 		if err != nil {
-			return nil, err
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, name)
 		}
 	}
 	return parameter, nil
+}
+
+func ABIArgumentToTypeString(typeName string, components abi.ParameterArray) string {
+	if strings.HasPrefix(typeName, "tuple") {
+		suffix := typeName[5:]
+		children := make([]string, len(components))
+		for i, component := range components {
+			children[i] = ABIArgumentToTypeString(component.Type, nil)
+		}
+		return "(" + strings.Join(children, ",") + ")" + suffix
+	}
+	return typeName
+}
+
+func ABIMethodToSignature(abi *abi.Entry) string {
+	result := abi.Name + "("
+	if len(abi.Inputs) > 0 {
+		types := make([]string, len(abi.Inputs))
+		for i, param := range abi.Inputs {
+			types[i] = ABIArgumentToTypeString(param.Type, param.Components)
+		}
+		result += strings.Join(types, ",")
+	}
+	result += ")"
+	return result
 }
 
 func GetFFIType(solidityType string) InputType {
