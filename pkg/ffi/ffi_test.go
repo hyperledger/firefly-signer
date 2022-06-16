@@ -69,7 +69,7 @@ func TestFFIMethodToABI(t *testing.T) {
 		Outputs: abi.ParameterArray{},
 	}
 
-	abi, err := ConvertFFIMethodToABI(context.Background(), method, nil)
+	abi, err := ConvertFFIMethodToABI(context.Background(), method)
 	assert.NoError(t, err)
 	// assert.Equal(t, expectedABIElement, abi)
 
@@ -148,7 +148,7 @@ func TestFFIMethodToABIObject(t *testing.T) {
 		Outputs: abi.ParameterArray{},
 	}
 
-	abi, err := ConvertFFIMethodToABI(context.Background(), method, nil)
+	abi, err := ConvertFFIMethodToABI(context.Background(), method)
 	assert.NoError(t, err)
 	assert.ObjectsAreEqual(expectedABIElement, abi)
 }
@@ -217,7 +217,7 @@ func TestABIFFIConversionArrayOfObjects(t *testing.T) {
 
 	ffiMethod, err := convertABIFunctionToFFIMethod(context.Background(), abiFunction)
 	assert.NoError(t, err)
-	abiFunctionOut, err := ConvertFFIMethodToABI(context.Background(), ffiMethod, nil)
+	abiFunctionOut, err := ConvertFFIMethodToABI(context.Background(), ffiMethod)
 	assert.NoError(t, err)
 
 	expectedABIFunctionJSON, err := json.Marshal(abiFunction)
@@ -266,7 +266,7 @@ func TestFFIMethodToABINestedArray(t *testing.T) {
 		Outputs: abi.ParameterArray{},
 	}
 
-	abi, err := ConvertFFIMethodToABI(context.Background(), method, nil)
+	abi, err := ConvertFFIMethodToABI(context.Background(), method)
 	assert.NoError(t, err)
 	expectedABIJSON, err := json.Marshal(expectedABIElement)
 	assert.NoError(t, err)
@@ -287,7 +287,7 @@ func TestFFIMethodToABIInvalidJSON(t *testing.T) {
 		Returns: []*fftypes.FFIParam{},
 	}
 
-	_, err := ConvertFFIMethodToABI(context.Background(), method, nil)
+	_, err := ConvertFFIMethodToABI(context.Background(), method)
 	assert.Regexp(t, "invalid character", err)
 }
 
@@ -308,7 +308,7 @@ func TestFFIMethodToABIBadSchema(t *testing.T) {
 		Returns: []*fftypes.FFIParam{},
 	}
 
-	_, err := ConvertFFIMethodToABI(context.Background(), method, nil)
+	_, err := ConvertFFIMethodToABI(context.Background(), method)
 	assert.Regexp(t, "FF22052", err)
 }
 
@@ -329,7 +329,7 @@ func TestFFIMethodToABIBadReturn(t *testing.T) {
 		},
 	}
 
-	_, err := ConvertFFIMethodToABI(context.Background(), method, nil)
+	_, err := ConvertFFIMethodToABI(context.Background(), method)
 	assert.Regexp(t, "FF22052", err)
 }
 
