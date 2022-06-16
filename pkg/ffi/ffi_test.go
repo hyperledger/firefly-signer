@@ -764,7 +764,8 @@ func TestConvertFFIEventDefinitionToABIInvalidSchema(t *testing.T) {
 
 func TestProcessFieldInvalidSchema(t *testing.T) {
 	s := &Schema{
-		Type: fftypes.JSONAnyPtr(`"object"`),
+		Type:    fftypes.JSONAnyPtr(`"object"`),
+		Details: &paramDetails{},
 		Properties: map[string]*Schema{
 			"badProperty": {
 				Type: fftypes.JSONAnyPtr("foo"),
@@ -773,4 +774,36 @@ func TestProcessFieldInvalidSchema(t *testing.T) {
 	}
 	_, err := processField(context.Background(), "badType", s)
 	assert.Regexp(t, "FF22052", err)
+}
+
+func TestABIMethodToSignature(t *testing.T) {
+	abi := &abi.Entry{
+		Name: "set",
+		Type: "function",
+		Inputs: abi.ParameterArray{
+			{
+				Name:    "widget",
+				Type:    "tuple",
+				Indexed: false,
+				Components: abi.ParameterArray{
+					{
+						Name:         "radius",
+						Type:         "uint256",
+						Indexed:      true,
+						InternalType: "",
+					},
+					{
+						Name:         "numbers",
+						Type:         "uint256[]",
+						Indexed:      false,
+						InternalType: "",
+					},
+				},
+			},
+		},
+		Outputs: abi.ParameterArray{},
+	}
+
+	signature := ABIMethodToSignature(abi)
+	assert.Equal(t, "set((uint256,uint256[]))", signature)
 }
