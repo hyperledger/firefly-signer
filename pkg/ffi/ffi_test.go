@@ -748,3 +748,29 @@ func TestConvertABIEventFFIEvent(t *testing.T) {
 
 	assert.JSONEq(t, string(expectedABIEventJSON), string(actualABIEventJSON))
 }
+
+func TestConvertFFIEventDefinitionToABIInvalidSchema(t *testing.T) {
+	e := &fftypes.FFIEventDefinition{
+		Params: fftypes.FFIParams{
+			&fftypes.FFIParam{
+				Name:   "badField",
+				Schema: fftypes.JSONAnyPtr("foobar"),
+			},
+		},
+	}
+	_, err := ConvertFFIEventDefinitionToABI(context.Background(), e)
+	assert.Regexp(t, "FF22052", err)
+}
+
+func TestProcessFieldInvalidSchema(t *testing.T) {
+	s := &Schema{
+		Type: fftypes.JSONAnyPtr(`"object"`),
+		Properties: map[string]*Schema{
+			"badProperty": {
+				Type: fftypes.JSONAnyPtr("foo"),
+			},
+		},
+	}
+	_, err := processField(context.Background(), "badType", s)
+	assert.Regexp(t, "FF22052", err)
+}
