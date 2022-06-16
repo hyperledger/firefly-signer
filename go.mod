@@ -6,7 +6,7 @@ require (
 	github.com/btcsuite/btcd v0.22.1
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gorilla/mux v1.8.0
-	github.com/hyperledger/firefly-common v0.1.10
+	github.com/hyperledger/firefly-common v0.1.11-0.20220616154518-160b5cf404cc
 	github.com/karlseguin/ccache v2.0.3+incompatible
 	github.com/pelletier/go-toml v1.9.5
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0
@@ -53,5 +53,3 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/hyperledger/firefly-common => ../firefly-common
