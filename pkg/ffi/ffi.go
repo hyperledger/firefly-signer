@@ -264,14 +264,30 @@ func getSchemaForABIInput(ctx context.Context, typeComponent abi.TypeComponent) 
 }
 
 func convertFFIParamsToABIParameters(ctx context.Context, params fftypes.FFIParams) (abi.ParameterArray, error) {
-	var err error
 	abiParamList := make(abi.ParameterArray, len(params))
 	for i, param := range params {
+
+		// We need to validate the schema against the Ethereum FFI metaschema here
+		// For example, if someone is creating an event listener, we need to make
+		// sure we have all the correct ABI fields. This does not validate function
+		// arguments themselves. The blockchain connector or node will do that.
+
+		c := fftypes.NewFFISchemaCompiler()
+		v := &ParamValidator{}
+		c.RegisterExtension(v.GetExtensionName(), v.GetMetaSchema(), v)
+		err := c.AddResource(param.Name, strings.NewReader(param.Schema.String()))
+		if err != nil {
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
+		}
+		_, err = c.Compile(param.Name)
+		if err != nil {
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
+		}
+
 		var s *Schema
 		if err := json.Unmarshal(param.Schema.Bytes(), &s); err != nil {
 			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
 		}
-
 		abiParamList[i], err = processField(ctx, param.Name, s)
 		if err != nil {
 			return nil, err
