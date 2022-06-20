@@ -359,11 +359,11 @@ func (e *Entry) Signature() (string, error) {
 	return e.SignatureCtx(context.Background())
 }
 
-func (e *Entry) GenerateID() ([]byte, error) {
-	return e.GenerateIDCtx(context.Background())
+func (e *Entry) GenerateFunctionSelector() ([]byte, error) {
+	return e.GenerateFunctionSelectorCtx(context.Background())
 }
 
-func (e *Entry) GenerateIDCtx(ctx context.Context) ([]byte, error) {
+func (e *Entry) GenerateFunctionSelectorCtx(ctx context.Context) ([]byte, error) {
 	hash := sha3.NewLegacyKeccak256()
 	sig, err := e.SignatureCtx(ctx)
 	if err != nil {
@@ -377,7 +377,7 @@ func (e *Entry) GenerateIDCtx(ctx context.Context) ([]byte, error) {
 // IDBytes is a convenience function to get the ID as bytes.
 // Will return a nil 4 bytes on error
 func (e *Entry) IDBytes() []byte {
-	id, err := e.GenerateID()
+	id, err := e.GenerateFunctionSelector()
 	if err != nil {
 		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
 		return []byte{0, 0, 0, 0}
@@ -388,7 +388,7 @@ func (e *Entry) IDBytes() []byte {
 // ID is a convenience function to get the ID as a hex string (no 0x prefix), which will
 // return the empty string on failure
 func (e *Entry) ID() string {
-	id, err := e.GenerateID()
+	id, err := e.GenerateFunctionSelector()
 	if err != nil {
 		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
 		return ""
@@ -403,7 +403,7 @@ func (e *Entry) EncodeCallData(cv *ComponentValue) ([]byte, error) {
 
 func (e *Entry) EncodeCallDataCtx(ctx context.Context, cv *ComponentValue) ([]byte, error) {
 
-	id, err := e.GenerateIDCtx(ctx)
+	id, err := e.GenerateFunctionSelectorCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +426,7 @@ func (e *Entry) DecodeCallData(b []byte) (*ComponentValue, error) {
 
 func (e *Entry) DecodeCallDataCtx(ctx context.Context, b []byte) (*ComponentValue, error) {
 
-	id, err := e.GenerateIDCtx(ctx)
+	id, err := e.GenerateFunctionSelectorCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -439,6 +439,17 @@ func (e *Entry) DecodeCallDataCtx(ctx context.Context, b []byte) (*ComponentValu
 
 	return e.Inputs.DecodeABIDataCtx(ctx, b, 4)
 
+}
+
+func (e *Entry) SignatureHash() (string, error) {
+	hash := sha3.NewLegacyKeccak256()
+	sig, err := e.SignatureCtx(context.Background())
+	if err != nil {
+		return "", err
+	}
+	hash.Write([]byte(sig))
+
+	return "0x" + hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func (e *Entry) SignatureCtx(ctx context.Context) (string, error) {
