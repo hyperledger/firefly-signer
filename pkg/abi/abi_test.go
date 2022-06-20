@@ -177,10 +177,14 @@ func TestDocsFunctionCallExample(t *testing.T) {
 	fmt.Println(string(jsonData2))
 	// ["0x03706ff580119b130e7d26c5e816913123c24d89","0xde0b6b3a7640000"]
 
+	// Test that signature gets hashed correctly via Keccak-256
+	sigHash, _ := f.SignatureHash()
+
 	// Test validation - not for copy/paste to docs
 	assert.Equal(t, `00000000000000000000000003706ff580119b130e7d26c5e816913123c24d890000000000000000000000000000000000000000000000000de0b6b3a7640000`, hex.EncodeToString(abiData))
 	assert.Equal(t, `{"amount":"1000000000000000000","recipient":"03706ff580119b130e7d26c5e816913123c24d89"}`, string(jsonData))
 	assert.Equal(t, `["0x03706ff580119b130e7d26c5e816913123c24d89","0xde0b6b3a7640000"]`, string(jsonData2))
+	assert.Equal(t, "0xa9059cbb2ab09eb219583f4a59a5d0623ade346d962bcd4e46b11da047c9049b", sigHash)
 }
 
 func TestABIGetTupleTypeTree(t *testing.T) {
