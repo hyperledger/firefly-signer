@@ -807,3 +807,16 @@ func TestABIMethodToSignature(t *testing.T) {
 	signature := ABIMethodToSignature(abi)
 	assert.Equal(t, "set((uint256,uint256[]))", signature)
 }
+
+func TestConvertFFIParamsToABIParametersInvalidSchema(t *testing.T) {
+	params := []*fftypes.FFIParam{
+		{
+			Name: "widget",
+			Schema: fftypes.JSONAnyPtr(`{
+				"type": "invalidSchema"
+			}`),
+		},
+	}
+	_, err := convertFFIParamsToABIParameters(context.Background(), params)
+	assert.Regexp(t, "FF22052", err)
+}

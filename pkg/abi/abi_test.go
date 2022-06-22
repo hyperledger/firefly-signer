@@ -493,3 +493,15 @@ func TestEncodeABIDataCtxBadInputs(t *testing.T) {
 	_, err := f.EncodeCallData(nil)
 	assert.Regexp(t, "FF22041", err)
 }
+
+func TestSignatureHashInvalid(t *testing.T) {
+	e := &Entry{
+		Inputs: ParameterArray{
+			{
+				Type: "foobar",
+			},
+		},
+	}
+	_, err := e.SignatureHash()
+	assert.Regexp(t, "FF22025", err)
+}
