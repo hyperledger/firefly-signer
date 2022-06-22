@@ -31,7 +31,6 @@ func NewTestSchema(input string) (*jsonschema.Schema, error) {
 	c.Draft = jsonschema.Draft2020
 	f := fftypes.BaseFFIParamValidator{}
 	c.RegisterExtension(f.GetExtensionName(), f.GetMetaSchema(), f)
-	// e, _ := newTestEthereum()
 	v := &ParamValidator{}
 	c.RegisterExtension(v.GetExtensionName(), v.GetMetaSchema(), v)
 	err := c.AddResource("schema.json", strings.NewReader(input))

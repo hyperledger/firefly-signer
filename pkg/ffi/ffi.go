@@ -284,14 +284,10 @@ func convertFFIParamsToABIParameters(ctx context.Context, params fftypes.FFIPara
 			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
 		}
 
+		// Errors here are unchecked because they cannot be hit if the above JSON Schema validation passed
 		var s *Schema
-		if err := json.Unmarshal(param.Schema.Bytes(), &s); err != nil {
-			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
-		}
-		abiParamList[i], err = processField(ctx, param.Name, s)
-		if err != nil {
-			return nil, err
-		}
+		_ = json.Unmarshal(param.Schema.Bytes(), &s)
+		abiParamList[i], _ = processField(ctx, param.Name, s)
 	}
 	return abiParamList, nil
 }
