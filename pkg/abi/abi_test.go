@@ -184,7 +184,7 @@ func TestDocsFunctionCallExample(t *testing.T) {
 	assert.Equal(t, `00000000000000000000000003706ff580119b130e7d26c5e816913123c24d890000000000000000000000000000000000000000000000000de0b6b3a7640000`, hex.EncodeToString(abiData))
 	assert.Equal(t, `{"amount":"1000000000000000000","recipient":"03706ff580119b130e7d26c5e816913123c24d89"}`, string(jsonData))
 	assert.Equal(t, `["0x03706ff580119b130e7d26c5e816913123c24d89","0xde0b6b3a7640000"]`, string(jsonData2))
-	assert.Equal(t, "0xa9059cbb2ab09eb219583f4a59a5d0623ade346d962bcd4e46b11da047c9049b", sigHash)
+	assert.Equal(t, "0xa9059cbb2ab09eb219583f4a59a5d0623ade346d962bcd4e46b11da047c9049b", sigHash.String())
 }
 
 func TestABIGetTupleTypeTree(t *testing.T) {

@@ -156,6 +156,7 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-common/pkg/log"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -441,15 +442,15 @@ func (e *Entry) DecodeCallDataCtx(ctx context.Context, b []byte) (*ComponentValu
 
 }
 
-func (e *Entry) SignatureHash() (string, error) {
+func (e *Entry) SignatureHash() (ethtypes.HexBytes0xPrefix, error) {
 	hash := sha3.NewLegacyKeccak256()
 	sig, err := e.SignatureCtx(context.Background())
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	hash.Write([]byte(sig))
 
-	return "0x" + hex.EncodeToString(hash.Sum(nil)), nil
+	return hash.Sum(nil), nil
 }
 
 func (e *Entry) SignatureCtx(ctx context.Context) (string, error) {
