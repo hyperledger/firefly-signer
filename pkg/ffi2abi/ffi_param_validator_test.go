@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ffi
+package ffi2abi
 
 import (
 	"encoding/json"
@@ -129,39 +129,6 @@ func TestSchemaDetailsIndexedWrongType(t *testing.T) {
 	assert.Regexp(t, "compilation failed", err)
 }
 
-func TestSchemaTypeMismatch(t *testing.T) {
-	_, err := NewTestSchema(`
-{
-	"type": "string",
-	"details": {
-		"type": "boolean"
-	}
-}`)
-	assert.Regexp(t, "cannot cast string to boolean", err)
-}
-
-func TestSchemaTypeMismatchArray(t *testing.T) {
-	_, err := NewTestSchema(`
-{
-	"type": "array",
-	"details": {
-		"type": "string"
-	}
-}`)
-	assert.Regexp(t, "cannot cast array to string", err)
-}
-
-func TestSchemaTypeMismatchObject(t *testing.T) {
-	_, err := NewTestSchema(`
-{
-	"type": "object",
-	"details": {
-		"type": "string"
-	}
-}`)
-	assert.Regexp(t, "cannot cast object to string", err)
-}
-
 func TestInputString(t *testing.T) {
 	s, err := NewTestSchema(`
 {
@@ -264,37 +231,6 @@ func TestInputArray(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestInputInvalidBlockchainType(t *testing.T) {
-	_, err := NewTestSchema(`
-{
-	"type": "boolean",
-	"details": {
-		"type": "foobar"
-	}
-}`)
-	assert.Regexp(t, "cannot cast boolean to foobar", err)
-}
-
-func TestInputInvalidNestedBlockchainType(t *testing.T) {
-	_, err := NewTestSchema(`
-{
-	"type": "object",
-	"details": {
-		"type": "tuple"
-	},
-	"properties": {
-		"amount": {
-			"type": "integer",
-			"details": {
-				"type": "string",
-				"index": 0
-			}
-		}
-	}
-}`)
-	assert.Regexp(t, "cannot cast integer to string", err)
-}
-
 func TestValidOneOf(t *testing.T) {
 	_, err := NewTestSchema(`
 	{
@@ -369,4 +305,16 @@ func TestInputNoAdditionalProperties(t *testing.T) {
 	assert.NoError(t, err)
 	err = s.Validate(jsonDecode(input))
 	assert.Regexp(t, "additionalProperties 'bar' not allowed", err)
+}
+
+func TestInputFixedArraySizeType(t *testing.T) {
+	_, err := NewTestSchema(`
+	{
+		"type": "array",
+		"details": {
+			"type": "uint64[][32]",
+			"internalType": "uint64[][32]"
+		}
+	}`)
+	assert.NoError(t, err)
 }
