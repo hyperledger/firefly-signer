@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ffi
+package ffi2abi
 
 import (
 	"context"
@@ -96,6 +96,7 @@ func ConvertFFIMethodToABI(ctx context.Context, method *fftypes.FFIMethod) (*abi
 		Inputs:  abiInputs,
 		Outputs: abiOutputs,
 	}
+
 	if method.Details != nil {
 		if stateMutability, ok := method.Details.GetStringOk("stateMutability"); ok {
 			abiEntry.StateMutability = abi.StateMutability(stateMutability)
@@ -284,12 +285,58 @@ func convertFFIParamsToABIParameters(ctx context.Context, params fftypes.FFIPara
 			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
 		}
 
-		// Errors here are unchecked because they cannot be hit if the above JSON Schema validation passed
 		var s *Schema
+		// Errors here are unchecked because they cannot be hit if the above JSON Schema validation passed
 		_ = json.Unmarshal(param.Schema.Bytes(), &s)
-		abiParamList[i], _ = processField(ctx, param.Name, s)
+		abiParameter, _ := processField(ctx, param.Name, s)
+
+		tc, err := abiParameter.TypeComponentTreeCtx(ctx)
+		if err != nil {
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
+		}
+		if !inputTypeValidForTypeComponent(ctx, s.Type, tc) {
+			return nil, i18n.NewError(ctx, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
+		}
+
+		abiParamList[i] = abiParameter
 	}
 	return abiParamList, nil
+}
+
+func inputTypeValidForTypeComponent(ctx context.Context, inputType *fftypes.JSONAny, tc abi.TypeComponent) bool {
+	var inputTypeString string
+	if err := inputType.Unmarshal(ctx, &inputTypeString); err != nil {
+		if o, ok := inputType.JSONObjectOk(); ok {
+			if _, ok := o.GetObjectArrayOk("oneOf"); ok {
+				inputTypeString = integerType
+			}
+		}
+	}
+	switch inputTypeString {
+	case booleanType:
+		if tc.ElementaryType() == abi.ElementaryTypeBool {
+			return true
+		}
+	case integerType:
+		switch tc.ElementaryType() {
+		case abi.ElementaryTypeUint, abi.ElementaryTypeInt:
+			return true
+		}
+	case stringType:
+		switch tc.ElementaryType() {
+		case abi.ElementaryTypeAddress, abi.ElementaryTypeBytes, abi.ElementaryTypeString:
+			return true
+		}
+	case arrayType:
+		if tc.ArrayChild() != nil {
+			return true
+		}
+	case objectType:
+		if tc.TupleChildren() != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func buildABIParameterArrayForObject(ctx context.Context, properties map[string]*Schema) (abi.ParameterArray, error) {
@@ -356,7 +403,7 @@ func ABIMethodToSignature(abi *abi.Entry) string {
 
 func GetFFIType(solidityType string) InputType {
 	switch solidityType {
-	case stringType, "address":
+	case stringType, addressType:
 		return InputTypeString
 	case boolType:
 		return InputTypeBoolean

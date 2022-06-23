@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ffi
+package ffi2abi
 
 import (
 	"context"
@@ -71,7 +71,6 @@ func TestFFIMethodToABI(t *testing.T) {
 
 	abi, err := ConvertFFIMethodToABI(context.Background(), method)
 	assert.NoError(t, err)
-	// assert.Equal(t, expectedABIElement, abi)
 
 	actualABIJSON, err := json.Marshal(abi)
 	assert.NoError(t, err)
@@ -819,4 +818,63 @@ func TestConvertFFIParamsToABIParametersInvalidSchema(t *testing.T) {
 	}
 	_, err := convertFFIParamsToABIParameters(context.Background(), params)
 	assert.Regexp(t, "FF22052", err)
+}
+
+func TestConvertFFIParamsToABIParametersInvalidEthereumType(t *testing.T) {
+	params := []*fftypes.FFIParam{
+		{
+			Name: "firstName",
+			Schema: fftypes.JSONAnyPtr(`{
+				"type": "string",
+				"details": {
+					"type": "foobar"
+				}
+			}`),
+		},
+	}
+	_, err := convertFFIParamsToABIParameters(context.Background(), params)
+	assert.Regexp(t, "FF22052", err)
+}
+
+func TestConvertFFIParamsToABIParametersTypeMismatch(t *testing.T) {
+	params := []*fftypes.FFIParam{
+		{
+			Name: "firstName",
+			Schema: fftypes.JSONAnyPtr(`{
+				"type": "string",
+				"details": {
+					"type": "bool"
+				}
+			}`),
+		},
+	}
+	_, err := convertFFIParamsToABIParameters(context.Background(), params)
+	assert.Regexp(t, "FF22052", err)
+}
+
+func TestInputTypeValidForTypeComponent(t *testing.T) {
+	inputType := fftypes.JSONAnyPtr(`"boolean"`)
+	param := abi.Parameter{
+		Type: "bool",
+	}
+	tc, _ := param.TypeComponentTree()
+	assert.True(t, inputTypeValidForTypeComponent(context.Background(), inputType, tc))
+}
+
+func TestInputTypeValidForTypeComponentOneOf(t *testing.T) {
+	inputType := fftypes.JSONAnyPtr(`{
+		"oneOf": [
+			{
+				"type": "integer"
+			},
+			{
+				"type": "string"
+			}
+		]
+	}`)
+	param := abi.Parameter{
+		Type: "uint256",
+	}
+	tc, _ := param.TypeComponentTree()
+	assert.True(t, inputTypeValidForTypeComponent(context.Background(), inputType, tc))
 }

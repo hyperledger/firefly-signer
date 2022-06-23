@@ -14,68 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ffi
+package ffi2abi
 
 import (
-	"fmt"
-	"regexp"
-	"strconv"
-	"strings"
-
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
 type ParamValidator struct{}
 
-var intRegex, _ = regexp.Compile("^u?int([0-9]{1,3})$")
-var bytesRegex, _ = regexp.Compile("^bytes([0-9]{1,2})?")
-
 func (v *ParamValidator) Compile(ctx jsonschema.CompilerContext, m map[string]interface{}) (jsonschema.ExtSchema, error) {
-	valid := true
-	if details, ok := m["details"]; ok {
-		var jsonTypeString string
-		n, _ := details.(map[string]interface{})
-		blockchainType := n["type"].(string)
-		jsonType, ok := m["type"]
-		if ok {
-			jsonTypeString = jsonType.(string)
-		} else {
-			_, ok := m["oneOf"]
-			if ok {
-				jsonTypeString = integerType
-			}
-		}
-		switch jsonTypeString {
-		case stringType:
-			if blockchainType != stringType &&
-				blockchainType != addressType &&
-				!isEthereumNumberType(blockchainType) &&
-				!isEthereumBytesType(blockchainType) {
-				valid = false
-			}
-		case integerType:
-			if !isEthereumNumberType(blockchainType) {
-				valid = false
-			}
-		case booleanType:
-			if blockchainType != boolType {
-				valid = false
-			}
-		case arrayType:
-			if !strings.HasSuffix(blockchainType, "[]") {
-				valid = false
-			}
-		case objectType:
-			if blockchainType != tupleType {
-				valid = false
-			}
-		}
-
-		if valid {
-			return detailsSchema(n), nil
-		}
-		return nil, fmt.Errorf("cannot cast %v to %v", jsonType, blockchainType)
-	}
 	return nil, nil
 }
 
@@ -214,38 +161,4 @@ func (v *ParamValidator) GetMetaSchema() *jsonschema.Schema {
 
 func (v *ParamValidator) GetExtensionName() string {
 	return "details"
-}
-
-type detailsSchema map[string]interface{}
-
-func (s detailsSchema) Validate(ctx jsonschema.ValidationContext, v interface{}) error {
-	// TODO: Additional validation of actual input possible in the future
-	return nil
-}
-
-func isEthereumNumberType(input string) bool {
-	matches := intRegex.FindStringSubmatch(input)
-	if len(matches) == 2 {
-		i, err := strconv.ParseInt(matches[1], 10, 0)
-		if err == nil && i >= 8 && i <= 256 && i%8 == 0 {
-			// valid
-			return true
-		}
-	}
-	return false
-}
-
-func isEthereumBytesType(input string) bool {
-	matches := bytesRegex.FindStringSubmatch(input)
-	if len(matches) == 2 {
-		if matches[1] == "" {
-			return true
-		}
-		i, err := strconv.ParseInt(matches[1], 10, 0)
-		if err == nil && i >= 1 && i <= 32 {
-			// valid
-			return true
-		}
-	}
-	return false
 }
