@@ -34,6 +34,7 @@ func TestElementalTypeInfoRules(t *testing.T) {
 	assert.Equal(t, "bytes / bytes<M> (1 <= M <= 32)", ElementaryTypeBytes.String())
 	assert.Equal(t, "function", ElementaryTypeFunction.String())
 	assert.Equal(t, "string", ElementaryTypeString.String())
+	assert.Equal(t, JSONEncodingTypeString, ElementaryTypeString.JSONEncodingType())
 
 }
 
