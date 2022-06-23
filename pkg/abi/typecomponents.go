@@ -72,15 +72,16 @@ type typeComponent struct {
 // elementaryTypeInfo defines the string parsing rules, as well as a pointer to the functions for
 // serialization to a set of bytes, and back again
 type elementaryTypeInfo struct {
-	name             string     // The name of the type - the alphabetic characters up to an optional suffix
-	suffixType       suffixType // Whether there is a length suffix, and its type
-	defaultSuffix    string     // If set and there is no suffix supplied, the following suffix is used
-	defaultM         uint16     // If the type implicitly has an M value that is not expressed (such as "function")
-	mMin             uint16     // For suffixes with an M dimension, this is the minimum value
-	mMax             uint16     // For suffixes with an M dimension, this is the maximum (inclusive) value
-	mMod             uint16     // If non-zero, then (M % MMod) == 0 must be true
-	nMin             uint16     // For suffixes with an N dimension, this is the minimum value
-	nMax             uint16     // For suffixes with an N dimension, this is the maximum (inclusive) value
+	name             string           // The name of the type - the alphabetic characters up to an optional suffix
+	suffixType       suffixType       // Whether there is a length suffix, and its type
+	defaultSuffix    string           // If set and there is no suffix supplied, the following suffix is used
+	defaultM         uint16           // If the type implicitly has an M value that is not expressed (such as "function")
+	mMin             uint16           // For suffixes with an M dimension, this is the minimum value
+	mMax             uint16           // For suffixes with an M dimension, this is the maximum (inclusive) value
+	mMod             uint16           // If non-zero, then (M % MMod) == 0 must be true
+	nMin             uint16           // For suffixes with an N dimension, this is the minimum value
+	nMax             uint16           // For suffixes with an N dimension, this is the maximum (inclusive) value
+	jsonEncodingType JSONEncodingType // categorizes how the type can be read/written from input JSON data
 	readExternalData func(ctx context.Context, desc string, input interface{}) (interface{}, error)
 	encodeABIData    func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error)
 	decodeABIData    func(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error)
@@ -114,6 +115,10 @@ func (et *elementaryTypeInfo) String() string {
 	}
 }
 
+func (et *elementaryTypeInfo) JSONEncodingType() JSONEncodingType {
+	return et.jsonEncodingType
+}
+
 var elementaryTypes = map[string]*elementaryTypeInfo{}
 
 func registerElementaryType(et elementaryTypeInfo) ElementaryTypeInfo {
@@ -125,8 +130,19 @@ func registerElementaryType(et elementaryTypeInfo) ElementaryTypeInfo {
 // You can do an equality check against the appropriate constant, to check if this is the type you are expecting.
 // e.g.
 type ElementaryTypeInfo interface {
-	String() string // gives a summary of the rules the elemental type (used in error reporting)
+	String() string                     // gives a summary of the rules the elemental type (used in error reporting)
+	JSONEncodingType() JSONEncodingType // categorizes JSON input/output type to one of a small number of options
 }
+
+type JSONEncodingType int
+
+const (
+	JSONEncodingTypeBool    JSONEncodingType = iota // JSON string or bool
+	JSONEncodingTypeInteger                         // JSON string containing integer with/without 0x prefix, or JSON number
+	JSONEncodingTypeBytes                           // JSON string containing hex with/without 0x prefix
+	JSONEncodingTypeFloat                           // JSON string containing a float with/without 0x prefix or exponent, or JSON number
+	JSONEncodingTypeString                          // JSON string containing any unicode characters
+)
 
 // tupleTypeString appears in the same place in the ABI as elementary type strings, but it is not an elementary type.
 // We treat it separately.
@@ -134,12 +150,13 @@ const tupleTypeString = "tuple"
 
 var (
 	ElementaryTypeInt = registerElementaryType(elementaryTypeInfo{
-		name:          "int",
-		suffixType:    suffixTypeMRequired,
-		defaultSuffix: "256",
-		mMin:          8,
-		mMax:          256,
-		mMod:          8,
+		name:             "int",
+		suffixType:       suffixTypeMRequired,
+		defaultSuffix:    "256",
+		mMin:             8,
+		mMax:             256,
+		mMod:             8,
+		jsonEncodingType: JSONEncodingTypeInteger,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
 		},
@@ -147,12 +164,13 @@ var (
 		decodeABIData: decodeABISignedInt,
 	})
 	ElementaryTypeUint = registerElementaryType(elementaryTypeInfo{
-		name:          "uint",
-		suffixType:    suffixTypeMRequired,
-		defaultSuffix: "256",
-		mMin:          8,
-		mMax:          256,
-		mMod:          8,
+		name:             "uint",
+		suffixType:       suffixTypeMRequired,
+		defaultSuffix:    "256",
+		mMin:             8,
+		mMax:             256,
+		mMod:             8,
+		jsonEncodingType: JSONEncodingTypeInteger,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
 		},
@@ -166,8 +184,9 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getUintBytesFromInterface(ctx, desc, input)
 		},
-		encodeABIData: encodeABIUnsignedInteger,
-		decodeABIData: decodeABIUnsignedInt,
+		jsonEncodingType: JSONEncodingTypeBytes,
+		encodeABIData:    encodeABIUnsignedInteger,
+		decodeABIData:    decodeABIUnsignedInt,
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
 		name:       "bool",
@@ -176,18 +195,20 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBoolAsUnsignedIntegerFromInterface(ctx, desc, input)
 		},
-		encodeABIData: encodeABIUnsignedInteger,
-		decodeABIData: decodeABIUnsignedInt,
+		jsonEncodingType: JSONEncodingTypeBool,
+		encodeABIData:    encodeABIUnsignedInteger,
+		decodeABIData:    decodeABIUnsignedInt,
 	})
 	ElementaryTypeFixed = registerElementaryType(elementaryTypeInfo{
-		name:          "fixed",
-		suffixType:    suffixTypeMxNRequired,
-		defaultSuffix: "128x18",
-		mMin:          8,
-		mMax:          256,
-		mMod:          8,
-		nMin:          1,
-		nMax:          80,
+		name:             "fixed",
+		suffixType:       suffixTypeMxNRequired,
+		defaultSuffix:    "128x18",
+		mMin:             8,
+		mMax:             256,
+		mMod:             8,
+		nMin:             1,
+		nMax:             80,
+		jsonEncodingType: JSONEncodingTypeFloat,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
 		},
@@ -195,14 +216,15 @@ var (
 		decodeABIData: decodeABISignedFloat,
 	})
 	ElementaryTypeUfixed = registerElementaryType(elementaryTypeInfo{
-		name:          "ufixed",
-		suffixType:    suffixTypeMxNRequired,
-		defaultSuffix: "128x18",
-		mMin:          8,
-		mMax:          256,
-		mMod:          8,
-		nMin:          1,
-		nMax:          80,
+		name:             "ufixed",
+		suffixType:       suffixTypeMxNRequired,
+		defaultSuffix:    "128x18",
+		mMin:             8,
+		mMax:             256,
+		mMod:             8,
+		nMin:             1,
+		nMax:             80,
+		jsonEncodingType: JSONEncodingTypeFloat,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
 		},
@@ -217,8 +239,9 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
-		encodeABIData: encodeABIBytes,
-		decodeABIData: decodeABIBytes,
+		jsonEncodingType: JSONEncodingTypeBytes,
+		encodeABIData:    encodeABIBytes,
+		decodeABIData:    decodeABIBytes,
 	})
 	ElementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
 		name:       "function",
@@ -227,8 +250,9 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
-		encodeABIData: encodeABIBytes,
-		decodeABIData: decodeABIBytes,
+		jsonEncodingType: JSONEncodingTypeBytes,
+		encodeABIData:    encodeABIBytes,
+		decodeABIData:    decodeABIBytes,
 	})
 	ElementaryTypeString = registerElementaryType(elementaryTypeInfo{
 		name:       "string",
@@ -236,8 +260,9 @@ var (
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getStringFromInterface(ctx, desc, input)
 		},
-		encodeABIData: encodeABIString,
-		decodeABIData: decodeABIString,
+		jsonEncodingType: JSONEncodingTypeString,
+		encodeABIData:    encodeABIString,
+		decodeABIData:    decodeABIString,
 	})
 )
 

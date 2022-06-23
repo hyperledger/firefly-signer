@@ -64,7 +64,7 @@ var (
 	MsgNumberTooLargeABIEncode      = ffe("FF22044", "Numeric value does not fit in bit length %d for ABI encoding of component %s")
 	MsgNotEnoughtBytesABIArrayCount = ffe("FF22045", "Insufficient bytes to read array index for component %s")
 	MsgABIArrayCountTooLarge        = ffe("FF22046", "Array index %s too large for component %s")
-	MsgNotEnoughtBytesABIValue      = ffe("FF22047", "Insufficient bytes to read %s value %s")
+	MsgNotEnoughBytesABIValue       = ffe("FF22047", "Insufficient bytes to read %s value %s")
 	MsgNotEnoughtBytesABISignature  = ffe("FF22048", "Insufficient bytes to read signature")
 	MsgIncorrectABISignatureID      = ffe("FF22049", "Incorrect ID for signature %s expected=%s found=%s")
 	MsgUnknownABIElementaryType     = ffe("FF22050", "Unknown elementary type %s for component %s")

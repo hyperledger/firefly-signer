@@ -29,16 +29,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetFFIType(t *testing.T) {
-	assert.Equal(t, InputTypeString, GetFFIType("string"))
-	assert.Equal(t, InputTypeString, GetFFIType("address"))
-	assert.Equal(t, InputTypeString, GetFFIType("byte"))
-	assert.Equal(t, InputTypeBoolean, GetFFIType("bool"))
-	assert.Equal(t, InputTypeInteger, GetFFIType("uint256"))
-	assert.Equal(t, InputTypeObject, GetFFIType("tuple"))
-	assert.Equal(t, fftypes.FFEnumValue("", ""), GetFFIType("foobar"))
-}
-
 func TestFFIMethodToABI(t *testing.T) {
 	method := &fftypes.FFIMethod{
 		Name: "set",
@@ -63,6 +53,47 @@ func TestFFIMethodToABI(t *testing.T) {
 			{
 				Name:    "newValue",
 				Type:    "uint256",
+				Indexed: false,
+			},
+		},
+		Outputs: abi.ParameterArray{},
+	}
+
+	abi, err := ConvertFFIMethodToABI(context.Background(), method)
+	assert.NoError(t, err)
+
+	actualABIJSON, err := json.Marshal(abi)
+	assert.NoError(t, err)
+	expectedABIJSON, err := json.Marshal(expectedABIElement)
+	assert.NoError(t, err)
+
+	assert.JSONEq(t, string(expectedABIJSON), string(actualABIJSON))
+}
+
+func TestFFIMethodToABIFloat(t *testing.T) {
+	method := &fftypes.FFIMethod{
+		Name: "set",
+		Params: []*fftypes.FFIParam{
+			{
+				Name: "newValue",
+				Schema: fftypes.JSONAnyPtr(`{
+					"type": "number",
+					"details": {
+						"type": "ufixed128x18"
+					}
+				}`),
+			},
+		},
+		Returns: []*fftypes.FFIParam{},
+	}
+
+	expectedABIElement := &abi.Entry{
+		Name: "set",
+		Type: "function",
+		Inputs: abi.ParameterArray{
+			{
+				Name:    "newValue",
+				Type:    "ufixed128x18",
 				Indexed: false,
 			},
 		},
@@ -608,6 +639,16 @@ func TestConvertABIToFFIWithNestedArrayOfObjects(t *testing.T) {
 							Name:         "inUse",
 							Type:         "bool",
 						},
+						{
+							InternalType: "ufixed128x18",
+							Name:         "value",
+							Type:         "ufixed128x18",
+						},
+						{
+							InternalType: "bytes",
+							Name:         "data",
+							Type:         "bytes",
+						},
 					},
 				},
 			},
@@ -615,8 +656,90 @@ func TestConvertABIToFFIWithNestedArrayOfObjects(t *testing.T) {
 		},
 	}
 
+	boolDesc := i18n.Expand(context.Background(), signermsgs.APIBoolDescription)
 	bigIntDesc := i18n.Expand(context.Background(), signermsgs.APIIntegerDescription)
-	schema := fftypes.JSONAnyPtr(fmt.Sprintf(`{"type":"array","details":{"type":"tuple[][]","internalType":"struct WidgetFactory.Widget[][]"},"items":{"type":"array","items":{"type":"object","properties":{"description":{"type":"string","details":{"type":"string","internalType":"string","index":0}},"inUse":{"type":"boolean","details":{"type":"bool","internalType":"bool","index":2}},"size":{"oneOf":[{"type":"string"},{"type":"integer"}],"details":{"type":"uint256","internalType":"uint256","index":1},"description":"%s"}}}}}`, bigIntDesc))
+	floatDesc := i18n.Expand(context.Background(), signermsgs.APIFloatDescription)
+	hexDesc := i18n.Expand(context.Background(), signermsgs.APIHexDescription)
+	schema := fftypes.JSONAnyPtr(fmt.Sprintf(`{
+		"type": "array",
+		"details": {
+			"type": "tuple[][]",
+			"internalType": "struct WidgetFactory.Widget[][]"
+		},
+		"items": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"properties": {
+					"data": {
+						"type": "string",
+						"details": {
+							"type": "bytes",
+							"internalType": "bytes",
+							"index": 4
+						},
+						"description": "%s"
+					},
+					"description": {
+						"type": "string",
+						"details": {
+							"type": "string",
+							"internalType": "string",
+							"index": 0
+						}
+					},
+					"inUse": {
+						"oneOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "boolean"
+							}
+						],
+						"details": {
+							"type": "bool",
+							"internalType": "bool",
+							"index": 2
+						},
+						"description": "%s"
+					},
+					"size": {
+						"oneOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "integer"
+							}
+						],
+						"details": {
+							"type": "uint256",
+							"internalType": "uint256",
+							"index": 1
+						},
+						"description": "%s"
+					},
+					"value": {
+						"oneOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "number"
+							}
+						],
+						"details": {
+							"type": "ufixed128x18",
+							"internalType": "ufixed128x18",
+							"index": 3
+						},
+						"description": "%s"
+					}
+				}
+			}
+		}
+	}`, hexDesc, boolDesc, bigIntDesc, floatDesc))
 	expectedFFI := &fftypes.FFI{
 		Name:        "WidgetTest",
 		Version:     "v0.0.1",
@@ -645,6 +768,8 @@ func TestConvertABIToFFIWithNestedArrayOfObjects(t *testing.T) {
 	assert.NoError(t, err)
 	actualFFIJSON, err := json.Marshal(actualFFI)
 	assert.NoError(t, err)
+	fmt.Printf("%s\n", actualFFIJSON)
+	fmt.Printf("%s\n", expectedFFIJSON)
 	assert.JSONEq(t, string(expectedFFIJSON), string(actualFFIJSON))
 }
 
@@ -841,7 +966,7 @@ func TestConvertFFIParamsToABIParametersTypeMismatch(t *testing.T) {
 		{
 			Name: "firstName",
 			Schema: fftypes.JSONAnyPtr(`{
-				"type": "string",
+				"type": "integer",
 				"details": {
 					"type": "bool"
 				}

@@ -68,7 +68,7 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 func decodeABISignedInt(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
 	cv = &ComponentValue{Component: component}
 	if headPosition+32 > len(block) {
-		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABIValue, component, desc)
+		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, desc)
 	}
 	cv.Value = ParseInt256TwosComplementBytes(block[headPosition : headPosition+32])
 	return cv, err
@@ -77,7 +77,7 @@ func decodeABISignedInt(ctx context.Context, desc string, block []byte, headStar
 func decodeABIUnsignedInt(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
 	cv = &ComponentValue{Component: component}
 	if headPosition+32 > len(block) {
-		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABIValue, component, desc)
+		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, desc)
 	}
 	cv.Value = new(big.Int).SetBytes(block[headPosition : headPosition+32])
 	return cv, err
@@ -141,7 +141,7 @@ func decodeABIBytes(ctx context.Context, desc string, block []byte, headStart, h
 	}
 	cv = &ComponentValue{Component: component}
 	if dataOffset+byteLength > len(block) {
-		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABIValue, component, desc)
+		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, desc)
 	}
 	b := make([]byte, byteLength)
 	copy(b, block[dataOffset:])

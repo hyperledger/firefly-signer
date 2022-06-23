@@ -29,14 +29,12 @@ import (
 )
 
 const (
-	addressType = "address"
-	boolType    = "bool"
-	booleanType = "boolean"
-	integerType = "integer"
-	tupleType   = "tuple"
-	stringType  = "string"
-	arrayType   = "array"
-	objectType  = "object"
+	jsonBooleanType = "boolean"
+	jsonIntegerType = "integer"
+	jsonNumberType  = "number"
+	jsonStringType  = "string"
+	jsonArrayType   = "array"
+	jsonObjectType  = "object"
 )
 
 // InputType is the type of a JSON field in a request to FireFly's API
@@ -45,6 +43,8 @@ type InputType = fftypes.FFEnum
 var (
 	// InputTypeInteger is a json integer or string to be treated as an integer
 	InputTypeInteger = fftypes.FFEnumValue("ffiinputtype", "integer")
+	// InputTypeNumber is a json number or string to be treated as an integer
+	InputTypeNumber = fftypes.FFEnumValue("ffiinputtype", "number")
 	// InputTypeString is a JSON string
 	InputTypeString = fftypes.FFEnumValue("ffiinputtype", "string")
 	// FFIInputTypeArray is a JSON boolean
@@ -235,24 +235,39 @@ func getSchemaForABIInput(ctx context.Context, typeComponent abi.TypeComponent) 
 	}
 	switch typeComponent.ComponentType() {
 	case abi.ElementaryComponent:
-		t := GetFFIType(typeComponent.ElementaryType().String())
-		if t == InputTypeInteger {
+		switch typeComponent.ElementaryType().JSONEncodingType() {
+		case abi.JSONEncodingTypeInteger:
 			schema.OneOf = []SchemaType{
-				{Type: stringType},
-				{Type: integerType},
+				{Type: jsonStringType},
+				{Type: jsonIntegerType},
 			}
 			schema.Description = i18n.Expand(ctx, signermsgs.APIIntegerDescription)
-		} else {
-			schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, t.String()))
+		case abi.JSONEncodingTypeFloat:
+			schema.OneOf = []SchemaType{
+				{Type: jsonStringType},
+				{Type: jsonNumberType},
+			}
+			schema.Description = i18n.Expand(ctx, signermsgs.APIFloatDescription)
+		case abi.JSONEncodingTypeBool:
+			schema.OneOf = []SchemaType{
+				{Type: jsonStringType},
+				{Type: jsonBooleanType},
+			}
+			schema.Description = i18n.Expand(ctx, signermsgs.APIBoolDescription)
+		case abi.JSONEncodingTypeBytes:
+			schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, jsonStringType))
+			schema.Description = i18n.Expand(ctx, signermsgs.APIHexDescription)
+		default:
+			schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, jsonStringType))
 		}
 	case abi.FixedArrayComponent, abi.DynamicArrayComponent:
-		schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, arrayType))
+		schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, jsonArrayType))
 		childSchema := getSchemaForABIInput(ctx, typeComponent.ArrayChild())
 		schema.Items = childSchema
 		schema.Details = childSchema.Details
 		childSchema.Details = nil
 	case abi.TupleComponent:
-		schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, objectType))
+		schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, jsonObjectType))
 		schema.Properties = make(map[string]*Schema, len(typeComponent.TupleChildren()))
 		for i, tupleChild := range typeComponent.TupleChildren() {
 			childSchema := getSchemaForABIInput(ctx, tupleChild)
@@ -307,34 +322,34 @@ func inputTypeValidForTypeComponent(ctx context.Context, inputType *fftypes.JSON
 	var inputTypeString string
 	if err := inputType.Unmarshal(ctx, &inputTypeString); err != nil {
 		if o, ok := inputType.JSONObjectOk(); ok {
-			if _, ok := o.GetObjectArrayOk("oneOf"); ok {
-				inputTypeString = integerType
+			if a, ok := o.GetObjectArrayOk("oneOf"); ok {
+				for _, t := range a {
+					// Look for the entry in the oneOf that isn't "string"
+					jsonType := t.GetString("type")
+					if jsonType != "" && jsonType != inputTypeString {
+						inputTypeString = jsonType
+					}
+				}
 			}
 		}
 	}
 	switch inputTypeString {
-	case booleanType:
-		if tc.ElementaryType() == abi.ElementaryTypeBool {
-			return true
-		}
-	case integerType:
-		switch tc.ElementaryType() {
-		case abi.ElementaryTypeUint, abi.ElementaryTypeInt:
-			return true
-		}
-	case stringType:
-		switch tc.ElementaryType() {
-		case abi.ElementaryTypeAddress, abi.ElementaryTypeBytes, abi.ElementaryTypeString:
-			return true
-		}
-	case arrayType:
-		if tc.ArrayChild() != nil {
-			return true
-		}
-	case objectType:
-		if tc.TupleChildren() != nil {
-			return true
-		}
+	case jsonBooleanType:
+		// Booleans are only valid for boolean types
+		return tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeBool
+	case jsonIntegerType:
+		// Integers are only valid for integer types
+		return tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeInteger
+	case jsonNumberType:
+		// Integers are only valid for float types
+		return tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeFloat
+	case jsonStringType:
+		// Strings are valid for all elementary components
+		return tc.ComponentType() == abi.ElementaryComponent
+	case jsonArrayType:
+		return tc.ComponentType() == abi.DynamicArrayComponent || tc.ComponentType() == abi.FixedArrayComponent
+	case jsonObjectType:
+		return tc.ComponentType() == abi.TupleComponent
 	}
 	return false
 }
@@ -364,9 +379,9 @@ func processField(ctx context.Context, name string, schema *Schema) (*abi.Parame
 	var schemaTypeString string
 	if err := json.Unmarshal(schema.Type.Bytes(), &schemaTypeString); err == nil {
 		switch schemaTypeString {
-		case objectType:
+		case jsonObjectType:
 			parameter.Components, err = buildABIParameterArrayForObject(ctx, schema.Properties)
-		case arrayType:
+		case jsonArrayType:
 			parameter.Components, err = buildABIParameterArrayForObject(ctx, schema.Items.Properties)
 		}
 		if err != nil {
@@ -399,23 +414,4 @@ func ABIMethodToSignature(abi *abi.Entry) string {
 	}
 	result += ")"
 	return result
-}
-
-func GetFFIType(solidityType string) InputType {
-	switch solidityType {
-	case stringType, addressType:
-		return InputTypeString
-	case boolType:
-		return InputTypeBoolean
-	case tupleType:
-		return InputTypeObject
-	default:
-		switch {
-		case strings.Contains(solidityType, "byte"):
-			return InputTypeString
-		case strings.Contains(solidityType, "int"):
-			return InputTypeInteger
-		}
-	}
-	return ""
 }
