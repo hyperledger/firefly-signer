@@ -11,6 +11,7 @@
     "ethsigner",
     "ethsignermocks",
     "ethtypes",
+    "ffiinputtype",
     "ffresty",
     "ffsigner",
     "fftypes",

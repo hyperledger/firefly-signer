@@ -28,4 +28,7 @@ var ffm = func(key, translation string) i18n.MessageKey {
 //revive:disable
 var (
 	APIIntegerDescription = ffm("api.integer", "An integer. You are recommended to use a JSON string. A JSON number can be used for values up to the safe maximum.")
+	APIBoolDescription    = ffm("api.bool", "A boolean. You can use a boolean or a string true/false as input")
+	APIFloatDescription   = ffm("api.float", "A floating point number, which will be converted to a fixed point number. You are recommended to use a JSON string. A JSON number can be used for values up to the safe maximum.")
+	APIHexDescription     = ffm("api.hex", "A hex encoded set of bytes, with an optional '0x' prefix")
 )
