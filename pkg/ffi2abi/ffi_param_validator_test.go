@@ -93,7 +93,7 @@ func TestSchemaTypeInvalid(t *testing.T) {
 func TestSchemaTypeInvalidFFIType(t *testing.T) {
 	_, err := NewTestSchema(`
 {
-	"type": "number",
+	"type": "null",
 	"details": {
 		"type": "uint256"
 	}
