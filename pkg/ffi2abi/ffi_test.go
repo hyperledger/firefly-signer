@@ -1003,3 +1003,12 @@ func TestInputTypeValidForTypeComponentOneOf(t *testing.T) {
 	tc, _ := param.TypeComponentTree()
 	assert.True(t, inputTypeValidForTypeComponent(context.Background(), inputType, tc))
 }
+
+func TestInputTypeValidForTypeComponentInvalid(t *testing.T) {
+	inputType := fftypes.JSONAnyPtr(`"foobar"`)
+	param := abi.Parameter{
+		Type: "bool",
+	}
+	tc, _ := param.TypeComponentTree()
+	assert.False(t, inputTypeValidForTypeComponent(context.Background(), inputType, tc))
+}
