@@ -111,7 +111,7 @@ func decodeABIUnsignedFloat(ctx context.Context, desc string, block []byte, head
 
 func decodeABILength(ctx context.Context, desc string, block []byte, offset int) (count int, err error) {
 	if offset+32 > len(block) {
-		return -1, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABIArrayCount, desc)
+		return -1, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIArrayCount, desc)
 	}
 	i := new(big.Int).SetBytes(block[offset : offset+32])
 	if i.BitLen() > 32 {

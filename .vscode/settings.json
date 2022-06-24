@@ -25,6 +25,7 @@
     "Keccak",
     "keypair",
     "keystorev",
+    "pluggable",
     "resty",
     "rpcbackendmocks",
     "secp",

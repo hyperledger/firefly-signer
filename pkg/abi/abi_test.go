@@ -238,8 +238,8 @@ func TestABIModifyReParse(t *testing.T) {
 	// Re-parse sorts it
 	abi.Validate()
 	assert.Equal(t, "foo(uint128)", abi[0].String())
-	assert.Equal(t, "c56cb6b0", abi[0].ID())
-	assert.Equal(t, []byte{0xc5, 0x6c, 0xb6, 0xb0}, abi[0].IDBytes())
+	assert.Equal(t, "0xc56cb6b0", abi[0].FunctionSelectorBytes().String())
+	assert.Equal(t, ethtypes.HexBytes0xPrefix{0xc5, 0x6c, 0xb6, 0xb0}, abi[0].FunctionSelectorBytes())
 
 }
 
@@ -274,8 +274,7 @@ func TestABIModifyBadInputs(t *testing.T) {
 	assert.Regexp(t, "FF22028", err)
 
 	assert.Empty(t, abi[0].Inputs[0].String())
-	assert.Empty(t, abi[0].ID())
-	assert.Equal(t, []byte{0x00, 0x00, 0x00, 0x00}, abi[0].IDBytes())
+	assert.Equal(t, ethtypes.HexBytes0xPrefix{0x00, 0x00, 0x00, 0x00}, abi[0].FunctionSelectorBytes())
 
 }
 
@@ -504,4 +503,182 @@ func TestSignatureHashInvalid(t *testing.T) {
 	}
 	_, err := e.SignatureHash()
 	assert.Regexp(t, "FF22025", err)
+
+	assert.Equal(t, make(ethtypes.HexBytes0xPrefix, 32), e.SignatureHashBytes())
+}
+
+func TestDecodeEventIndexedOnly(t *testing.T) {
+	e := &Entry{
+		Anonymous: true,
+		Type:      Event,
+		Inputs: ParameterArray{
+			{
+				Name:    "from",
+				Type:    "address",
+				Indexed: true,
+			},
+			{
+				Name:    "to",
+				Type:    "address",
+				Indexed: true,
+			},
+			{
+				Name:    "tokenId",
+				Type:    "uint256",
+				Indexed: true,
+			},
+		},
+	}
+	v, err := e.DecodeEventData([]ethtypes.HexBytes0xPrefix{
+		ethtypes.MustNewHexBytes0xPrefix("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		ethtypes.MustNewHexBytes0xPrefix("0x000000000000000000000000fb075bb99f2aa4c49955bf703509a227d7a12248"),
+		ethtypes.MustNewHexBytes0xPrefix("0x000000000000000000000000000000000000000000000000000000000000091d"),
+	}, ethtypes.HexBytes0xPrefix{})
+	assert.NoError(t, err)
+
+	j, err := v.JSON()
+	assert.NoError(t, err)
+
+	assert.JSONEq(t, `{
+		"from": "0000000000000000000000000000000000000000",
+		"to": "fb075bb99f2aa4c49955bf703509a227d7a12248",
+		"tokenId": "2333"
+	}`, string(j))
+}
+
+func TestDecodeEventMixed(t *testing.T) {
+	e := &Entry{
+		Type: Event,
+		Name: "MyEvent",
+		Inputs: ParameterArray{
+			{
+				Name:    "indexed1",
+				Type:    "uint256",
+				Indexed: true,
+			},
+			{
+				Name:    "indexed2",
+				Type:    "address",
+				Indexed: true,
+			},
+			{
+				Name: "unindexed1",
+				Type: "uint256",
+			},
+			{
+				Name: "unindexed2",
+				Type: "bool",
+			},
+			{
+				Name:    "indexed3",
+				Type:    "string",
+				Indexed: true,
+			},
+			{
+				Name: "unindexed3",
+				Type: "string",
+			},
+		},
+	}
+	v, err := e.DecodeEventData([]ethtypes.HexBytes0xPrefix{
+		ethtypes.MustNewHexBytes0xPrefix("0x27f22555fe6499d07163873ce3237d90091053cdeb2280c652466f4e1be378e5"),
+		ethtypes.MustNewHexBytes0xPrefix("0x0000000000000000000000000000000000000000000000000000000000002b67"),
+		ethtypes.MustNewHexBytes0xPrefix("0x0000000000000000000000003968ef051b422d3d1cdc182a88bba8dd922e6fa4"),
+		ethtypes.MustNewHexBytes0xPrefix("0x592fa743889fc7f92ac2a37bb1f5ba1daf2a5c84741ca0e0061d243a2e6707ba"),
+	}, ethtypes.MustNewHexBytes0xPrefix("0x00000000000000000000000000000000000000000000000000000000000056ce00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000b48656c6c6f20576f726c64000000000000000000000000000000000000000000"))
+	assert.NoError(t, err)
+
+	j, err := v.JSON()
+	assert.NoError(t, err)
+
+	assert.JSONEq(t, `{
+		"indexed1": "11111",
+		"indexed2": "3968ef051b422d3d1cdc182a88bba8dd922e6fa4",
+		"unindexed1": "22222",
+		"unindexed2": true,
+		"indexed3": "592fa743889fc7f92ac2a37bb1f5ba1daf2a5c84741ca0e0061d243a2e6707ba",
+		"unindexed3": "Hello World"
+	}`, string(j))
+}
+
+func TestDecodeEventBadABI(t *testing.T) {
+	e := &Entry{
+		Inputs: ParameterArray{
+			{
+				Type: "wrong",
+			},
+		},
+	}
+	_, err := e.DecodeEventData([]ethtypes.HexBytes0xPrefix{}, ethtypes.HexBytes0xPrefix{})
+	assert.Regexp(t, "FF22025", err)
+}
+
+func TestDecodeEventBadSignature(t *testing.T) {
+	e := &Entry{
+		Name: "MyEvent",
+		Type: Event,
+		Inputs: ParameterArray{
+			{
+				Name:    "addr1",
+				Type:    "address",
+				Indexed: true,
+			},
+		},
+	}
+	_, err := e.DecodeEventData([]ethtypes.HexBytes0xPrefix{
+		ethtypes.MustNewHexBytes0xPrefix("0x0000000000000000000000000000000000000000000000000000000000000000"),
+	}, ethtypes.HexBytes0xPrefix{})
+	assert.Regexp(t, "FF22054", err)
+}
+
+func TestDecodeEventInsufficientTopics(t *testing.T) {
+	e := &Entry{
+		Name:      "MyEvent",
+		Type:      Event,
+		Anonymous: true,
+		Inputs: ParameterArray{
+			{
+				Name:    "addr1",
+				Type:    "address",
+				Indexed: true,
+			},
+		},
+	}
+	_, err := e.DecodeEventData([]ethtypes.HexBytes0xPrefix{}, ethtypes.HexBytes0xPrefix{})
+	assert.Regexp(t, "FF22053", err)
+}
+
+func TestDecodeEventBadValue(t *testing.T) {
+	e := &Entry{
+		Name:      "MyEvent",
+		Type:      Event,
+		Anonymous: true,
+		Inputs: ParameterArray{
+			{
+				Name:    "addr1",
+				Type:    "address",
+				Indexed: true,
+			},
+		},
+	}
+	_, err := e.DecodeEventData([]ethtypes.HexBytes0xPrefix{
+		ethtypes.MustNewHexBytes0xPrefix("0x"),
+	}, ethtypes.HexBytes0xPrefix{})
+	assert.Regexp(t, "FF22047", err)
+}
+
+func TestDecodeEventBadData(t *testing.T) {
+	e := &Entry{
+		Name:      "MyEvent",
+		Type:      Event,
+		Anonymous: true,
+		Inputs: ParameterArray{
+			{
+				Name: "addr1",
+				Type: "address",
+			},
+		},
+	}
+	_, err := e.DecodeEventData([]ethtypes.HexBytes0xPrefix{}, ethtypes.MustNewHexBytes0xPrefix("0x"))
+	assert.Regexp(t, "FF22047", err)
 }
