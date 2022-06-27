@@ -377,7 +377,7 @@ func (e *Entry) GenerateFunctionSelectorCtx(ctx context.Context) ([]byte, error)
 }
 
 // FunctionSelectorBytes is a convenience function to get the ID as bytes.
-// Will return a nil 4 bytes on error
+// Will return all zeros on error (ensures non-nil)
 func (e *Entry) FunctionSelectorBytes() ethtypes.HexBytes0xPrefix {
 	id, err := e.GenerateFunctionSelector()
 	if err != nil {
@@ -447,6 +447,8 @@ func (e *Entry) SignatureHashCtx(context.Context) (ethtypes.HexBytes0xPrefix, er
 	return hash.Sum(nil), nil
 }
 
+// SignatureHashBytes is a convenience function to get the signature hash as bytes.
+// Will return all zeros on error (ensures non-nil)
 func (e *Entry) SignatureHashBytes() ethtypes.HexBytes0xPrefix {
 	sh, err := e.SignatureHashCtx(context.Background())
 	if err != nil {
