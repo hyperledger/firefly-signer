@@ -139,7 +139,7 @@ with a number of built-in options as follows:
 - Number serialization can be:
   - Base 10 formatted string
   - Hex with "0x" prefix
-  - Numeric up to the maximum safe Javscript values, then automatically switching to string
+  - Numeric up to the maximum safe Javascript values, then automatically switching to string
 - Byte serialization can be:
   - Hex with "0x" prefix
   - Hex without any prefix
@@ -151,6 +151,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
@@ -174,7 +175,7 @@ type EntryType string
 const (
 	Function    EntryType = "function"    // A function/method of the smart contract
 	Constructor EntryType = "constructor" // The constructor
-	Receive     EntryType = "receive"     // The "receive Ethere" function
+	Receive     EntryType = "receive"     // The "receive ether" function
 	Fallback    EntryType = "fallback"    // The default function to invoke
 	Event       EntryType = "event"       // An event the smart contract can emit
 	Error       EntryType = "error"       // An error definition
@@ -279,7 +280,7 @@ func (e *Entry) ValidateCtx(ctx context.Context) (err error) {
 	return nil
 }
 
-// ParseJSON takes external JSON data, and parses againt the ABI to generate
+// ParseJSON takes external JSON data, and parses against the ABI to generate
 // a component value tree.
 //
 // The component value tree can then be serialized to binary ABI data.
@@ -375,26 +376,15 @@ func (e *Entry) GenerateFunctionSelectorCtx(ctx context.Context) ([]byte, error)
 	return k[0:4], nil
 }
 
-// IDBytes is a convenience function to get the ID as bytes.
-// Will return a nil 4 bytes on error
-func (e *Entry) IDBytes() []byte {
+// FunctionSelectorBytes is a convenience function to get the ID as bytes.
+// Will return all zeros on error (ensures non-nil)
+func (e *Entry) FunctionSelectorBytes() ethtypes.HexBytes0xPrefix {
 	id, err := e.GenerateFunctionSelector()
 	if err != nil {
 		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
 		return []byte{0, 0, 0, 0}
 	}
 	return id
-}
-
-// ID is a convenience function to get the ID as a hex string (no 0x prefix), which will
-// return the empty string on failure
-func (e *Entry) ID() string {
-	id, err := e.GenerateFunctionSelector()
-	if err != nil {
-		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
-		return ""
-	}
-	return hex.EncodeToString(id)
 }
 
 // EncodeCallData serializes the inputs of the entry, prefixed with the function selector
@@ -432,7 +422,7 @@ func (e *Entry) DecodeCallDataCtx(ctx context.Context, b []byte) (*ComponentValu
 		return nil, err
 	}
 	if len(b) < 4 {
-		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughtBytesABISignature)
+		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABISignature)
 	}
 	if !bytes.Equal(id, b[0:4]) {
 		return nil, i18n.NewError(ctx, signermsgs.MsgIncorrectABISignatureID, e.String(), hex.EncodeToString(id), hex.EncodeToString(b[0:4]))
@@ -442,15 +432,116 @@ func (e *Entry) DecodeCallDataCtx(ctx context.Context, b []byte) (*ComponentValu
 
 }
 
+// SignatureHash returns the keccak hash of the signature as bytes
 func (e *Entry) SignatureHash() (ethtypes.HexBytes0xPrefix, error) {
+	return e.SignatureHashCtx(context.Background())
+}
+
+func (e *Entry) SignatureHashCtx(context.Context) (ethtypes.HexBytes0xPrefix, error) {
 	hash := sha3.NewLegacyKeccak256()
 	sig, err := e.SignatureCtx(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	hash.Write([]byte(sig))
-
 	return hash.Sum(nil), nil
+}
+
+// SignatureHashBytes is a convenience function to get the signature hash as bytes.
+// Will return all zeros on error (ensures non-nil)
+func (e *Entry) SignatureHashBytes() ethtypes.HexBytes0xPrefix {
+	sh, err := e.SignatureHashCtx(context.Background())
+	if err != nil {
+		log.L(context.Background()).Errorf("Failed to generate signature: %s", err)
+		sh = make(ethtypes.HexBytes0xPrefix, 32)
+	}
+	return sh
+}
+
+func (e *Entry) topicToValue(ctx context.Context, topicIdx int, topic ethtypes.HexBytes0xPrefix, input *typeComponent) (*ComponentValue, error) {
+	et := input.ElementaryType().(*elementaryTypeInfo)
+	if et != nil && et.fixed32 {
+		// Directly encoded into topic
+		return et.decodeABIData(ctx, fmt.Sprintf("topic[%d]", topicIdx), topic, 0, 0, input)
+	}
+	// For all other types it is just a hash of the output for indexing, so we can only
+	// logically return it as a hex string. The Solidity developer has to include
+	// the same data a second type non-indexed to get the real value.
+	return &ComponentValue{
+		Component: &typeComponent{
+			cType:          ElementaryComponent,
+			elementaryType: (ElementaryTypeBytes).(*elementaryTypeInfo),
+			keyName:        input.keyName,
+			parameter:      input.parameter, // the original parameter will obviously have a different type to Bytes
+		},
+		Value: []byte(topic),
+	}, nil
+}
+
+// DecodeEventData takes the array of topics, and the event data, and builds a component value tree that parses
+// the values against the ABI definition in the entry. Values are extracted from either the topic or data per
+// the rules defined here: https://docs.soliditylang.org/en/v0.8.15/abi-spec.html
+//
+// If the event is non-anonymous, the signature hash of the event must match the first topic (or an error is thrown).
+func (e *Entry) DecodeEventData(topics []ethtypes.HexBytes0xPrefix, data ethtypes.HexBytes0xPrefix) (*ComponentValue, error) {
+	return e.DecodeEventDataCtx(context.Background(), topics, data)
+}
+
+func (e *Entry) DecodeEventDataCtx(ctx context.Context, topics []ethtypes.HexBytes0xPrefix, data ethtypes.HexBytes0xPrefix) (*ComponentValue, error) {
+	typeTree, err := e.Inputs.TypeComponentTree()
+	if err != nil {
+		return nil, err
+	}
+	inputTypes := typeTree.TupleChildren()
+	topicIdx := 0
+	if !e.Anonymous && len(topics) >= 1 {
+		sigHashBytes := e.SignatureHashBytes()
+		if !bytes.Equal(topics[0], sigHashBytes) {
+			return nil, i18n.NewError(ctx, signermsgs.MsgEventSignatureMismatch, e, topics[0], sigHashBytes)
+		}
+		topicIdx++
+	}
+	dataArgs := &typeComponent{
+		cType:         TupleComponent,
+		tupleChildren: make([]*typeComponent, 0, len(inputTypes)),
+	}
+	dataArgIndexMap := make(map[int]int)
+	valueTree := &ComponentValue{
+		Component: typeTree,
+		Children:  make([]*ComponentValue, len(inputTypes)),
+	}
+	for idx, input := range inputTypes {
+		if input.Parameter().Indexed {
+			// Extract the value (or value hash) from the topic
+			if topicIdx >= len(topics) {
+				return nil, i18n.NewError(ctx, signermsgs.MsgEventsInsufficientTopics, idx, e)
+			}
+			topic := topics[topicIdx]
+			topicIdx++
+			valueTree.Children[idx], err = e.topicToValue(ctx, topicIdx, topic, input.(*typeComponent))
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			// Add this parameter to the list we expect to be encoded in the data, with a map
+			// back to where we store the output in the tree.
+			dataArgIndexMap[len(dataArgs.tupleChildren)] = idx
+			dataArgs.tupleChildren = append(dataArgs.tupleChildren, input.(*typeComponent))
+		}
+	}
+	// If we have data args, decode them
+	if len(dataArgs.tupleChildren) > 0 {
+		dataValueTree, err := dataArgs.DecodeABIDataCtx(ctx, data, 0)
+		if err != nil {
+			return nil, err
+		}
+		// Map back to their original positions
+		for i, v := range dataValueTree.Children {
+			targetIdx := dataArgIndexMap[i]
+			valueTree.Children[targetIdx] = v
+		}
+	}
+	return valueTree, nil
 }
 
 func (e *Entry) SignatureCtx(ctx context.Context) (string, error) {
