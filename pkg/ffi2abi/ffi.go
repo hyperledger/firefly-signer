@@ -19,7 +19,6 @@ package ffi2abi
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
@@ -63,8 +62,8 @@ type paramDetails struct {
 }
 
 type Schema struct {
+	Type        string             `json:"type,omitempty"`
 	OneOf       []SchemaType       `json:"oneOf,omitempty"`
-	Type        *fftypes.JSONAny   `json:"type,omitempty"`
 	Details     *paramDetails      `json:"details,omitempty"`
 	Properties  map[string]*Schema `json:"properties,omitempty"`
 	Items       *Schema            `json:"items,omitempty"`
@@ -255,19 +254,19 @@ func getSchemaForABIInput(ctx context.Context, typeComponent abi.TypeComponent) 
 			}
 			schema.Description = i18n.Expand(ctx, signermsgs.APIBoolDescription)
 		case abi.JSONEncodingTypeBytes:
-			schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, jsonStringType))
+			schema.Type = jsonStringType
 			schema.Description = i18n.Expand(ctx, signermsgs.APIHexDescription)
 		default:
-			schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, jsonStringType))
+			schema.Type = jsonStringType
 		}
 	case abi.FixedArrayComponent, abi.DynamicArrayComponent:
-		schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, jsonArrayType))
+		schema.Type = jsonArrayType
 		childSchema := getSchemaForABIInput(ctx, typeComponent.ArrayChild())
 		schema.Items = childSchema
 		schema.Details = childSchema.Details
 		childSchema.Details = nil
 	case abi.TupleComponent:
-		schema.Type = fftypes.JSONAnyPtr(fmt.Sprintf(`"%s"`, jsonObjectType))
+		schema.Type = jsonObjectType
 		schema.Properties = make(map[string]*Schema, len(typeComponent.TupleChildren()))
 		for i, tupleChild := range typeComponent.TupleChildren() {
 			childSchema := getSchemaForABIInput(ctx, tupleChild)
@@ -309,7 +308,7 @@ func convertFFIParamsToABIParameters(ctx context.Context, params fftypes.FFIPara
 		if err != nil {
 			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
 		}
-		if !inputTypeValidForTypeComponent(ctx, s.Type, tc) {
+		if !inputTypeValidForTypeComponent(s, tc) {
 			return nil, i18n.NewError(ctx, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
 		}
 
@@ -318,20 +317,16 @@ func convertFFIParamsToABIParameters(ctx context.Context, params fftypes.FFIPara
 	return abiParamList, nil
 }
 
-func inputTypeValidForTypeComponent(ctx context.Context, inputType *fftypes.JSONAny, tc abi.TypeComponent) bool {
+func inputTypeValidForTypeComponent(inputSchema *Schema, tc abi.TypeComponent) bool {
 	var inputTypeString string
-	if err := inputType.Unmarshal(ctx, &inputTypeString); err != nil {
-		if o, ok := inputType.JSONObjectOk(); ok {
-			if a, ok := o.GetObjectArrayOk("oneOf"); ok {
-				for _, t := range a {
-					// Look for the entry in the oneOf that isn't "string"
-					jsonType := t.GetString("type")
-					if jsonType != "" && jsonType != inputTypeString {
-						inputTypeString = jsonType
-					}
-				}
+	if inputSchema.OneOf != nil {
+		for _, t := range inputSchema.OneOf {
+			if t.Type != jsonStringType {
+				inputTypeString = t.Type
 			}
 		}
+	} else {
+		inputTypeString = inputSchema.Type
 	}
 	switch inputTypeString {
 	case jsonBooleanType:
@@ -366,29 +361,26 @@ func buildABIParameterArrayForObject(ctx context.Context, properties map[string]
 	return parameters, nil
 }
 
-func processField(ctx context.Context, name string, schema *Schema) (*abi.Parameter, error) {
+func processField(ctx context.Context, name string, schema *Schema) (parameter *abi.Parameter, err error) {
 	if schema.Details == nil {
 		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidFFIDetailsSchema, name)
 	}
-	parameter := &abi.Parameter{
+	parameter = &abi.Parameter{
 		Name:         name,
 		Type:         schema.Details.Type,
 		InternalType: schema.Details.InternalType,
 		Indexed:      schema.Details.Indexed,
 	}
-	var schemaTypeString string
-	if err := json.Unmarshal(schema.Type.Bytes(), &schemaTypeString); err == nil {
-		switch schemaTypeString {
-		case jsonObjectType:
-			parameter.Components, err = buildABIParameterArrayForObject(ctx, schema.Properties)
-		case jsonArrayType:
-			parameter.Components, err = buildABIParameterArrayForObject(ctx, schema.Items.Properties)
-		}
-		if err != nil {
-			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, name)
-		}
+	switch schema.Type {
+	case jsonObjectType:
+		parameter.Components, err = buildABIParameterArrayForObject(ctx, schema.Properties)
+	case jsonArrayType:
+		parameter.Components, err = buildABIParameterArrayForObject(ctx, schema.Items.Properties)
 	}
-	return parameter, nil
+	if err != nil {
+		return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, name)
+	}
+	return
 }
 
 func ABIArgumentToTypeString(typeName string, components abi.ParameterArray) string {
