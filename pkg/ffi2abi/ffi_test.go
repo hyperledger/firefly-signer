@@ -888,11 +888,11 @@ func TestConvertFFIEventDefinitionToABIInvalidSchema(t *testing.T) {
 
 func TestProcessFieldInvalidSchema(t *testing.T) {
 	s := &Schema{
-		Type:    fftypes.JSONAnyPtr(`"object"`),
+		Type:    "object",
 		Details: &paramDetails{},
 		Properties: map[string]*Schema{
 			"badProperty": {
-				Type: fftypes.JSONAnyPtr("foo"),
+				Type: "foo",
 			},
 		},
 	}
@@ -978,37 +978,41 @@ func TestConvertFFIParamsToABIParametersTypeMismatch(t *testing.T) {
 }
 
 func TestInputTypeValidForTypeComponent(t *testing.T) {
-	inputType := fftypes.JSONAnyPtr(`"boolean"`)
+	inputSchema := &Schema{
+		Type: "boolean",
+	}
 	param := abi.Parameter{
 		Type: "bool",
 	}
 	tc, _ := param.TypeComponentTree()
-	assert.True(t, inputTypeValidForTypeComponent(context.Background(), inputType, tc))
+	assert.NoError(t, inputTypeValidForTypeComponent(context.Background(), inputSchema, tc))
 }
 
 func TestInputTypeValidForTypeComponentOneOf(t *testing.T) {
-	inputType := fftypes.JSONAnyPtr(`{
-		"oneOf": [
+	inputSchema := &Schema{
+		OneOf: []SchemaType{
 			{
-				"type": "integer"
+				Type: "integer",
 			},
 			{
-				"type": "string"
-			}
-		]
-	}`)
+				Type: "string",
+			},
+		},
+	}
 	param := abi.Parameter{
 		Type: "uint256",
 	}
 	tc, _ := param.TypeComponentTree()
-	assert.True(t, inputTypeValidForTypeComponent(context.Background(), inputType, tc))
+	assert.NoError(t, inputTypeValidForTypeComponent(context.Background(), inputSchema, tc))
 }
 
 func TestInputTypeValidForTypeComponentInvalid(t *testing.T) {
-	inputType := fftypes.JSONAnyPtr(`"foobar"`)
+	inputSchema := &Schema{
+		Type: "foobar",
+	}
 	param := abi.Parameter{
 		Type: "bool",
 	}
 	tc, _ := param.TypeComponentTree()
-	assert.False(t, inputTypeValidForTypeComponent(context.Background(), inputType, tc))
+	assert.Regexp(t, "FF22055", inputTypeValidForTypeComponent(context.Background(), inputSchema, tc))
 }

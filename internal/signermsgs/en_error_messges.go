@@ -72,4 +72,5 @@ var (
 	MsgInvalidFFIDetailsSchema     = ffe("FF22052", "Invalid FFI details schema for '%s'")
 	MsgEventsInsufficientTopics    = ffe("FF22053", "Ran out of topics for indexed fields at field %d of %s")
 	MsgEventSignatureMismatch      = ffe("FF22054", "Event signature mismatch for '%s': expected='%s' found='%s'")
+	MsgFFITypeMismatch             = ffe("FF22055", "Input type '%s' is not valid for ABI type '%s'")
 )
