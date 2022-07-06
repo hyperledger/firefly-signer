@@ -308,8 +308,8 @@ func convertFFIParamsToABIParameters(ctx context.Context, params fftypes.FFIPara
 		if err != nil {
 			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
 		}
-		if !inputTypeValidForTypeComponent(s, tc) {
-			return nil, i18n.NewError(ctx, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
+		if err := inputTypeValidForTypeComponent(ctx, s, tc); err != nil {
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidFFIDetailsSchema, param.Name)
 		}
 
 		abiParamList[i] = abiParameter
@@ -317,7 +317,7 @@ func convertFFIParamsToABIParameters(ctx context.Context, params fftypes.FFIPara
 	return abiParamList, nil
 }
 
-func inputTypeValidForTypeComponent(inputSchema *Schema, tc abi.TypeComponent) bool {
+func inputTypeValidForTypeComponent(ctx context.Context, inputSchema *Schema, tc abi.TypeComponent) error {
 	var inputTypeString string
 	if inputSchema.OneOf != nil {
 		for _, t := range inputSchema.OneOf {
@@ -331,22 +331,34 @@ func inputTypeValidForTypeComponent(inputSchema *Schema, tc abi.TypeComponent) b
 	switch inputTypeString {
 	case jsonBooleanType:
 		// Booleans are only valid for boolean types
-		return tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeBool
+		if tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeBool {
+			return nil
+		}
 	case jsonIntegerType:
 		// Integers are only valid for integer types
-		return tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeInteger
+		if tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeInteger {
+			return nil
+		}
 	case jsonNumberType:
 		// Integers are only valid for float types
-		return tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeFloat
+		if tc.ComponentType() == abi.ElementaryComponent && tc.ElementaryType().JSONEncodingType() == abi.JSONEncodingTypeFloat {
+			return nil
+		}
 	case jsonStringType:
 		// Strings are valid for all elementary components
-		return tc.ComponentType() == abi.ElementaryComponent
+		if tc.ComponentType() == abi.ElementaryComponent {
+			return nil
+		}
 	case jsonArrayType:
-		return tc.ComponentType() == abi.DynamicArrayComponent || tc.ComponentType() == abi.FixedArrayComponent
+		if tc.ComponentType() == abi.DynamicArrayComponent || tc.ComponentType() == abi.FixedArrayComponent {
+			return nil
+		}
 	case jsonObjectType:
-		return tc.ComponentType() == abi.TupleComponent
+		if tc.ComponentType() == abi.TupleComponent {
+			return nil
+		}
 	}
-	return false
+	return i18n.NewError(ctx, signermsgs.MsgFFITypeMismatch, inputTypeString, tc.ElementaryType().String())
 }
 
 func buildABIParameterArrayForObject(ctx context.Context, properties map[string]*Schema) (abi.ParameterArray, error) {

@@ -985,7 +985,7 @@ func TestInputTypeValidForTypeComponent(t *testing.T) {
 		Type: "bool",
 	}
 	tc, _ := param.TypeComponentTree()
-	assert.True(t, inputTypeValidForTypeComponent(inputSchema, tc))
+	assert.NoError(t, inputTypeValidForTypeComponent(context.Background(), inputSchema, tc))
 }
 
 func TestInputTypeValidForTypeComponentOneOf(t *testing.T) {
@@ -1003,7 +1003,7 @@ func TestInputTypeValidForTypeComponentOneOf(t *testing.T) {
 		Type: "uint256",
 	}
 	tc, _ := param.TypeComponentTree()
-	assert.True(t, inputTypeValidForTypeComponent(inputSchema, tc))
+	assert.NoError(t, inputTypeValidForTypeComponent(context.Background(), inputSchema, tc))
 }
 
 func TestInputTypeValidForTypeComponentInvalid(t *testing.T) {
@@ -1014,5 +1014,5 @@ func TestInputTypeValidForTypeComponentInvalid(t *testing.T) {
 		Type: "bool",
 	}
 	tc, _ := param.TypeComponentTree()
-	assert.False(t, inputTypeValidForTypeComponent(inputSchema, tc))
+	assert.Regexp(t, "FF22055", inputTypeValidForTypeComponent(context.Background(), inputSchema, tc))
 }
