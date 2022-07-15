@@ -35,6 +35,7 @@ type Serializer struct {
 	is IntSerializer
 	fs FloatSerializer
 	bs ByteSerializer
+	dn DefaultNameGenerator
 }
 
 // NewSerializer creates a new ABI value tree serializer, with the default
@@ -48,6 +49,7 @@ func NewSerializer() *Serializer {
 		is: Base10StringIntSerializer,
 		fs: Base10StringFloatSerializer,
 		bs: HexByteSerializer,
+		dn: NumericDefaultNameGenerator,
 	}
 }
 
@@ -69,6 +71,8 @@ var (
 	minSafeJSONNumberInt   = big.NewInt(-9007199254740991)
 	minSafeJSONNumberFloat = big.NewFloat(-9007199254740991)
 )
+
+type DefaultNameGenerator func(idx int) string
 
 type IntSerializer func(i *big.Int) interface{}
 
@@ -93,6 +97,11 @@ func (s *Serializer) SetFloatSerializer(fs FloatSerializer) *Serializer {
 
 func (s *Serializer) SetByteSerializer(bs ByteSerializer) *Serializer {
 	s.bs = bs
+	return s
+}
+
+func (s *Serializer) SetDefaultNameGenerator(dn DefaultNameGenerator) *Serializer {
+	s.dn = dn
 	return s
 }
 
@@ -131,6 +140,10 @@ func HexByteSerializer(b []byte) interface{} {
 
 func HexByteSerializer0xPrefix(b []byte) interface{} {
 	return "0x" + hex.EncodeToString(b)
+}
+
+func NumericDefaultNameGenerator(idx int) string {
+	return strconv.FormatInt(int64(idx), 10)
 }
 
 func (s *Serializer) SerializeInterface(cv *ComponentValue) (interface{}, error) {
@@ -210,7 +223,7 @@ func (s *Serializer) serializeTuple(ctx context.Context, breadcrumbs string, cv 
 			if child.Component != nil {
 				name := child.Component.KeyName()
 				if name == "" {
-					name = strconv.FormatInt(int64(i), 10)
+					name = s.dn(i)
 				}
 				v, err := s.walkOutput(ctx, fmt.Sprintf("%s[%s]", breadcrumbs, name), child)
 				if err != nil {
@@ -239,7 +252,7 @@ func (s *Serializer) serializeTuple(ctx context.Context, breadcrumbs string, cv 
 				vm["type"] = child.Component.String()
 			}
 			if vm["name"] == "" {
-				vm["name"] = strconv.FormatInt(int64(i), 10)
+				vm["name"] = s.dn(i)
 			}
 			v, err := s.walkOutput(ctx, fmt.Sprintf("%s[%s]", breadcrumbs, vm["name"]), child)
 			if err != nil {

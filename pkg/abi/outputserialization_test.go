@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"math/big"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -305,16 +306,23 @@ func TestJSONSerializationFormatsAnonymousTuple(t *testing.T) {
 
 	j3, err := NewSerializer().
 		SetFormattingMode(FormatAsSelfDescribingArrays).
+		SetDefaultNameGenerator(func(idx int) string {
+			name := "input"
+			if idx > 0 {
+				name += strconv.Itoa(idx)
+			}
+			return name
+		}).
 		SerializeJSON(v)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `[
 		{
-			"name": "0",
+			"name": "input",
 			"type": "address",
 			"value": "6c26465984ac94713e83300d1f002296772ebb64"
 		},
 		{
-			"name": "1",
+			"name": "input1",
 			"type": "uint256",
 			"value": "1"
 		}
