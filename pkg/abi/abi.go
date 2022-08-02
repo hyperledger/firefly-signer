@@ -251,6 +251,15 @@ func (a ABI) Functions() map[string]*Entry {
 	return m
 }
 
+func (a ABI) Constructor() *Entry {
+	for _, e := range a {
+		if e.Type == Constructor {
+			return e
+		}
+	}
+	return nil
+}
+
 func (a ABI) Events() map[string]*Entry {
 	m := make(map[string]*Entry)
 	for _, e := range a {
