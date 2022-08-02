@@ -105,6 +105,58 @@ const sampleABI2 = `[
 	}
   ]`
 
+const sampleABI3 = `[
+	{
+		"type": "constructor",
+		"inputs": [
+		  {
+			  "name": "a",
+			  "type": "tuple",
+			  "components": [
+				  {
+					  "name": "b",
+					  "type": "uint"
+				  },
+				  {
+					  "name": "c",
+					  "type": "string[2]"
+				  },
+				  {
+					  "name": "d",
+					  "type": "bytes"
+				  }
+			  ]
+		  }
+		],
+		"outputs": []
+	},
+	{
+	  "name": "foo",
+	  "type": "function",
+	  "inputs": [
+		{
+			"name": "a",
+			"type": "tuple",
+			"components": [
+				{
+					"name": "b",
+					"type": "uint"
+				},
+				{
+					"name": "c",
+					"type": "string[2]"
+				},
+				{
+					"name": "d",
+					"type": "bytes"
+				}
+			]
+		}
+	  ],
+	  "outputs": []
+	}
+  ]`
+
 func testABI(t *testing.T, abiJSON string) (abi ABI) {
 	err := json.Unmarshal([]byte(abiJSON), &abi)
 	assert.NoError(t, err)
@@ -681,4 +733,15 @@ func TestDecodeEventBadData(t *testing.T) {
 	}
 	_, err := e.DecodeEventData([]ethtypes.HexBytes0xPrefix{}, ethtypes.MustNewHexBytes0xPrefix("0x"))
 	assert.Regexp(t, "FF22047", err)
+}
+
+func TestGetConstructor(t *testing.T) {
+	a := testABI(t, sampleABI1)
+	c := a.Constructor()
+	assert.Nil(t, c)
+
+	a = testABI(t, sampleABI3)
+	c = a.Constructor()
+	assert.Equal(t, Constructor, c.Type)
+	assert.Equal(t, 1, len(c.Inputs))
 }
