@@ -127,11 +127,12 @@ func TestSignAutoEIP155(t *testing.T) {
 	foundSig.R.SetBytes([]byte(rlpList.(rlp.List)[7].(rlp.Data)))
 	foundSig.S.SetBytes([]byte(rlpList.(rlp.List)[8].(rlp.Data)))
 
-	expectedUnsigned := txn.AddEIP155HashValues(txn.BuildLegacy(), 1001).Encode()
-	addr, err := foundSig.Recover(expectedUnsigned, 1001)
+	signaturePayload := txn.SignaturePayload(1001)
+	addr, err := foundSig.Recover(signaturePayload.Bytes(), 1001)
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.Address.String(), addr.String())
 
+	assert.Equal(t, "0x4524b8ac39ace2a3a2c061b73125c19c76daf0d25d44a4d88799f3c2ba686fe6", signaturePayload.Hash().String())
 }
 
 func TestSignAutoEIP1559(t *testing.T) {
@@ -167,8 +168,8 @@ func TestSignAutoEIP1559(t *testing.T) {
 	foundSig.R.SetBytes([]byte(rlpList.(rlp.List)[10].(rlp.Data)))
 	foundSig.S.SetBytes([]byte(rlpList.(rlp.List)[11].(rlp.Data)))
 
-	expectedUnsigned := append([]byte{TransactionType1559}, txn.Build1559(1001).Encode()...)
-	addr, err := foundSig.Recover(expectedUnsigned, 1001)
+	signaturePayload := txn.SignaturePayload(1001)
+	addr, err := foundSig.Recover(signaturePayload.Bytes(), 1001)
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.Address.String(), addr.String())
 
@@ -205,8 +206,8 @@ func TestSignLegacyOriginal(t *testing.T) {
 	foundSig.R.SetBytes([]byte(rlpList.(rlp.List)[7].(rlp.Data)))
 	foundSig.S.SetBytes([]byte(rlpList.(rlp.List)[8].(rlp.Data)))
 
-	expectedUnsigned := txn.BuildLegacy().Encode()
-	addr, err := foundSig.Recover(expectedUnsigned, 0)
+	signaturePayload := txn.SignaturePayloadLegacyOriginal()
+	addr, err := foundSig.Recover(signaturePayload.Bytes(), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.Address.String(), addr.String())
 

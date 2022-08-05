@@ -23,7 +23,23 @@ import (
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/rlp"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
+	"golang.org/x/crypto/sha3"
 )
+
+type TransactionSignaturePayload struct {
+	rlpList rlp.List
+	data    []byte
+}
+
+func (sp *TransactionSignaturePayload) Bytes() []byte {
+	return sp.data
+}
+
+func (sp *TransactionSignaturePayload) Hash() ethtypes.HexBytes0xPrefix {
+	msgHash := sha3.NewLegacyKeccak256()
+	msgHash.Write(sp.data)
+	return msgHash.Sum(nil)
+}
 
 const (
 	TransactionTypeLegacy byte = 0x00
@@ -87,28 +103,56 @@ func (t *Transaction) Sign(signer *secp256k1.KeyPair, chainID int64) ([]byte, er
 	return t.SignLegacyEIP155(signer, chainID)
 }
 
+// Returns the bytes that would be used to sign the transaction, without actually
+// perform the signing. Can be used with Recover to verify a signing result.
+func (t *Transaction) SignaturePayload(chainID int64) (sp *TransactionSignaturePayload) {
+	if t.MaxPriorityFeePerGas.BigInt().Sign() > 0 || t.MaxFeePerGas.BigInt().Sign() > 0 {
+		return t.SignaturePayloadEIP1559(chainID)
+	}
+	return t.SignaturePayloadLegacyEIP155(chainID)
+}
+
+// SignaturePayloadLegacyOriginal returns the rlpList of fields that are signed, and the
+// bytes. Note that for legacy and EIP-155 transactions (everything prior to EIP-2718),
+// there is no transaction type byte added (so the bytes are exactly rlpList.Encode())
+func (t *Transaction) SignaturePayloadLegacyOriginal() *TransactionSignaturePayload {
+	rlpList := t.BuildLegacy()
+	return &TransactionSignaturePayload{
+		rlpList: rlpList,
+		data:    rlpList.Encode(),
+	}
+}
+
 // SignLegacyOriginal uses legacy transaction structure, with legacy V value (27/28)
 func (t *Transaction) SignLegacyOriginal(signer *secp256k1.KeyPair) ([]byte, error) {
-	rlpList := t.BuildLegacy()
-
-	txData := rlpList.Encode()
-	sig, err := signer.Sign(txData)
+	signatureData := t.SignaturePayloadLegacyOriginal()
+	sig, err := signer.Sign(signatureData.data)
 	if err != nil {
 		return nil, err
 	}
 
-	rlpList = t.addSignature(rlpList, sig)
+	rlpList := t.addSignature(signatureData.rlpList, sig)
 	return rlpList.Encode(), nil
+}
+
+// SignaturePayloadLegacyEIP155 returns the rlpList of fields that are signed, and the
+// bytes. Note that for legacy and EIP-155 transactions (everything prior to EIP-2718),
+// there is no transaction type byte added (so the bytes are exactly rlpList.Encode())
+func (t *Transaction) SignaturePayloadLegacyEIP155(chainID int64) *TransactionSignaturePayload {
+	rlpList := t.BuildLegacy()
+	rlpList = t.AddEIP155HashValues(rlpList, chainID)
+	return &TransactionSignaturePayload{
+		rlpList: rlpList,
+		data:    rlpList.Encode(),
+	}
 }
 
 // SignLegacyEIP155 uses legacy transaction structure, with EIP-155 signing V value (2*ChainID + 35 + Y-parity)
 func (t *Transaction) SignLegacyEIP155(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
-	rlpList := t.BuildLegacy()
 
-	rlpList = t.AddEIP155HashValues(rlpList, chainID)
+	signaturePayload := t.SignaturePayloadLegacyEIP155(chainID)
 
-	hashData := rlpList.Encode()
-	sig, err := signer.Sign(hashData)
+	sig, err := signer.Sign(signaturePayload.data)
 	if err != nil {
 		return nil, err
 	}
@@ -116,18 +160,28 @@ func (t *Transaction) SignLegacyEIP155(signer *secp256k1.KeyPair, chainID int64)
 	// Use the EIP-155 V value, of (2*ChainID + 35 + Y-parity)
 	sig.UpdateEIP155(chainID)
 
-	rlpList = t.addSignature(rlpList[0:6] /* we don't include the chainID+0+0 hash values in the payload */, sig)
+	rlpList := t.addSignature(signaturePayload.rlpList[0:6] /* we don't include the chainID+0+0 hash values in the payload */, sig)
 	return rlpList.Encode(), nil
+}
+
+// SignaturePayloadEIP1559 returns the rlpList of fields that are signed, along with the full
+// bytes for the signature / TX Hash - which have the transaction type prefixed
+func (t *Transaction) SignaturePayloadEIP1559(chainID int64) *TransactionSignaturePayload {
+	rlpList := t.Build1559(chainID)
+
+	// The signature payload is the transaction type, concatenated with RLP list _excluding_ signature
+	// keccak256(0x02 || rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, destination, amount, data, access_list]))
+	return &TransactionSignaturePayload{
+		rlpList: rlpList,
+		data:    append([]byte{TransactionType1559}, rlpList.Encode()...),
+	}
 }
 
 // SignEIP1559 uses EIP-1559 transaction structure (with EIP-2718 transaction type byte), with EIP-2930 V value (0 / 1 - direct parity-Y)
 func (t *Transaction) SignEIP1559(signer *secp256k1.KeyPair, chainID int64) ([]byte, error) {
-	rlpList := t.Build1559(chainID)
 
-	// First sign the transaction type, concattented with RLP list _excluding_ signature
-	// keccak256(0x02 || rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, destination, amount, data, access_list]))
-	b := append([]byte{TransactionType1559}, rlpList.Encode()...)
-	sig, err := signer.Sign(b)
+	signaturePayload := t.SignaturePayloadEIP1559(chainID)
+	sig, err := signer.Sign(signaturePayload.data)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +191,7 @@ func (t *Transaction) SignEIP1559(signer *secp256k1.KeyPair, chainID int64) ([]b
 
 	// Now we need a new RLP array, _including_ signature
 	// 0x02 || rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, destination, amount, data, access_list, signature_y_parity, signature_r, signature_s])
-	rlpList = t.addSignature(rlpList, sig)
+	rlpList := t.addSignature(signaturePayload.rlpList, sig)
 	return append([]byte{TransactionType1559}, rlpList.Encode()...), nil
 }
 
