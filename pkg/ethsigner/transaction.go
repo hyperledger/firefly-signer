@@ -103,9 +103,8 @@ func (t *Transaction) Sign(signer *secp256k1.KeyPair, chainID int64) ([]byte, er
 	return t.SignLegacyEIP155(signer, chainID)
 }
 
-// Returns the bytes that would be used to sign the transaction, which can then
-// be used to determine the hash of the transaction.
-// - Uses same automatic selection rules as Sign()
+// Returns the bytes that would be used to sign the transaction, without actually
+// perform the signing. Can be used with Recover to verify a signing result.
 func (t *Transaction) SignaturePayload(chainID int64) (sp *TransactionSignaturePayload) {
 	if t.MaxPriorityFeePerGas.BigInt().Sign() > 0 || t.MaxFeePerGas.BigInt().Sign() > 0 {
 		return t.SignaturePayloadEIP1559(chainID)
