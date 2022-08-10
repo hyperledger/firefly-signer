@@ -18,6 +18,7 @@ package ethsigner
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
@@ -97,6 +98,9 @@ func (t *Transaction) Build1559(chainID int64) rlp.List {
 // - By default use EIP-155 signing
 // Never picks legacy-legacy (non EIP-155), or EIP-2930
 func (t *Transaction) Sign(signer secp256k1.Signer, chainID int64) ([]byte, error) {
+	if signer == nil {
+		return nil, fmt.Errorf("invalid signer")
+	}
 	if t.MaxPriorityFeePerGas.BigInt().Sign() > 0 || t.MaxFeePerGas.BigInt().Sign() > 0 {
 		return t.SignEIP1559(signer, chainID)
 	}
@@ -125,6 +129,9 @@ func (t *Transaction) SignaturePayloadLegacyOriginal() *TransactionSignaturePayl
 
 // SignLegacyOriginal uses legacy transaction structure, with legacy V value (27/28)
 func (t *Transaction) SignLegacyOriginal(signer secp256k1.Signer) ([]byte, error) {
+	if signer == nil {
+		return nil, fmt.Errorf("invalid signer")
+	}
 	signatureData := t.SignaturePayloadLegacyOriginal()
 	sig, err := signer.Sign(signatureData.data)
 	if err != nil {
@@ -149,6 +156,9 @@ func (t *Transaction) SignaturePayloadLegacyEIP155(chainID int64) *TransactionSi
 
 // SignLegacyEIP155 uses legacy transaction structure, with EIP-155 signing V value (2*ChainID + 35 + Y-parity)
 func (t *Transaction) SignLegacyEIP155(signer secp256k1.Signer, chainID int64) ([]byte, error) {
+	if signer == nil {
+		return nil, fmt.Errorf("invalid signer")
+	}
 
 	signaturePayload := t.SignaturePayloadLegacyEIP155(chainID)
 
@@ -179,6 +189,9 @@ func (t *Transaction) SignaturePayloadEIP1559(chainID int64) *TransactionSignatu
 
 // SignEIP1559 uses EIP-1559 transaction structure (with EIP-2718 transaction type byte), with EIP-2930 V value (0 / 1 - direct parity-Y)
 func (t *Transaction) SignEIP1559(signer secp256k1.Signer, chainID int64) ([]byte, error) {
+	if signer == nil {
+		return nil, fmt.Errorf("invalid signer")
+	}
 
 	signaturePayload := t.SignaturePayloadEIP1559(chainID)
 	sig, err := signer.Sign(signaturePayload.data)
