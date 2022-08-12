@@ -31,6 +31,11 @@ type SignatureData struct {
 	S *big.Int
 }
 
+// Signer is the low level common interface that can be implemented by any module which provides signature capability
+type Signer interface {
+	Sign(message []byte) (*SignatureData, error)
+}
+
 // getVNormalized returns the original 27/28 parity
 func (s *SignatureData) getVNormalized(chainID int64) (byte, error) {
 	v := s.V.Int64()

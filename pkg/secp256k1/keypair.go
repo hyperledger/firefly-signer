@@ -35,7 +35,7 @@ func (k *KeyPair) PrivateKeyBytes() []byte {
 }
 
 func (k *KeyPair) PublicKeyBytes() []byte {
-	// Remove the "04" Suffix byte when computing the address. This byte indicates that it is an uncompressed public key.
+	// Remove the "04" Prefix byte when computing the address. This byte indicates that it is an uncompressed public key.
 	return k.PublicKey.SerializeUncompressed()[1:]
 }
 
