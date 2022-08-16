@@ -22,141 +22,143 @@ import (
 
 type ParamValidator struct{}
 
+var compiledMetaSchema = jsonschema.MustCompileString("ffiParamDetails.json", `{
+	"$ref": "#/$defs/ethereumParam",
+	"$defs": {
+		"ethereumParam": {
+			"oneOf": [
+				{
+					"type": "object",
+					"properties": {
+						"type": {
+							"type": "string",
+							"not": {
+								"const": "object"
+							}
+						},
+						"details": {
+							"$ref": "#/$defs/details"
+						}
+					},
+					"required": [
+						"details"
+					]
+				},
+				{
+					"type": "object",
+					"properties": {
+						"type": {
+							"const": "object"
+						},
+						"details": {
+							"$ref": "#/$defs/details"
+						},
+						"properties": {
+							"type": "object",
+							"patternProperties": {
+								".*": {
+									"$ref": "#/$defs/ethereumObjectChildParam"
+								}
+							}
+						}
+					},
+					"required": [
+						"details",
+						"type"
+					]
+				}
+			]
+		},
+		"ethereumObjectChildParam": {
+			"oneOf": [
+				{
+					"type": "object",
+					"properties": {
+						"type": {
+							"type": "string",
+							"not": {
+								"const": "object"
+							}
+						},
+						"details": {
+							"$ref": "#/$defs/objectFieldDetails"
+						}
+					},
+					"required": [
+						"details"
+					]
+				},
+				{
+					"type": "object",
+					"properties": {
+						"type": {
+							"const": "object"
+						},
+						"details": {
+							"$ref": "#/$defs/objectFieldDetails"
+						},
+						"properties": {
+							"type": "object",
+							"patternProperties": {
+								".*": {
+									"$ref": "#/$defs/ethereumObjectChildParam"
+								}
+							}
+						}
+					},
+					"required": [
+						"details"
+					]
+				}
+			]
+		},
+		"details": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string"
+				},
+				"internalType": {
+					"type": "string"
+				},
+				"indexed": {
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"type"
+			]
+		},
+		"objectFieldDetails": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string"
+				},
+				"internalType": {
+					"type": "string"
+				},
+				"indexed": {
+					"type": "boolean"
+				},
+				"index": {
+					"type": "integer"
+				}
+			},
+			"required": [
+				"type",
+				"index"
+			]
+		}
+	}
+}`)
+
 func (v *ParamValidator) Compile(ctx jsonschema.CompilerContext, m map[string]interface{}) (jsonschema.ExtSchema, error) {
 	return nil, nil
 }
 
 func (v *ParamValidator) GetMetaSchema() *jsonschema.Schema {
-	return jsonschema.MustCompileString("ffiParamDetails.json", `{
-		"$ref": "#/$defs/ethereumParam",
-		"$defs": {
-			"ethereumParam": {
-				"oneOf": [
-					{
-						"type": "object",
-						"properties": {
-							"type": {
-								"type": "string",
-								"not": {
-									"const": "object"
-								}
-							},
-							"details": {
-								"$ref": "#/$defs/details"
-							}
-						},
-						"required": [
-							"details"
-						]
-					},
-					{
-						"type": "object",
-						"properties": {
-							"type": {
-								"const": "object"
-							},
-							"details": {
-								"$ref": "#/$defs/details"
-							},
-							"properties": {
-								"type": "object",
-								"patternProperties": {
-									".*": {
-										"$ref": "#/$defs/ethereumObjectChildParam"
-									}
-								}
-							}
-						},
-						"required": [
-							"details",
-							"type"
-						]
-					}
-				]
-			},
-			"ethereumObjectChildParam": {
-				"oneOf": [
-					{
-						"type": "object",
-						"properties": {
-							"type": {
-								"type": "string",
-								"not": {
-									"const": "object"
-								}
-							},
-							"details": {
-								"$ref": "#/$defs/objectFieldDetails"
-							}
-						},
-						"required": [
-							"details"
-						]
-					},
-					{
-						"type": "object",
-						"properties": {
-							"type": {
-								"const": "object"
-							},
-							"details": {
-								"$ref": "#/$defs/objectFieldDetails"
-							},
-							"properties": {
-								"type": "object",
-								"patternProperties": {
-									".*": {
-										"$ref": "#/$defs/ethereumObjectChildParam"
-									}
-								}
-							}
-						},
-						"required": [
-							"details"
-						]
-					}
-				]
-			},
-			"details": {
-				"type": "object",
-				"properties": {
-					"type": {
-						"type": "string"
-					},
-					"internalType": {
-						"type": "string"
-					},
-					"indexed": {
-						"type": "boolean"
-					}
-				},
-				"required": [
-					"type"
-				]
-			},
-			"objectFieldDetails": {
-				"type": "object",
-				"properties": {
-					"type": {
-						"type": "string"
-					},
-					"internalType": {
-						"type": "string"
-					},
-					"indexed": {
-						"type": "boolean"
-					},
-					"index": {
-						"type": "integer"
-					}
-				},
-				"required": [
-					"type",
-					"index"
-				]
-			}
-		}
-	}`)
+	return compiledMetaSchema
 }
 
 func (v *ParamValidator) GetExtensionName() string {
