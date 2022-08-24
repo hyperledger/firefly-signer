@@ -139,6 +139,7 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 	if err != nil {
 		err := i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed)
 		log.L(ctx).Errorf("RPC[%d] <-- ERROR: %s", rpcReq.ID, err)
+		rpcRes = RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError)
 		return rpcRes, err
 	}
 	if logrus.IsLevelEnabled(logrus.TraceLevel) {
@@ -146,7 +147,7 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 		log.L(ctx).Tracef("RPC:%s:%s OUTPUT: %s", rpcReq.ID, rpcReq.ID, jsonOutput)
 	}
 	// JSON/RPC allows errors to be returned with a 200 status code, as well as other status codes
-	if res.IsError() || rpcRes.Error != nil && rpcRes.Error.Message != "" {
+	if res.IsError() || rpcRes.Error != nil && rpcRes.Error.Code != 0 {
 		log.L(ctx).Errorf("RPC[%d] <-- [%d]: %s", rpcReq.ID, res.StatusCode(), rpcRes.Message())
 		err := fmt.Errorf(rpcRes.Message())
 		return rpcRes, err
