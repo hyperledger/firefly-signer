@@ -22,13 +22,14 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/hyperledger/firefly-common/pkg/config"
+	"github.com/hyperledger/firefly-common/pkg/ffresty"
 	"github.com/hyperledger/firefly-common/pkg/httpserver"
 	"github.com/hyperledger/firefly-common/pkg/i18n"
-	"github.com/hyperledger/firefly-signer/internal/rpcbackend"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
+	"github.com/hyperledger/firefly-signer/pkg/rpcbackend"
 )
 
 type Server interface {
@@ -40,7 +41,7 @@ type Server interface {
 func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err error) {
 
 	s := &rpcServer{
-		backend:       rpcbackend.NewRPCBackend(ctx),
+		backend:       rpcbackend.NewRPCClient(ffresty.New(ctx, signerconfig.BackendConfig)),
 		apiServerDone: make(chan error),
 		wallet:        wallet,
 		chainID:       config.GetInt64(signerconfig.BackendChainID),

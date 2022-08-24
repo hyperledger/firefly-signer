@@ -23,12 +23,11 @@ import (
 	"sync/atomic"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/hyperledger/firefly-common/pkg/ffresty"
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-common/pkg/log"
-	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
+	"github.com/sirupsen/logrus"
 )
 
 type RPCCode int64
@@ -45,14 +44,14 @@ type Backend interface {
 	SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error)
 }
 
-// NewRPCBackend Constructor
-func NewRPCBackend(ctx context.Context) Backend {
-	return &rpcBackend{
-		client: ffresty.New(ctx, signerconfig.BackendConfig),
+// NewRPCClient Constructor
+func NewRPCClient(client *resty.Client) Backend {
+	return &RPCClient{
+		client: client,
 	}
 }
 
-type rpcBackend struct {
+type RPCClient struct {
 	client         *resty.Client
 	requestCounter int64
 }
@@ -65,9 +64,9 @@ type RPCRequest struct {
 }
 
 type RPCError struct {
-	Code    int64              `json:"code"`
-	Message string             `json:"message"`
-	Data    []*fftypes.JSONAny `json:"data,omitempty"`
+	Code    int64           `json:"code"`
+	Message string          `json:"message"`
+	Data    fftypes.JSONAny `json:"data,omitempty"`
 }
 
 type RPCResponse struct {
@@ -84,12 +83,12 @@ func (r *RPCResponse) Message() string {
 	return ""
 }
 
-func (rb *rpcBackend) allocateRequestID(req *RPCRequest) {
-	reqID := atomic.AddInt64(&rb.requestCounter, 1)
+func (rc *RPCClient) allocateRequestID(req *RPCRequest) {
+	reqID := atomic.AddInt64(&rc.requestCounter, 1)
 	req.ID = fftypes.JSONAnyPtr(fmt.Sprintf(`"%.9d"`, reqID))
 }
 
-func (rb *rpcBackend) CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) error {
+func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) error {
 	req := &RPCRequest{
 		JSONRpc: "2.0",
 		Method:  method,
@@ -102,7 +101,7 @@ func (rb *rpcBackend) CallRPC(ctx context.Context, result interface{}, method st
 		}
 		req.Params[i] = fftypes.JSONAnyPtrBytes(b)
 	}
-	res, err := rb.SyncRequest(ctx, req)
+	res, err := rc.SyncRequest(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -114,32 +113,42 @@ func (rb *rpcBackend) CallRPC(ctx context.Context, result interface{}, method st
 //
 // In all return paths *including error paths* the RPCResponse is populated
 // so the caller has an RPC structure to send back to the front-end caller.
-func (rb *rpcBackend) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error) {
+func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error) {
 
 	// We always set the back-end request ID - as we need to support requests coming in from
 	// multiple concurrent clients on our front-end that might use clashing IDs.
 	var beReq = *rpcReq
 	beReq.JSONRpc = "2.0"
-	rb.allocateRequestID(&beReq)
+	rc.allocateRequestID(&beReq)
 	rpcRes = new(RPCResponse)
 
-	log.L(ctx).Infof("RPC:%s:%s --> %s", beReq.ID, rpcReq.ID, rpcReq.Method)
-	res, err := rb.client.R().
+	log.L(ctx).Debugf("RPC:%s:%s --> %s", rpcReq.ID, rpcReq.ID, rpcReq.Method)
+	if logrus.IsLevelEnabled(logrus.TraceLevel) {
+		jsonInput, _ := json.Marshal(rpcReq)
+		log.L(ctx).Tracef("RPC:%s:%s INPUT: %s", rpcReq.ID, rpcReq.ID, jsonInput)
+	}
+	res, err := rc.client.R().
 		SetContext(ctx).
-		SetBody(&beReq).
-		SetResult(rpcRes).
+		SetBody(beReq).
+		SetResult(&rpcRes).
 		SetError(rpcRes).
 		Post("")
+
 	// Restore the original ID
 	rpcRes.ID = rpcReq.ID
 	if err != nil {
 		err := i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed)
-		log.L(ctx).Errorf("RPC:%s:%s <-- ERROR: %s", beReq.ID, rpcReq.ID, err)
+		log.L(ctx).Errorf("RPC[%d] <-- ERROR: %s", rpcReq.ID, err)
 		rpcRes = RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError)
 		return rpcRes, err
 	}
-	if res.IsError() {
-		log.L(ctx).Errorf("RPC:%s:%s <-- [%d]: %s", beReq.ID, rpcReq.ID, res.StatusCode(), rpcRes.Message())
+	if logrus.IsLevelEnabled(logrus.TraceLevel) {
+		jsonOutput, _ := json.Marshal(rpcRes)
+		log.L(ctx).Tracef("RPC:%s:%s OUTPUT: %s", rpcReq.ID, rpcReq.ID, jsonOutput)
+	}
+	// JSON/RPC allows errors to be returned with a 200 status code, as well as other status codes
+	if res.IsError() || rpcRes.Error != nil && rpcRes.Error.Code != 0 {
+		log.L(ctx).Errorf("RPC[%d] <-- [%d]: %s", rpcReq.ID, res.StatusCode(), rpcRes.Message())
 		err := fmt.Errorf(rpcRes.Message())
 		return rpcRes, err
 	}
