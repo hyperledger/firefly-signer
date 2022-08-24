@@ -29,7 +29,7 @@ var ffe = func(key, translation string, statusHint ...int) i18n.ErrorMessageKey 
 var (
 	MsgInvalidOutputType           = ffe("FF22010", "Invalid output type: %s")
 	MsgInvalidParam                = ffe("FF22011", "Invalid parameter at position %d for method %s: %s")
-	MsgRPCRequestFailed            = ffe("FF22012", "Backend RPC request failed")
+	MsgRPCRequestFailed            = ffe("FF22012", "Backend RPC request failed: %s")
 	MsgReadDirFile                 = ffe("FF22013", "Directory listing failed")
 	MsgWalletNotAvailable          = ffe("FF22014", "Wallet for address '%s' not available")
 	MsgWalletFailed                = ffe("FF22015", "Wallet for address '%s' could not be initialized")

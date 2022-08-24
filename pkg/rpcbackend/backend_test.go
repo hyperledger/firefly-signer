@@ -34,7 +34,7 @@ import (
 
 type testRPCHander func(rpcReq *RPCRequest) (int, *RPCResponse)
 
-func newTestServer(t *testing.T, rpcHandler testRPCHander) (context.Context, *rpcBackend, func()) {
+func newTestServer(t *testing.T, rpcHandler testRPCHander) (context.Context, *RPCClient, func()) {
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func newTestServer(t *testing.T, rpcHandler testRPCHander) (context.Context, *rp
 	prefix := signerconfig.BackendConfig
 	prefix.Set(ffresty.HTTPConfigURL, fmt.Sprintf("http://%s", server.Listener.Addr()))
 
-	rb := NewRPCBackend(ctx).(*rpcBackend)
+	rb := NewRPCClient(ffresty.New(ctx, signerconfig.BackendConfig)).(*RPCClient)
 
 	return ctx, rb, func() {
 		cancelCtx()
