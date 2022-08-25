@@ -56,7 +56,7 @@ type Transaction struct {
 	MaxFeePerGas         *ethtypes.HexInteger      `json:"maxFeePerGas,omitempty"`
 	GasLimit             *ethtypes.HexInteger      `json:"gas"`
 	To                   *ethtypes.Address0xHex    `json:"to,omitempty"`
-	Value                *ethtypes.HexInteger      `json:"value"`
+	Value                *ethtypes.HexInteger      `json:"value,omitempty"`
 	Data                 ethtypes.HexBytes0xPrefix `json:"data"`
 }
 
