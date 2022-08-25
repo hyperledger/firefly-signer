@@ -54,7 +54,7 @@ type Transaction struct {
 	GasPrice             *ethtypes.HexInteger      `json:"gasPrice,omitempty"`
 	MaxPriorityFeePerGas *ethtypes.HexInteger      `json:"maxPriorityFeePerGas,omitempty"`
 	MaxFeePerGas         *ethtypes.HexInteger      `json:"maxFeePerGas,omitempty"`
-	GasLimit             *ethtypes.HexInteger      `json:"gas"`
+	GasLimit             *ethtypes.HexInteger      `json:"gas,omitempty"` // note this is required for some methods (eth_estimateGas)
 	To                   *ethtypes.Address0xHex    `json:"to,omitempty"`
 	Value                *ethtypes.HexInteger      `json:"value,omitempty"`
 	Data                 ethtypes.HexBytes0xPrefix `json:"data"`
