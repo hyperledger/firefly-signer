@@ -1,0 +1,87 @@
+[
+    {
+      "type": "constructor",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "initVal"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "Changed",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "data",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "get",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "gas": 29000000,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "retVal"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "query",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "gas": 29000000,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "retVal"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "set",
+      "constant": false,
+      "payable": false,
+      "gas": 29000000,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "x"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "value"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "storedData",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "gas": 29000000,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    }
+  ]

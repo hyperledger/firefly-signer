@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -130,6 +131,8 @@ func TestSyncRequestOK(t *testing.T) {
 }
 
 func TestSyncRPCCallOK(t *testing.T) {
+
+	logrus.SetLevel(logrus.TraceLevel)
 
 	ctx, rb, done := newTestServer(t, func(rpcReq *RPCRequest) (status int, rpcRes *RPCResponse) {
 		assert.Equal(t, "2.0", rpcReq.JSONRpc)
