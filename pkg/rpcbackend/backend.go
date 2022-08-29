@@ -83,9 +83,10 @@ func (r *RPCResponse) Message() string {
 	return ""
 }
 
-func (rc *RPCClient) allocateRequestID(req *RPCRequest) {
-	reqID := atomic.AddInt64(&rc.requestCounter, 1)
-	req.ID = fftypes.JSONAnyPtr(fmt.Sprintf(`"%.9d"`, reqID))
+func (rc *RPCClient) allocateRequestID(req *RPCRequest) string {
+	reqID := fmt.Sprintf(`%.9d`, atomic.AddInt64(&rc.requestCounter, 1))
+	req.ID = fftypes.JSONAnyPtr(`"` + reqID + `"`)
+	return reqID
 }
 
 func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) error {
@@ -119,13 +120,18 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 	// multiple concurrent clients on our front-end that might use clashing IDs.
 	var beReq = *rpcReq
 	beReq.JSONRpc = "2.0"
-	rc.allocateRequestID(&beReq)
+	rpcTraceID := rc.allocateRequestID(&beReq)
+	if rpcReq.ID != nil {
+		// We're proxying a request with front-end RPC ID - log that as well
+		rpcTraceID = fmt.Sprintf("%s->%s", rpcReq.ID, rpcTraceID)
+	}
+
 	rpcRes = new(RPCResponse)
 
-	log.L(ctx).Debugf("RPC:%s:%s --> %s", rpcReq.ID, rpcReq.ID, rpcReq.Method)
+	log.L(ctx).Debugf("RPC[%s] --> %s", rpcTraceID, rpcReq.Method)
 	if logrus.IsLevelEnabled(logrus.TraceLevel) {
 		jsonInput, _ := json.Marshal(rpcReq)
-		log.L(ctx).Tracef("RPC:%s:%s INPUT: %s", rpcReq.ID, rpcReq.ID, jsonInput)
+		log.L(ctx).Tracef("RPC[%s] INPUT: %s", rpcTraceID, jsonInput)
 	}
 	res, err := rc.client.R().
 		SetContext(ctx).
@@ -138,21 +144,21 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 	rpcRes.ID = rpcReq.ID
 	if err != nil {
 		err := i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed)
-		log.L(ctx).Errorf("RPC[%d] <-- ERROR: %s", rpcReq.ID, err)
+		log.L(ctx).Errorf("RPC[%s] <-- ERROR: %s", rpcTraceID, err)
 		rpcRes = RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError)
 		return rpcRes, err
 	}
 	if logrus.IsLevelEnabled(logrus.TraceLevel) {
 		jsonOutput, _ := json.Marshal(rpcRes)
-		log.L(ctx).Tracef("RPC:%s:%s OUTPUT: %s", rpcReq.ID, rpcReq.ID, jsonOutput)
+		log.L(ctx).Tracef("RPC[%s] OUTPUT: %s", rpcTraceID, jsonOutput)
 	}
 	// JSON/RPC allows errors to be returned with a 200 status code, as well as other status codes
 	if res.IsError() || rpcRes.Error != nil && rpcRes.Error.Code != 0 {
-		log.L(ctx).Errorf("RPC[%d] <-- [%d]: %s", rpcReq.ID, res.StatusCode(), rpcRes.Message())
+		log.L(ctx).Errorf("RPC[%s] <-- [%d]: %s", rpcTraceID, res.StatusCode(), rpcRes.Message())
 		err := fmt.Errorf(rpcRes.Message())
 		return rpcRes, err
 	}
-	log.L(ctx).Infof("RPC:%s:%s <-- [%d] OK", beReq.ID, rpcReq.ID, res.StatusCode())
+	log.L(ctx).Infof("RPC[%s] <-- [%d] OK", rpcTraceID, res.StatusCode())
 	if rpcRes.Result == nil {
 		// We don't want a result for errors, but a null success response needs to go in there
 		rpcRes.Result = fftypes.JSONAnyPtr(fftypes.NullString)
