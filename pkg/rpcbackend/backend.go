@@ -143,7 +143,7 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 	// Restore the original ID
 	rpcRes.ID = rpcReq.ID
 	if err != nil {
-		err := i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed)
+		err := i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed, err)
 		log.L(ctx).Errorf("RPC[%s] <-- ERROR: %s", rpcTraceID, err)
 		rpcRes = RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError)
 		return rpcRes, err
