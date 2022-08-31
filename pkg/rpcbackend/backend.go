@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
@@ -133,6 +134,7 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 		jsonInput, _ := json.Marshal(rpcReq)
 		log.L(ctx).Tracef("RPC[%s] INPUT: %s", rpcTraceID, jsonInput)
 	}
+	rpcStartTime := time.Now()
 	res, err := rc.client.R().
 		SetContext(ctx).
 		SetBody(beReq).
@@ -158,7 +160,7 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 		err := fmt.Errorf(rpcRes.Message())
 		return rpcRes, err
 	}
-	log.L(ctx).Infof("RPC[%s] <-- [%d] OK", rpcTraceID, res.StatusCode())
+	log.L(ctx).Infof("RPC[%s] <-- %s [%d] OK (%.2fms)", rpcTraceID, rpcReq.Method, res.StatusCode(), float64(time.Since(rpcStartTime))/float64(time.Millisecond))
 	if rpcRes.Result == nil {
 		// We don't want a result for errors, but a null success response needs to go in there
 		rpcRes.Result = fftypes.JSONAnyPtr(fftypes.NullString)
