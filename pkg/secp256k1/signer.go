@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/btcsuite/btcd/btcec"
+	ecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"golang.org/x/crypto/sha3"
 )
@@ -78,7 +78,7 @@ func (s *SignatureData) Recover(message []byte, chainID int64) (a *ethtypes.Addr
 	}
 	s.R.FillBytes(signatureBytes[1:33])
 	s.S.FillBytes(signatureBytes[33:65])
-	pubKey, _, err := btcec.RecoverCompact(btcec.S256(), signatureBytes, msgHash.Sum(nil))
+	pubKey, _, err := ecdsa.RecoverCompact(signatureBytes, msgHash.Sum(nil)) // uses S256() by default
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (k *KeyPair) Sign(message []byte) (ethSig *SignatureData, err error) {
 	}
 	msgHash := sha3.NewLegacyKeccak256()
 	msgHash.Write(message)
-	sig, err := btcec.SignCompact(btcec.S256(), k.PrivateKey, msgHash.Sum(nil), false)
+	sig, err := ecdsa.SignCompact(k.PrivateKey, msgHash.Sum(nil), false) // uses S256() by default
 	if err == nil {
 		// btcec does all the hard work for us. However, the interface of btcec is such
 		// that we need to unpack the result for Ethereum encoding.

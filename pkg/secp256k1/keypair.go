@@ -17,12 +17,10 @@
 package secp256k1
 
 import (
-	"github.com/btcsuite/btcd/btcec" // ISC licensed
+	btcec "github.com/btcsuite/btcd/btcec/v2" // ISC licensed
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"golang.org/x/crypto/sha3"
 )
-
-const privateKeySize = 32
 
 type KeyPair struct {
 	PrivateKey *btcec.PrivateKey
@@ -31,7 +29,7 @@ type KeyPair struct {
 }
 
 func (k *KeyPair) PrivateKeyBytes() []byte {
-	return k.PrivateKey.D.FillBytes(make([]byte, privateKeySize))
+	return k.PrivateKey.Serialize()
 }
 
 func (k *KeyPair) PublicKeyBytes() []byte {
@@ -40,12 +38,13 @@ func (k *KeyPair) PublicKeyBytes() []byte {
 }
 
 func GenerateSecp256k1KeyPair() (*KeyPair, error) {
-	key, _ := btcec.NewPrivateKey(btcec.S256())
+	// Generates key of curve S256() by default
+	key, _ := btcec.NewPrivateKey()
 	return wrapSecp256k1Key(key, key.PubKey()), nil
 }
 
 func NewSecp256k1KeyPair(b []byte) (*KeyPair, error) {
-	key, pubKey := btcec.PrivKeyFromBytes(btcec.S256(), b)
+	key, pubKey := btcec.PrivKeyFromBytes(b)
 	return wrapSecp256k1Key(key, pubKey), nil
 }
 
