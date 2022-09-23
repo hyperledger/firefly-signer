@@ -41,6 +41,22 @@ var compiledMetaSchema = jsonschema.MustCompileString("ffiParamDetails.json", `{
 						}
 					},
 					"required": [
+						"type",
+						"details"
+					]
+				},
+				{
+					"type": "object",
+					"properties": {
+						"oneOf": {
+							"type": "array"
+						},
+						"details": {
+							"$ref": "#/$defs/details"
+						}
+					},
+					"required": [
+						"oneOf",
 						"details"
 					]
 				},
@@ -63,8 +79,8 @@ var compiledMetaSchema = jsonschema.MustCompileString("ffiParamDetails.json", `{
 						}
 					},
 					"required": [
-						"details",
-						"type"
+						"type",
+						"details"
 					]
 				}
 			]
@@ -85,6 +101,22 @@ var compiledMetaSchema = jsonschema.MustCompileString("ffiParamDetails.json", `{
 						}
 					},
 					"required": [
+						"type",
+						"details"
+					]
+				},
+				{
+					"type": "object",
+					"properties": {
+						"oneOf": {
+							"type": "array"
+						},
+						"details": {
+							"$ref": "#/$defs/objectFieldDetails"
+						}
+					},
+					"required": [
+						"oneOf",
 						"details"
 					]
 				},
@@ -107,6 +139,7 @@ var compiledMetaSchema = jsonschema.MustCompileString("ffiParamDetails.json", `{
 						}
 					},
 					"required": [
+						"type",
 						"details"
 					]
 				}

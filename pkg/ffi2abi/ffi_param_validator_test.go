@@ -318,3 +318,32 @@ func TestInputFixedArraySizeType(t *testing.T) {
 	}`)
 	assert.NoError(t, err)
 }
+
+func TestOneOfSyntax(t *testing.T) {
+	_, err := NewTestSchema(`{
+		"type": "object",
+		"details": {
+			"type": "tuple",
+			"internalType": "struct Custom.Thing"
+		},
+		"properties": {
+			"customProp": {
+				"oneOf": [
+					{
+						"type": "string"
+					},
+					{
+						"type": "integer"
+					}
+				],
+				"details": {
+					"type": "uint256",
+					"internalType": "uint256",
+					"index": 0
+				},
+				"description": "An integer. You are recommended to use a JSON string. A JSON number can be used for values up to the safe maximum."
+			}
+		}
+	}`)
+	assert.NoError(t, err)
+}
