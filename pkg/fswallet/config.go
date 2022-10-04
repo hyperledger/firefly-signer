@@ -33,6 +33,8 @@ const (
 	ConfigFilenamesPasswordExt = "filenames.passwordExt"
 	// ConfigDefaultPasswordFile default password file to use if neither the metadata, or passwordExtension find a password
 	ConfigDefaultPasswordFile = "defaultPasswordFile"
+	// ConfigDisableListener disable the filesystem listener that detects newly added keys automatically
+	ConfigDisableListener = "disableListener"
 	// ConfigSignerCacheSize the number of signing keys to keep in memory
 	ConfigSignerCacheSize = "signerCacheSize"
 	// ConfigSignerCacheTTL the time to keep an unused signing key in memory
@@ -50,6 +52,7 @@ type Config struct {
 	DefaultPasswordFile string
 	SignerCacheSize     string
 	SignerCacheTTL      string
+	DisableListener     bool
 	Filenames           FilenamesConfig
 	Metadata            MetadataConfig
 }
@@ -71,6 +74,7 @@ func InitConfig(section config.Section) {
 	section.AddKnownKey(ConfigFilenamesPrimaryExt)
 	section.AddKnownKey(ConfigFilenamesPrimaryMatchRegex)
 	section.AddKnownKey(ConfigFilenamesPasswordExt)
+	section.AddKnownKey(ConfigDisableListener)
 	section.AddKnownKey(ConfigDefaultPasswordFile)
 	section.AddKnownKey(ConfigSignerCacheSize, 250)
 	section.AddKnownKey(ConfigSignerCacheTTL, "24h")
@@ -85,6 +89,7 @@ func ReadConfig(section config.Section) *Config {
 		DefaultPasswordFile: section.GetString(ConfigDefaultPasswordFile),
 		SignerCacheSize:     section.GetString(ConfigSignerCacheSize),
 		SignerCacheTTL:      section.GetString(ConfigSignerCacheTTL),
+		DisableListener:     section.GetBool(ConfigDisableListener),
 		Filenames: FilenamesConfig{
 			PrimaryExt:        section.GetString(ConfigFilenamesPrimaryExt),
 			PrimaryMatchRegex: section.GetString(ConfigFilenamesPrimaryMatchRegex),

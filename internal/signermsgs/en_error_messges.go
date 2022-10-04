@@ -76,4 +76,5 @@ var (
 	MsgBadRegularExpression        = ffe("FF22056", "Bad regular expression for /%s/: %s")
 	MsgMissingRegexpCaptureGroup   = ffe("FF22057", "Regular expression is missing a capture group (subexpression) for address: /%s/")
 	MsgAddressMismatch             = ffe("FF22059", "Address '%s' loaded from wallet file does not match requested lookup address / filename '%s'")
+	MsgFailedToStartListener       = ffe("FF22060", "Failed to start filesystem listener: %s")
 )

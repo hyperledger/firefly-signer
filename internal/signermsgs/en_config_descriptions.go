@@ -29,10 +29,11 @@ var ffc = func(key, translation, fieldType string) i18n.ConfigMessageKey {
 var (
 	ConfigFileWalletEnabled                      = ffc("config.fileWallet.enabled", "Whether the Keystore V3 filesystem wallet is enabled", "boolean")
 	ConfigFileWalletPath                         = ffc("config.fileWallet.path", "Path on the filesystem where the metadata files (and/or key files) are located", "string")
-	ConfigFileWalletFilenamesPrimaryBatchRegex   = ffc("config.fileWallet.filenames.primaryMatchRegex", "Regular express to run against filenames to extract the address", "regexp")
-	ConfigFileWalletFilenamesPrimaryExt          = ffc("config.fileWallet.filenames.primaryExt", "Extension for the primary file to look up for an address string (can be key file directly, or metadata file)", "string")
+	ConfigFileWalletFilenamesPrimaryBatchRegex   = ffc("config.fileWallet.filenames.primaryMatchRegex", "Regular expression run against key/metadata filenames to extract the address (takes precedence over primaryExt)", "regexp")
+	ConfigFileWalletFilenamesPrimaryExt          = ffc("config.fileWallet.filenames.primaryExt", "Extension for key/metadata files named by <ADDRESS>.<EXT>", "string")
 	ConfigFileWalletFilenamesPasswordExt         = ffc("config.fileWallet.filenames.passwordExt", "Optional to use to look up password files, that sit next to the key files directly. Alternative to metadata when you have a password per keystore", "string")
 	ConfigFileWalletDefaultPasswordFile          = ffc("config.fileWallet.defaultPasswordFile", "Optional default password file to use, if one is not specified individually for the key (via metadata, or file extension)", "string")
+	ConfigFileWalletDisableListener              = ffc("config.fileWallet.disableListener", "Disable the filesystem listener that automatically detects the creation of new keystore files", "boolean")
 	ConfigFileWalletSignerCacheSize              = ffc("config.fileWallet.signerCacheSize", "Maximum of signing keys to hold in memory", "number")
 	ConfigFileWalletSignerCacheTTL               = ffc("config.fileWallet.signerCacheTTL", "How long ot leave an unused signing key in memory", "duration")
 	ConfigFileWalletMetadataFormat               = ffc("config.fileWallet.metadata.format", "Set this if the primary key file is a metadata file. Supported formats: auto (from extension) / filename / toml / yaml / json (please quote \"0x...\" strings in YAML)", "string")
@@ -46,7 +47,7 @@ var (
 	ConfigServerWriteTimeout = ffc("config.server.writeTimeout", "The maximum time to wait when writing to a HTTP connection", "duration")
 	ConfigAPIShutdownTimeout = ffc("config.server.shutdownTimeout", "The maximum amount of time to wait for any open HTTP requests to finish before shutting down the HTTP server", i18n.TimeDurationType)
 
-	ConfigBackendChainID  = ffc("config.backend.chainId", "Optionally set the Chain ID of the blockchain. Otherwise the Network ID will be queried, and used as the Chain ID in signind", "number")
+	ConfigBackendChainID  = ffc("config.backend.chainId", "Optionally set the Chain ID of the blockchain. Otherwise the Network ID will be queried, and used as the Chain ID in signing", "number")
 	ConfigBackendURL      = ffc("config.backend.url", "URL for the backend JSON/RPC server / blockchain node", "url")
 	ConfigBackendProxyURL = ffc("config.backend.proxy.url", "Optional HTTP proxy URL", "url")
 )

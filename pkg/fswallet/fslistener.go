@@ -18,9 +18,57 @@ package fswallet
 
 import (
 	"context"
+	"os"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/hyperledger/firefly-common/pkg/log"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
-func (w *fsWallet) fsListener(ctx context.Context) {
-	w.fsListenerStarted <- nil
-	defer close(w.fsListenerDone)
+func (w *fsWallet) startFilesystemListener(ctx context.Context) error {
+	if w.conf.DisableListener {
+		log.L(ctx).Debugf("Filesystem listener disabled")
+		close(w.fsListenerDone)
+		return nil
+	}
+	watcher, err := fsnotify.NewWatcher()
+	if err == nil {
+		go w.fsListenerLoop(ctx, func() {
+			_ = watcher.Close()
+			close(w.fsListenerDone)
+		}, watcher.Events, watcher.Errors)
+		err = watcher.Add(w.conf.Path)
+	}
+	if err != nil {
+		log.L(ctx).Errorf("Failed to start filesystem listener: %s", err)
+		return i18n.WrapError(ctx, err, signermsgs.MsgFailedToStartListener, err)
+	}
+	return nil
+}
+
+func (w *fsWallet) fsListenerLoop(ctx context.Context, done func(), events chan fsnotify.Event, errors chan error) {
+	defer done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.L(ctx).Infof("File listener exiting")
+			return
+		case event, ok := <-events:
+			if ok {
+				log.L(ctx).Tracef("FSEvent [%s]: %s", event.Op, event.Name)
+				if event.Op == fsnotify.Create {
+					fi, err := os.Stat(event.Name)
+					if err == nil {
+						w.notifyNewFiles(ctx, fi)
+					}
+				}
+			}
+		case err, ok := <-errors:
+			if ok {
+				log.L(ctx).Errorf("FSEvent error: %s", err)
+			}
+		}
+	}
 }

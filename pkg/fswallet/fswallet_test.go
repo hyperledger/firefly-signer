@@ -37,6 +37,7 @@ func newTestRegexpFilenameOnlyWallet(t *testing.T, init bool) (context.Context, 
 	unitTestConfig.Set(ConfigPath, "../../test/keystore_toml")
 	unitTestConfig.Set(ConfigFilenamesPrimaryMatchRegex, "^((0x)?[0-9a-z]+).key.json$")
 	unitTestConfig.Set(ConfigFilenamesPasswordExt, ".pwd")
+	unitTestConfig.Set(ConfigDisableListener, true)
 	ctx := context.Background()
 
 	ff, err := NewFilesystemWallet(ctx, ReadConfig(unitTestConfig))
@@ -61,6 +62,7 @@ func newTestTOMLMetadataWallet(t *testing.T, init bool) (context.Context, *fsWal
 	unitTestConfig.Set(ConfigFilenamesPrimaryExt, ".toml")
 	unitTestConfig.Set(ConfigMetadataKeyFileProperty, `{{ index .signing "key-file" }}`)
 	unitTestConfig.Set(ConfigMetadataPasswordFileProperty, `{{ index .signing "password-file" }}`)
+	unitTestConfig.Set(ConfigDisableListener, true)
 	ctx := context.Background()
 
 	ff, err := NewFilesystemWallet(ctx, ReadConfig(unitTestConfig))
@@ -376,7 +378,7 @@ func TestLoadKeyBadPath(t *testing.T) {
 	ctx, f, done := newTestRegexpFilenameOnlyWallet(t, false)
 	defer done()
 
-	_, err := f.loadKey(ctx, *ethtypes.MustNewAddress("0xFFFF5718734552d08278aa70f804580bab5fd2b4"), "../../test/keystore_toml/wrong.txt")
+	_, err := f.loadWalletFile(ctx, *ethtypes.MustNewAddress("0xFFFF5718734552d08278aa70f804580bab5fd2b4"), "../../test/keystore_toml/wrong.txt")
 	assert.Regexp(t, "FF22015", err)
 
 }

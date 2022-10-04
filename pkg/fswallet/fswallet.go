@@ -46,6 +46,7 @@ import (
 // keys are added to the wallet (via FS listener).
 type Wallet interface {
 	ethsigner.Wallet
+	GetWalletFile(ctx context.Context, addr ethtypes.Address0xHex) (keystorev3.WalletFile, error)
 	AddListener(listener chan<- ethtypes.Address0xHex)
 }
 
@@ -99,7 +100,8 @@ type fsWallet struct {
 	primaryMatchRegex            *regexp.Regexp
 
 	mux               sync.Mutex
-	addressToFileMap  map[ethtypes.Address0xHex]string
+	addressToFileMap  map[ethtypes.Address0xHex]string // map for lookup to filename
+	addressList       []*ethtypes.Address0xHex         // ordered list in filename at startup, then notification order
 	listeners         []chan<- ethtypes.Address0xHex
 	fsListenerCancel  context.CancelFunc
 	fsListenerStarted chan error
@@ -120,9 +122,8 @@ func (w *fsWallet) Initialize(ctx context.Context) error {
 	w.fsListenerCancel = lCancel
 	w.fsListenerStarted = make(chan error)
 	w.fsListenerDone = make(chan struct{})
-	go w.fsListener(lCtx)
 	// Make sure listener is listening for changes, before doing the scan
-	if err := <-w.fsListenerStarted; err != nil {
+	if err := w.startFilesystemListener(lCtx); err != nil {
 		return err
 	}
 	// Do an initial full scan before returning
@@ -139,11 +140,8 @@ func (w *fsWallet) AddListener(listener chan<- ethtypes.Address0xHex) {
 func (w *fsWallet) GetAccounts(ctx context.Context) ([]*ethtypes.Address0xHex, error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
-	accounts := make([]*ethtypes.Address0xHex, 0, len(w.addressToFileMap))
-	for addr := range w.addressToFileMap {
-		a := addr
-		accounts = append(accounts, &a)
-	}
+	accounts := make([]*ethtypes.Address0xHex, len(w.addressList))
+	copy(accounts, w.addressList)
 	return accounts, nil
 }
 
@@ -178,14 +176,16 @@ func (w *fsWallet) matchFilename(ctx context.Context, f fs.FileInfo) *ethtypes.A
 }
 
 func (w *fsWallet) Refresh(ctx context.Context) error {
+	log.L(ctx).Infof("Refreshing account list at %s", w.conf.Path)
 	files, err := ioutil.ReadDir(w.conf.Path)
 	if err != nil {
 		return i18n.WrapError(ctx, err, signermsgs.MsgReadDirFile)
 	}
-	return w.notifyNewFiles(ctx, files...)
+	w.notifyNewFiles(ctx, files...)
+	return nil
 }
 
-func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) error {
+func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) {
 	// Lock now we have the list
 	w.mux.Lock()
 	defer w.mux.Unlock()
@@ -193,15 +193,19 @@ func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) err
 	for _, f := range files {
 		addr := w.matchFilename(ctx, f)
 		if addr != nil {
-			if existing := w.addressToFileMap[*addr]; existing != f.Name() {
+			if existingFilename, exists := w.addressToFileMap[*addr]; existingFilename != f.Name() {
 				w.addressToFileMap[*addr] = f.Name()
-				newAddresses = append(newAddresses, addr)
+				if !exists {
+					log.L(ctx).Debugf("Added address: %s (file=%s)", addr, f.Name())
+					w.addressList = append(w.addressList, addr)
+					newAddresses = append(newAddresses, addr)
+				}
 			}
 		}
 	}
 	listeners := make([]chan<- ethtypes.Address0xHex, len(w.listeners))
 	copy(listeners, w.listeners)
-	log.L(ctx).Infof("Detected %d files. Found %d addresses", len(files), len(newAddresses))
+	log.L(ctx).Debugf("Processed %d files. Found %d new addresses", len(files), len(newAddresses))
 	// Avoid holding the lock while calling the listeners, by using a go-routine
 	go func() {
 		for _, l := range w.listeners {
@@ -210,10 +214,13 @@ func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) err
 			}
 		}
 	}()
-	return nil
 }
 
 func (w *fsWallet) Close() error {
+	if w.fsListenerCancel != nil {
+		w.fsListenerCancel()
+		<-w.fsListenerDone
+	}
 	return nil
 }
 
@@ -226,35 +233,46 @@ func (w *fsWallet) getSignerForAccount(ctx context.Context, rawAddrJSON json.Raw
 		return nil, err
 	}
 
-	addrString := from.String()
-	cached := w.signerCache.Get(from.String())
+	wf, err := w.GetWalletFile(ctx, from)
+	if err != nil {
+		return nil, err
+	}
+	return wf.KeyPair(), nil
+
+}
+
+func (w *fsWallet) GetWalletFile(ctx context.Context, addr ethtypes.Address0xHex) (keystorev3.WalletFile, error) {
+
+	addrString := addr.String()
+	cached := w.signerCache.Get(addrString)
 	if cached != nil {
 		cached.Extend(w.signerCacheTTL)
-		return cached.Value().(*secp256k1.KeyPair), nil
+		return cached.Value().(keystorev3.WalletFile), nil
 	}
 
 	w.mux.Lock()
-	primaryFilename, ok := w.addressToFileMap[from]
+	primaryFilename, ok := w.addressToFileMap[addr]
 	w.mux.Unlock()
 	if !ok {
-		return nil, i18n.NewError(ctx, signermsgs.MsgWalletNotAvailable, from)
+		return nil, i18n.NewError(ctx, signermsgs.MsgWalletNotAvailable, addr)
 	}
 
-	keypair, err := w.loadKey(ctx, from, path.Join(w.conf.Path, primaryFilename))
+	kv3, err := w.loadWalletFile(ctx, addr, path.Join(w.conf.Path, primaryFilename))
 	if err != nil {
 		return nil, err
 	}
 
-	if keypair.Address != from {
-		return nil, i18n.NewError(ctx, signermsgs.MsgAddressMismatch, keypair.Address, from)
+	keypair := kv3.KeyPair()
+	if keypair.Address != addr {
+		return nil, i18n.NewError(ctx, signermsgs.MsgAddressMismatch, keypair.Address, addr)
 	}
 
-	w.signerCache.Set(addrString, keypair, w.signerCacheTTL)
-	return keypair, err
+	w.signerCache.Set(addrString, kv3, w.signerCacheTTL)
+	return kv3, err
 
 }
 
-func (w *fsWallet) loadKey(ctx context.Context, addr ethtypes.Address0xHex, primaryFilename string) (*secp256k1.KeyPair, error) {
+func (w *fsWallet) loadWalletFile(ctx context.Context, addr ethtypes.Address0xHex, primaryFilename string) (keystorev3.WalletFile, error) {
 
 	b, err := ioutil.ReadFile(primaryFilename)
 	if err != nil {
@@ -304,7 +322,8 @@ func (w *fsWallet) loadKey(ctx context.Context, addr ethtypes.Address0xHex, prim
 		log.L(ctx).Errorf("Failed to read '%s' (bad keystorev3 file): %s", w.conf.DefaultPasswordFile, err)
 		return nil, i18n.NewError(ctx, signermsgs.MsgWalletFailed, addr)
 	}
-	return kv3.KeyPair(), nil
+	log.L(ctx).Infof("Loaded signing key for address: %s", addr)
+	return kv3, nil
 
 }
 

@@ -21,7 +21,7 @@ nav_order: 2
 
 |Key|Description|Type|Default Value|
 |---|-----------|----|-------------|
-|chainId|Optionally set the Chain ID of the blockchain. Otherwise the Network ID will be queried, and used as the Chain ID in signind|number|`-1`
+|chainId|Optionally set the Chain ID of the blockchain. Otherwise the Network ID will be queried, and used as the Chain ID in signing|number|`-1`
 |connectionTimeout|The maximum amount of time that a connection is allowed to remain with no data transmitted|[`time.Duration`](https://pkg.go.dev/time#Duration)|`30s`
 |expectContinueTimeout|See [ExpectContinueTimeout in the Go docs](https://pkg.go.dev/net/http#Transport)|[`time.Duration`](https://pkg.go.dev/time#Duration)|`1s`
 |headers|Adds custom headers to HTTP requests|`map[string]string`|`<nil>`
@@ -80,6 +80,7 @@ nav_order: 2
 |Key|Description|Type|Default Value|
 |---|-----------|----|-------------|
 |defaultPasswordFile|Optional default password file to use, if one is not specified individually for the key (via metadata, or file extension)|string|`<nil>`
+|disableListener|Disable the filesystem listener that automatically detects the creation of new keystore files|boolean|`<nil>`
 |enabled|Whether the Keystore V3 filesystem wallet is enabled|boolean|`true`
 |path|Path on the filesystem where the metadata files (and/or key files) are located|string|`<nil>`
 |signerCacheSize|Maximum of signing keys to hold in memory|number|`250`
@@ -90,8 +91,8 @@ nav_order: 2
 |Key|Description|Type|Default Value|
 |---|-----------|----|-------------|
 |passwordExt|Optional to use to look up password files, that sit next to the key files directly. Alternative to metadata when you have a password per keystore|string|`<nil>`
-|primaryExt|Extension for the primary file to look up for an address string (can be key file directly, or metadata file)|string|`<nil>`
-|primaryMatchRegex|Regular express to run against filenames to extract the address|regexp|`<nil>`
+|primaryExt|Extension for key/metadata files named by <ADDRESS>.<EXT>|string|`<nil>`
+|primaryMatchRegex|Regular expression run against key/metadata filenames to extract the address (takes precedence over primaryExt)|regexp|`<nil>`
 
 ## fileWallet.metadata
 
