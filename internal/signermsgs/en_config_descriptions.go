@@ -29,7 +29,7 @@ var ffc = func(key, translation, fieldType string) i18n.ConfigMessageKey {
 var (
 	ConfigFileWalletEnabled                      = ffc("config.fileWallet.enabled", "Whether the Keystore V3 filesystem wallet is enabled", "boolean")
 	ConfigFileWalletPath                         = ffc("config.fileWallet.path", "Path on the filesystem where the metadata files (and/or key files) are located", "string")
-	ConfigFileWalletFilenamesWith0xPrefix        = ffc("config.fileWallet.filenames.with0xPrefix", "When true filenames will be resolved with an 0x prefix", "boolean")
+	ConfigFileWalletFilenamesPrimaryBatchRegex   = ffc("config.fileWallet.filenames.primaryMatchRegex", "Regular express to run against filenames to extract the address", "regexp")
 	ConfigFileWalletFilenamesPrimaryExt          = ffc("config.fileWallet.filenames.primaryExt", "Extension for the primary file to look up for an address string (can be key file directly, or metadata file)", "string")
 	ConfigFileWalletFilenamesPasswordExt         = ffc("config.fileWallet.filenames.passwordExt", "Optional to use to look up password files, that sit next to the key files directly. Alternative to metadata when you have a password per keystore", "string")
 	ConfigFileWalletDefaultPasswordFile          = ffc("config.fileWallet.defaultPasswordFile", "Optional default password file to use, if one is not specified individually for the key (via metadata, or file extension)", "string")

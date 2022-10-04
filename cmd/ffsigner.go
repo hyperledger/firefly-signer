@@ -26,10 +26,10 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/config"
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-common/pkg/log"
-	"github.com/hyperledger/firefly-signer/internal/filewallet"
 	"github.com/hyperledger/firefly-signer/internal/rpcserver"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
+	"github.com/hyperledger/firefly-signer/pkg/fswallet"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -92,7 +92,7 @@ func run() error {
 	if !config.GetBool(signerconfig.FileWalletEnabled) {
 		return i18n.NewError(ctx, signermsgs.MsgNoWalletEnabled)
 	}
-	fileWallet, err := filewallet.NewFileWallet(ctx)
+	fileWallet, err := fswallet.NewFilesystemWallet(ctx, fswallet.ReadConfig(signerconfig.FileWalletConfig))
 	if err != nil {
 		return err
 	}

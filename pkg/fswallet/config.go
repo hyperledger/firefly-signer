@@ -1,0 +1,99 @@
+// Copyright © 2022 Kaleido, Inc.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package fswallet
+
+import (
+	"github.com/hyperledger/firefly-common/pkg/config"
+)
+
+const (
+	// ConfigPath the path of the Keystore V3 wallet path
+	ConfigPath = "path"
+	// ConfigFilenamesWith0xPrefix whether or not to expect the 0x prefix on filenames
+	ConfigFilenamesWith0xPrefix = "filenames.with0xPrefix"
+	// ConfigFilenamesPrimaryExt extension to append to the "from" address string to find the file (see metadata section for file types). All filenames must be lower case on disk.
+	ConfigFilenamesPrimaryExt = "filenames.primaryExt"
+	// ConfigFilenamesPrimaryMatchRegex allows filenames where the address can be extracted with a regular expression. Takes precedence over primaryExt
+	ConfigFilenamesPrimaryMatchRegex = "filenames.primaryMatchRegex"
+	// ConfigFilenamesPasswordExt extension to append to the "from" address string to find the password file (if not using a metadata file to specify the password file)
+	ConfigFilenamesPasswordExt = "filenames.passwordExt"
+	// ConfigDefaultPasswordFile default password file to use if neither the metadata, or passwordExtension find a password
+	ConfigDefaultPasswordFile = "defaultPasswordFile"
+	// ConfigSignerCacheSize the number of signing keys to keep in memory
+	ConfigSignerCacheSize = "signerCacheSize"
+	// ConfigSignerCacheTTL the time to keep an unused signing key in memory
+	ConfigSignerCacheTTL = "signerCacheTTL"
+	// ConfigMetadataFormat format to parse the metadata - supported: auto (from extension) / filename / toml / yaml / json (please quote "0x..." strings in YAML)
+	ConfigMetadataFormat = "metadata.format"
+	// ConfigMetadataKeyFileProperty use for toml/yaml/json to find the name of the file containing the keystorev3 file
+	ConfigMetadataKeyFileProperty = "metadata.keyFileProperty"
+	// ConfigMetadataPasswordFileProperty use for toml/yaml to find the name of the file containing the keystorev3 file
+	ConfigMetadataPasswordFileProperty = "metadata.passwordFileProperty"
+)
+
+type Config struct {
+	Path                string
+	DefaultPasswordFile string
+	SignerCacheSize     string
+	SignerCacheTTL      string
+	Filenames           FilenamesConfig
+	Metadata            MetadataConfig
+}
+
+type FilenamesConfig struct {
+	PrimaryMatchRegex string
+	PrimaryExt        string
+	PasswordExt       string
+}
+
+type MetadataConfig struct {
+	Format               string
+	KeyFileProperty      string
+	PasswordFileProperty string
+}
+
+func InitConfig(section config.Section) {
+	section.AddKnownKey(ConfigPath)
+	section.AddKnownKey(ConfigFilenamesPrimaryExt)
+	section.AddKnownKey(ConfigFilenamesPrimaryMatchRegex)
+	section.AddKnownKey(ConfigFilenamesPasswordExt)
+	section.AddKnownKey(ConfigDefaultPasswordFile)
+	section.AddKnownKey(ConfigSignerCacheSize, 250)
+	section.AddKnownKey(ConfigSignerCacheTTL, "24h")
+	section.AddKnownKey(ConfigMetadataFormat, `auto`)
+	section.AddKnownKey(ConfigMetadataKeyFileProperty)
+	section.AddKnownKey(ConfigMetadataPasswordFileProperty)
+}
+
+func ReadConfig(section config.Section) *Config {
+	return &Config{
+		Path:                section.GetString(ConfigPath),
+		DefaultPasswordFile: section.GetString(ConfigDefaultPasswordFile),
+		SignerCacheSize:     section.GetString(ConfigSignerCacheSize),
+		SignerCacheTTL:      section.GetString(ConfigSignerCacheTTL),
+		Filenames: FilenamesConfig{
+			PrimaryExt:        section.GetString(ConfigFilenamesPrimaryExt),
+			PrimaryMatchRegex: section.GetString(ConfigFilenamesPrimaryMatchRegex),
+			PasswordExt:       section.GetString(ConfigFilenamesPasswordExt),
+		},
+		Metadata: MetadataConfig{
+			Format:               section.GetString(ConfigMetadataFormat),
+			KeyFileProperty:      section.GetString(ConfigMetadataKeyFileProperty),
+			PasswordFileProperty: section.GetString(ConfigMetadataPasswordFileProperty),
+		},
+	}
+}

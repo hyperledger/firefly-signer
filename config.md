@@ -91,7 +91,7 @@ nav_order: 2
 |---|-----------|----|-------------|
 |passwordExt|Optional to use to look up password files, that sit next to the key files directly. Alternative to metadata when you have a password per keystore|string|`<nil>`
 |primaryExt|Extension for the primary file to look up for an address string (can be key file directly, or metadata file)|string|`<nil>`
-|with0xPrefix|When true filenames will be resolved with an 0x prefix|boolean|`<nil>`
+|primaryMatchRegex|Regular express to run against filenames to extract the address|regexp|`<nil>`
 
 ## fileWallet.metadata
 
