@@ -33,6 +33,8 @@ const (
 	ConfigFilenamesPasswordExt = "filenames.passwordExt"
 	// ConfigFilenamesPasswordPath directory path where the password files should be found - default is the same path as the primary file
 	ConfigFilenamesPasswordPath = "filenames.passwordPath"
+	// ConfigFilenamesPasswordTrimSpace whether to trim whitespace from passwords loaded from files (such as trailing newline characters)
+	ConfigFilenamesPasswordTrimSpace = "filenames.passwordTrimSpace"
 	// ConfigDefaultPasswordFile default password file to use if neither the metadata, or passwordExtension find a password
 	ConfigDefaultPasswordFile = "defaultPasswordFile"
 	// ConfigDisableListener disable the filesystem listener that detects newly added keys automatically
@@ -64,6 +66,7 @@ type FilenamesConfig struct {
 	PrimaryExt        string
 	PasswordExt       string
 	PasswordPath      string
+	PasswordTrimSpace bool
 	With0xPrefix      bool
 }
 
@@ -79,6 +82,7 @@ func InitConfig(section config.Section) {
 	section.AddKnownKey(ConfigFilenamesPrimaryMatchRegex)
 	section.AddKnownKey(ConfigFilenamesPasswordExt)
 	section.AddKnownKey(ConfigFilenamesPasswordPath)
+	section.AddKnownKey(ConfigFilenamesPasswordTrimSpace, true)
 	section.AddKnownKey(ConfigFilenamesWith0xPrefix)
 	section.AddKnownKey(ConfigDisableListener)
 	section.AddKnownKey(ConfigDefaultPasswordFile)
@@ -101,6 +105,7 @@ func ReadConfig(section config.Section) *Config {
 			PrimaryMatchRegex: section.GetString(ConfigFilenamesPrimaryMatchRegex),
 			PasswordExt:       section.GetString(ConfigFilenamesPasswordExt),
 			PasswordPath:      section.GetString(ConfigFilenamesPasswordPath),
+			PasswordTrimSpace: section.GetBool(ConfigFilenamesPasswordTrimSpace),
 			With0xPrefix:      section.GetBool(ConfigFilenamesWith0xPrefix),
 		},
 		Metadata: MetadataConfig{

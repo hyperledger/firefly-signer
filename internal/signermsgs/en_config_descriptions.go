@@ -34,6 +34,7 @@ var (
 	ConfigFileWalletFilenamesPrimaryExt          = ffc("config.fileWallet.filenames.primaryExt", "Extension for key/metadata files named by <ADDRESS>.<EXT>", "string")
 	ConfigFileWalletFilenamesPasswordExt         = ffc("config.fileWallet.filenames.passwordExt", "Optional to use to look up password files, that sit next to the key files directly. Alternative to metadata when you have a password per keystore", "string")
 	ConfigFileWalletFilenamesPasswordPath        = ffc("config.fileWallet.filenames.passwordPath", "Optional directory in which to look for the password files, when passwordExt is configured. Default is the wallet directory", "string")
+	ConfigFileWalletFilenamesPasswordTrimSpace   = ffc("config.fileWallet.filenames.passwordTrimSpace", "Whether to trim leading/trailing whitespace (such as a newline) from the password when loaded from file", "boolean")
 	ConfigFileWalletDefaultPasswordFile          = ffc("config.fileWallet.defaultPasswordFile", "Optional default password file to use, if one is not specified individually for the key (via metadata, or file extension)", "string")
 	ConfigFileWalletDisableListener              = ffc("config.fileWallet.disableListener", "Disable the filesystem listener that automatically detects the creation of new keystore files", "boolean")
 	ConfigFileWalletSignerCacheSize              = ffc("config.fileWallet.signerCacheSize", "Maximum of signing keys to hold in memory", "number")

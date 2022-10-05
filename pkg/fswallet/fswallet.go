@@ -299,6 +299,8 @@ func (w *fsWallet) loadWalletFile(ctx context.Context, addr ethtypes.Address0xHe
 		password, err = ioutil.ReadFile(passwordFilename)
 		if err != nil {
 			log.L(ctx).Debugf("Failed to read '%s' (password file): %s", passwordFilename, err)
+		} else if w.conf.Filenames.PasswordTrimSpace {
+			password = []byte(strings.TrimSpace(string(password)))
 		}
 	}
 

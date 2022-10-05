@@ -92,6 +92,7 @@ nav_order: 2
 |---|-----------|----|-------------|
 |passwordExt|Optional to use to look up password files, that sit next to the key files directly. Alternative to metadata when you have a password per keystore|string|`<nil>`
 |passwordPath|Optional directory in which to look for the password files, when passwordExt is configured. Default is the wallet directory|string|`<nil>`
+|passwordTrimSpace|Whether to trim leading/trailing whitespace (such as a newline) from the password when loaded from file|boolean|`true`
 |primaryExt|Extension for key/metadata files named by <ADDRESS>.<EXT>|string|`<nil>`
 |primaryMatchRegex|Regular expression run against key/metadata filenames to extract the address (takes precedence over primaryExt)|regexp|`<nil>`
 |with0xPrefix|When true and passwordExt is used, password filenames will be generated with an 0x prefix|boolean|`<nil>`
