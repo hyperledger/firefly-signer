@@ -31,6 +31,8 @@ const (
 	ConfigFilenamesPrimaryMatchRegex = "filenames.primaryMatchRegex"
 	// ConfigFilenamesPasswordExt extension to append to the "from" address string to find the password file (if not using a metadata file to specify the password file)
 	ConfigFilenamesPasswordExt = "filenames.passwordExt"
+	// ConfigFilenamesPasswordPath directory path where the password files should be found - default is the same path as the primary file
+	ConfigFilenamesPasswordPath = "filenames.passwordPath"
 	// ConfigDefaultPasswordFile default password file to use if neither the metadata, or passwordExtension find a password
 	ConfigDefaultPasswordFile = "defaultPasswordFile"
 	// ConfigDisableListener disable the filesystem listener that detects newly added keys automatically
@@ -61,6 +63,7 @@ type FilenamesConfig struct {
 	PrimaryMatchRegex string
 	PrimaryExt        string
 	PasswordExt       string
+	PasswordPath      string
 }
 
 type MetadataConfig struct {
@@ -74,6 +77,7 @@ func InitConfig(section config.Section) {
 	section.AddKnownKey(ConfigFilenamesPrimaryExt)
 	section.AddKnownKey(ConfigFilenamesPrimaryMatchRegex)
 	section.AddKnownKey(ConfigFilenamesPasswordExt)
+	section.AddKnownKey(ConfigFilenamesPasswordPath)
 	section.AddKnownKey(ConfigDisableListener)
 	section.AddKnownKey(ConfigDefaultPasswordFile)
 	section.AddKnownKey(ConfigSignerCacheSize, 250)
@@ -94,6 +98,7 @@ func ReadConfig(section config.Section) *Config {
 			PrimaryExt:        section.GetString(ConfigFilenamesPrimaryExt),
 			PrimaryMatchRegex: section.GetString(ConfigFilenamesPrimaryMatchRegex),
 			PasswordExt:       section.GetString(ConfigFilenamesPasswordExt),
+			PasswordPath:      section.GetString(ConfigFilenamesPasswordPath),
 		},
 		Metadata: MetadataConfig{
 			Format:               section.GetString(ConfigMetadataFormat),
