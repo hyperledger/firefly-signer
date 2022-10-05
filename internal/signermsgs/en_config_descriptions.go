@@ -30,6 +30,7 @@ var (
 	ConfigFileWalletEnabled                      = ffc("config.fileWallet.enabled", "Whether the Keystore V3 filesystem wallet is enabled", "boolean")
 	ConfigFileWalletPath                         = ffc("config.fileWallet.path", "Path on the filesystem where the metadata files (and/or key files) are located", "string")
 	ConfigFileWalletFilenamesPrimaryBatchRegex   = ffc("config.fileWallet.filenames.primaryMatchRegex", "Regular expression run against key/metadata filenames to extract the address (takes precedence over primaryExt)", "regexp")
+	ConfigFileWalletFilenamesWith0xPrefix        = ffc("config.fileWallet.filenames.with0xPrefix", "When true and passwordExt is used, password filenames will be generated with an 0x prefix", "boolean")
 	ConfigFileWalletFilenamesPrimaryExt          = ffc("config.fileWallet.filenames.primaryExt", "Extension for key/metadata files named by <ADDRESS>.<EXT>", "string")
 	ConfigFileWalletFilenamesPasswordExt         = ffc("config.fileWallet.filenames.passwordExt", "Optional to use to look up password files, that sit next to the key files directly. Alternative to metadata when you have a password per keystore", "string")
 	ConfigFileWalletFilenamesPasswordPath        = ffc("config.fileWallet.filenames.passwordPath", "Optional directory in which to look for the password files, when passwordExt is configured. Default is the wallet directory", "string")

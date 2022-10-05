@@ -23,7 +23,7 @@ import (
 const (
 	// ConfigPath the path of the Keystore V3 wallet path
 	ConfigPath = "path"
-	// ConfigFilenamesWith0xPrefix whether or not to expect the 0x prefix on filenames
+	// ConfigFilenamesWith0xPrefix whether or not to use the 0x prefix on filenames, when using passwordExt password
 	ConfigFilenamesWith0xPrefix = "filenames.with0xPrefix"
 	// ConfigFilenamesPrimaryExt extension to append to the "from" address string to find the file (see metadata section for file types). All filenames must be lower case on disk.
 	ConfigFilenamesPrimaryExt = "filenames.primaryExt"
@@ -64,6 +64,7 @@ type FilenamesConfig struct {
 	PrimaryExt        string
 	PasswordExt       string
 	PasswordPath      string
+	With0xPrefix      bool
 }
 
 type MetadataConfig struct {
@@ -78,6 +79,7 @@ func InitConfig(section config.Section) {
 	section.AddKnownKey(ConfigFilenamesPrimaryMatchRegex)
 	section.AddKnownKey(ConfigFilenamesPasswordExt)
 	section.AddKnownKey(ConfigFilenamesPasswordPath)
+	section.AddKnownKey(ConfigFilenamesWith0xPrefix)
 	section.AddKnownKey(ConfigDisableListener)
 	section.AddKnownKey(ConfigDefaultPasswordFile)
 	section.AddKnownKey(ConfigSignerCacheSize, 250)
@@ -99,6 +101,7 @@ func ReadConfig(section config.Section) *Config {
 			PrimaryMatchRegex: section.GetString(ConfigFilenamesPrimaryMatchRegex),
 			PasswordExt:       section.GetString(ConfigFilenamesPasswordExt),
 			PasswordPath:      section.GetString(ConfigFilenamesPasswordPath),
+			With0xPrefix:      section.GetBool(ConfigFilenamesWith0xPrefix),
 		},
 		Metadata: MetadataConfig{
 			Format:               section.GetString(ConfigMetadataFormat),

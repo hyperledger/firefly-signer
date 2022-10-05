@@ -342,21 +342,16 @@ func (w *fsWallet) getKeyAndPasswordFiles(ctx context.Context, addr ethtypes.Add
 		err = yaml.Unmarshal(primaryFile, &metadata)
 	default:
 		// No separate metadata file - we just use the default password file extension instead
-		passwordFilename := path.Base(primaryFilename)
 		passwordPath := w.conf.Filenames.PasswordPath
 		if passwordPath == "" {
 			passwordPath = w.conf.Path
 		}
-		extToRemove := w.conf.Filenames.PrimaryExt
-		if extToRemove == "" {
-			// We use the first index - so remove '.key.json' for example
-			firstIndex := strings.Index(passwordFilename, ".")
-			if firstIndex > 0 {
-				extToRemove = passwordFilename[firstIndex:]
-			}
+		passwordFilename := addr.String()
+		if !w.conf.Filenames.With0xPrefix {
+			passwordFilename = strings.TrimPrefix(passwordFilename, "0x")
 		}
-		passwordFilename = path.Join(passwordPath, strings.TrimSuffix(passwordFilename, extToRemove)) + w.conf.Filenames.PasswordExt
-		return primaryFilename, passwordFilename, nil
+		passwordFilename += w.conf.Filenames.PasswordExt
+		return primaryFilename, path.Join(passwordPath, passwordFilename), nil
 	}
 	if err != nil {
 		log.L(ctx).Errorf("Failed to parse '%s' as %s: %s", primaryFilename, w.conf.Metadata.Format, err)

@@ -94,6 +94,7 @@ nav_order: 2
 |passwordPath|Optional directory in which to look for the password files, when passwordExt is configured. Default is the wallet directory|string|`<nil>`
 |primaryExt|Extension for key/metadata files named by <ADDRESS>.<EXT>|string|`<nil>`
 |primaryMatchRegex|Regular expression run against key/metadata filenames to extract the address (takes precedence over primaryExt)|regexp|`<nil>`
+|with0xPrefix|When true and passwordExt is used, password filenames will be generated with an 0x prefix|boolean|`<nil>`
 
 ## fileWallet.metadata
 
