@@ -1,0 +1,1 @@
+This directory ensures the code ignores subdirectories

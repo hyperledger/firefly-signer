@@ -19,10 +19,17 @@ A set of Ethereum transaction signing utilities designed for use across projects
   - EIP-155
   - EIP-1559
   - See `pkg/ethsigner` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/ethsigner)
-- Keystore V3 wallet implementation
+- Keystore V3 key file implementation
   - Scrypt - read/write
   - pbkdf2 - read
   - See `pkg/keystorev3` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/keystorev3)
+- Filesystem wallet
+  - Configurable caching for in-memory keys
+  - Files in directory with a given extension matching `{{ADDRESS}}.key`/`{{ADDRESS}}.toml` or arbitrary regex
+  - Files can be TOML/YAML/JSON metadata pointing to Keystore V3 files + password files
+  - Files can be Keystore V3 files directly, with accompanying `{{ADDRESS}}.pass` files
+  - Detects newly added files automatically
+  - See `pkg/fswallet` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/fswallet)
 
 ## JSON/RPC proxy server
 
@@ -40,12 +47,6 @@ calls through unchanged.
   - Queries Chain ID via `net_version` on startup
   - `eth_accounts` JSON/RPC method support
   - Trivial nonce management built-in (calls `eth_getTransactionCount` for each request)
-- File based wallet
-  - Configurable caching for in-memory keys
-  - Files in directory with a given extension matching `{{ADDRESS}}.key`/`{{ADDRESS}}.toml`
-  - Customizable extension, and optional `0x` prefix to filename
-  - Files can be TOML/YAML/JSON metadata pointing to Keystore V3 files + password files
-  - Files can be Keystore V3 files directly, with accompanying `{{ADDRESS}}.pass` files
 
 ## JSON/RPC proxy server configuration
 

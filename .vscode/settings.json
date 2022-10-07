@@ -16,6 +16,8 @@
     "ffsigner",
     "fftypes",
     "filewallet",
+    "fsnotify",
+    "fswallet",
     "GJSON",
     "httpserver",
     "hyperledger",
