@@ -58,11 +58,9 @@ func (w *fsWallet) fsListenerLoop(ctx context.Context, done func(), events chan 
 		case event, ok := <-events:
 			if ok {
 				log.L(ctx).Tracef("FSEvent [%s]: %s", event.Op, event.Name)
-				if event.Op == fsnotify.Create {
-					fi, err := os.Stat(event.Name)
-					if err == nil {
-						w.notifyNewFiles(ctx, fi)
-					}
+				fi, err := os.Stat(event.Name)
+				if err == nil {
+					w.notifyNewFiles(ctx, fi)
 				}
 			}
 		case err, ok := <-errors:
