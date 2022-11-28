@@ -157,6 +157,75 @@ const sampleABI3 = `[
 	}
   ]`
 
+const sampleABI4 = `[
+	{
+		"inputs": [],
+		"name": "getArray",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+	]`
+
+const sampleABI5 = `[
+	{
+		"inputs": [],
+		"name": "getArray",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+	]`
+
+const sampleABI6 = `[
+	{
+		"inputs": [],
+		"name": "getArray",
+		"outputs": [
+			{
+				"internalType": "string[]",
+				"name": "",
+				"type": "string[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+	]`
+
+const sampleABI7 = `[
+	{
+		"inputs": [],
+		"name": "getArray",
+		"outputs": [
+			{
+				"internalType": "string[2]",
+				"name": "",
+				"type": "string[2]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+	]`
+
 func testABI(t *testing.T, abiJSON string) (abi ABI) {
 	err := json.Unmarshal([]byte(abiJSON), &abi)
 	assert.NoError(t, err)
@@ -431,6 +500,57 @@ func TestParseJSONMixedModeOk(t *testing.T) {
 	assert.Equal(t, "string2", cv.Children[0].Children[1].Children[1].Value)
 	assert.Equal(t, []byte{0xfe, 0xed, 0xbe, 0xef}, cv.Children[0].Children[2].Value)
 
+}
+
+func TestParseOuptutStringOk(t *testing.T) {
+
+	outputs := testABI(t, sampleABI4)[0].Outputs
+
+	values, _ := hex.DecodeString("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000016100000000000000000000000000000000000000000000000000000000000000")
+
+	cv, err := outputs.DecodeABIData(values, 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "a", cv.Children[0].Value)
+}
+
+func TestParseOutputTupleOk(t *testing.T) {
+
+	outputs := testABI(t, sampleABI5)[0].Outputs
+
+	values, _ := hex.DecodeString("000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001610000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016200000000000000000000000000000000000000000000000000000000000000")
+
+	cv, err := outputs.DecodeABIData(values, 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "a", cv.Children[0].Value)
+	assert.Equal(t, "b", cv.Children[1].Value)
+}
+
+func TestParseOutputDynamicArrayOk(t *testing.T) {
+
+	outputs := testABI(t, sampleABI6)[0].Outputs
+
+	values, _ := hex.DecodeString("00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001610000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016200000000000000000000000000000000000000000000000000000000000000")
+
+	cv, err := outputs.DecodeABIData(values, 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "a", cv.Children[0].Children[0].Value)
+	assert.Equal(t, "b", cv.Children[0].Children[1].Value)
+}
+
+func TestParseOutputFixedArrayOk(t *testing.T) {
+
+	outputs := testABI(t, sampleABI7)[0].Outputs
+
+	values, _ := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000001610000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016200000000000000000000000000000000000000000000000000000000000000")
+
+	cv, err := outputs.DecodeABIData(values, 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "a", cv.Children[0].Children[0].Value)
+	assert.Equal(t, "b", cv.Children[1].Children[1].Value)
 }
 
 func TestABIParseCoerceGoTypes(t *testing.T) {
