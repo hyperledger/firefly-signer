@@ -18,6 +18,7 @@ package abi
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 
@@ -165,17 +166,66 @@ func decodeABIFixedArrayBytes(ctx context.Context, breadcrumbs string, block []b
 		Children:  make([]*ComponentValue, component.arrayLength),
 	}
 	headBytesRead = 0
+	// a fixed length sequence of a dynamic type has these parts, using a 'string[2]' type as an example:
+	// 0000000000000000000000000000000000000000000000000000000000000020 <= offset of the start of the content
+	// 0000000000000000000000000000000000000000000000000000000000000040 <= offset of the 1st element
+	// 0000000000000000000000000000000000000000000000000000000000000080 <= offset of the 2nd element
+	// 0000000000000000000000000000000000000000000000000000000000000001 <= length of the 1st element
+	// 6100000000000000000000000000000000000000000000000000000000000000 <= content of the 1st element
+	// 0000000000000000000000000000000000000000000000000000000000000001 <= length of the 2nd element
+	// 6200000000000000000000000000000000000000000000000000000000000000 <= content of the 2nd element
+
+	returnOutput := block[headPosition : headPosition+32]
+
+	var content []byte
+	if isDynamicType(component.arrayChild) {
+		offset := binary.BigEndian.Uint64(returnOutput[len(returnOutput)-8:])
+		if offset > uint64(len(block)) {
+			return -1, nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIArrayCount, breadcrumbs)
+		}
+		content = block[offset:]
+	} else {
+		content = block[headPosition:]
+	}
+
+	if headPosition+32*component.arrayLength > len(block) {
+		return -1, nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, breadcrumbs)
+	}
+
+	offset := 0
 	for i := 0; i < component.arrayLength; i++ {
 		childHeadBytes, child, err := decodeABIElement(ctx, fmt.Sprintf("%s[fix,i:%d,o:%d]", breadcrumbs, i, headPosition),
-			block, headStart, headPosition, component.arrayChild)
+			content, headStart, offset, component.arrayChild)
 		if err != nil {
 			return -1, nil, err
 		}
 		cv.Children[i] = child
 		headBytesRead += childHeadBytes
 		headPosition += childHeadBytes
+		offset += childHeadBytes
 	}
 	return headBytesRead, cv, err
+}
+
+func isDynamicType(tc *typeComponent) bool {
+	switch tc.cType {
+	case TupleComponent:
+		for _, childType := range tc.tupleChildren {
+			if isDynamicType(childType) {
+				return true
+			}
+		}
+		return false
+	case ElementaryComponent:
+		tName := tc.elementaryType.name
+		// types of bytes3 are not dynamic types, so make sure to check the suffix
+		if tName == "string" || (tName == "bytes" && tc.elementarySuffix == "") {
+			return true
+		}
+		return false
+	default:
+		return false
+	}
 }
 
 func decodeABIDynamicArrayBytes(ctx context.Context, breadcrumbs string, block []byte, dataOffset int, component *typeComponent) (cv *ComponentValue, err error) {

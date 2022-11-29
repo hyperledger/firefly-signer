@@ -226,6 +226,31 @@ const sampleABI7 = `[
 	}
 	]`
 
+const sampleABI8 = `[
+	{
+		"name" : "multi",
+		"type": "function",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256[3]"
+			},
+			{
+				"name": "",
+				"type": "address"
+			},
+			{
+				"name": "",
+				"type": "string[2]"
+			},
+			{
+				"name": "",
+				"type": "bool"
+			}
+		]
+	}
+	]`
+
 func testABI(t *testing.T, abiJSON string) (abi ABI) {
 	err := json.Unmarshal([]byte(abiJSON), &abi)
 	assert.NoError(t, err)
@@ -550,7 +575,28 @@ func TestParseOutputFixedArrayOk(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "a", cv.Children[0].Children[0].Value)
-	assert.Equal(t, "b", cv.Children[1].Children[1].Value)
+	assert.Equal(t, "b", cv.Children[0].Children[1].Value)
+}
+
+func TestParseOutputMixedTypesOk(t *testing.T) {
+
+	outputs := testABI(t, sampleABI8)[0].Outputs
+
+	values, _ := hex.DecodeString("000000000000000000000000000000000000000000000000000000005c1b78ea0000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000001a055690d9db80000000000000000000000000000ab1257528b3782fb40d7ed5f72e624b744dffb2f00000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000008457468657265756d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001048656c6c6f2c20457468657265756d2100000000000000000000000000000000")
+
+	cv, err := outputs.DecodeABIData(values, 0)
+	assert.NoError(t, err)
+
+	bignumber, _ := big.NewInt(0).SetString("30000000000000000000", 10)
+	assert.Equal(t, big.NewInt(1545304298), cv.Children[0].Children[0].Value)
+	assert.Equal(t, big.NewInt(6), cv.Children[0].Children[1].Value)
+	assert.Equal(t, bignumber, cv.Children[0].Children[2].Value)
+	address, _ := cv.Children[1].JSON()
+	assert.Equal(t, "\"ab1257528b3782fb40d7ed5f72e624b744dffb2f\"", string(address))
+	assert.Equal(t, "Ethereum", cv.Children[2].Children[0].Value)
+	assert.Equal(t, "Hello, Ethereum!", cv.Children[2].Children[1].Value)
+	boolean, _ := cv.Children[3].JSON()
+	assert.Equal(t, "false", string(boolean))
 }
 
 func TestABIParseCoerceGoTypes(t *testing.T) {
