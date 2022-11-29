@@ -63,7 +63,11 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 		// If the fixed array, contains only fixed types - decode the fixed array at that position
 		return decodeABIFixedArrayBytes(ctx, breadcrumbs, block, headStart, headPosition, component)
 	case DynamicArrayComponent:
-		cv, err := decodeABIDynamicArrayBytes(ctx, breadcrumbs, block, headStart, component)
+		headOffset, err := decodeABILength(ctx, breadcrumbs, block, headStart+headPosition)
+		if err != nil {
+			return -1, nil, err
+		}
+		cv, err := decodeABIDynamicArrayBytes(ctx, breadcrumbs, block, headStart+headOffset, component)
 		if err != nil {
 			return -1, nil, err
 		}
@@ -214,7 +218,7 @@ func isDynamicType(ctx context.Context, tc *typeComponent) (bool, error) {
 	case DynamicArrayComponent:
 		return true, nil
 	case ElementaryComponent:
-		return !tc.elementaryType.fixed32, nil
+		return tc.elementaryType.dynamic(tc), nil
 	default:
 		return false, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, tc.cType)
 	}
@@ -233,7 +237,7 @@ func decodeABIDynamicArrayBytes(ctx context.Context, breadcrumbs string, block [
 	}
 	for i := 0; i < arrayLength; i++ {
 		childHeadBytes, child, err := decodeABIElement(ctx, fmt.Sprintf("%s[dyn,i:%d,b:%d]", breadcrumbs, i, dataOffset),
-			block, dataStart, dataOffset, component.arrayChild)
+			block, dataStart, 0, component.arrayChild)
 		if err != nil {
 			return nil, err
 		}
