@@ -77,4 +77,5 @@ var (
 	MsgMissingRegexpCaptureGroup   = ffe("FF22057", "Regular expression is missing a capture group (subexpression) for address: /%s/")
 	MsgAddressMismatch             = ffe("FF22059", "Address '%s' loaded from wallet file does not match requested lookup address / filename '%s'")
 	MsgFailedToStartListener       = ffe("FF22060", "Failed to start filesystem listener: %s")
+	MsgDecodeNotTuple              = ffe("FF22061", "Decode can only be called against a root tuple component type=%d")
 )

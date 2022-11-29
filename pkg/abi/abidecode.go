@@ -32,8 +32,8 @@ import (
 //
 // So for example headStart=4,headPosition=4 would mean we are reading from the beginning of the primary header, after
 // the 4 byte function selector in a function call parameter.
-func walkTupleABIBytes(ctx context.Context, breadcrumbs string, block []byte, headStart, headPosition int, component *typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
-	return walkDynamicLenArrayABIBytes(ctx, "tup", breadcrumbs, block, headStart, headPosition, component, component.tupleChildren)
+func walkTupleABIBytes(ctx context.Context, block []byte, offset int, component *typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
+	return walkDynamicLenArrayABIBytes(ctx, "tup", "", block, offset, offset, component, component.tupleChildren)
 }
 
 // decodeABIElement is called for each entry in a tuple, or array, to process the head bytes,
@@ -90,7 +90,7 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 		}
 		headStart += headOffset
 		headPosition = headStart
-		return walkTupleABIBytes(ctx, breadcrumbs, block, headStart, headPosition, component)
+		return walkDynamicLenArrayABIBytes(ctx, "tup", breadcrumbs, block, headOffset, headPosition, component, component.tupleChildren)
 	default:
 		return -1, nil, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, component.cType)
 	}
