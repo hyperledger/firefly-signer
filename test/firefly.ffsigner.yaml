@@ -1,5 +1,5 @@
 fileWallet:
-  path: "../test/keystore_toml"
+  path: "./test/keystore_toml"
   disableListener: true
   filenames:
     primaryExt: ".toml"
