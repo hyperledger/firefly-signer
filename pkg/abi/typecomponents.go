@@ -365,6 +365,13 @@ func (tc *typeComponent) DecodeABIData(b []byte, offset int) (*ComponentValue, e
 }
 
 func (tc *typeComponent) DecodeABIDataCtx(ctx context.Context, b []byte, offset int) (*ComponentValue, error) {
+	// If called against a tuple, treats it as the root of the bytes at the offset
+	if tc.cType == TupleComponent {
+		_, cv, err := walkTupleABIBytes(ctx, "", b, offset, offset, tc)
+		return cv, err
+	}
+	// Otherwise normal header-based processing happens, where only a fixed amount is consumed from the
+	// header, and the rest from the offset (this is true for nested tuples within an array)
 	_, cv, err := decodeABIElement(ctx, "", b, offset, offset, tc)
 	return cv, err
 }
