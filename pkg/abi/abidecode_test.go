@@ -199,6 +199,113 @@ func TestExampleABIDecode5(t *testing.T) {
 
 }
 
+func TestExampleABIDecode6(t *testing.T) {
+
+	// a mix of fixed-length static types, fixed-length of dynamic types and elementary types
+	f := &Entry{
+		Name: "g",
+		Outputs: ParameterArray{
+			{Type: "uint256[3]"},
+			{Type: "address"},
+			{Type: "string[2]"},
+			{Type: "bool"},
+		},
+	}
+
+	d, err := hex.DecodeString("" +
+		// head
+		"000000000000000000000000000000000000000000000000000000005c1b78ea" + // encoding of 1545304298
+		"0000000000000000000000000000000000000000000000000000000000000006" + // encoding of 6
+		"000000000000000000000000000000000000000000000001a055690d9db80000" + // encoding of 30000000000000000000
+		"000000000000000000000000ab1257528b3782fb40d7ed5f72e624b744dffb2f" + // encoding of address 0xab1257528b3782fb40d7ed5f72e624b744dffb2f
+		"00000000000000000000000000000000000000000000000000000000000000c0" + // offset of ["Ethereum", "Hello, Ethereum!"]
+		"0000000000000000000000000000000000000000000000000000000000000000" + // encoding of boolean: false
+		"0000000000000000000000000000000000000000000000000000000000000040" + // offset of "Ethereum"
+		"0000000000000000000000000000000000000000000000000000000000000080" + // offset of "Hello, Ethereum!"
+		"0000000000000000000000000000000000000000000000000000000000000008" + // count of "Ethereum"
+		"457468657265756d000000000000000000000000000000000000000000000000" + // encoding of "Ethereum"
+		"0000000000000000000000000000000000000000000000000000000000000010" + // count of "Hello, Ethereum!"
+		"48656c6c6f2c20457468657265756d2100000000000000000000000000000000", // encoding of "Hello, Ethereum!"
+	)
+	assert.NoError(t, err)
+
+	cv, err := f.Outputs.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+
+	bignumber, _ := big.NewInt(0).SetString("30000000000000000000", 10)
+	assert.Equal(t, big.NewInt(1545304298), cv.Children[0].Children[0].Value)
+	assert.Equal(t, big.NewInt(6), cv.Children[0].Children[1].Value)
+	assert.Equal(t, bignumber, cv.Children[0].Children[2].Value)
+	address, _ := cv.Children[1].JSON()
+	assert.Equal(t, "\"ab1257528b3782fb40d7ed5f72e624b744dffb2f\"", string(address))
+	assert.Equal(t, "Ethereum", cv.Children[2].Children[0].Value)
+	assert.Equal(t, "Hello, Ethereum!", cv.Children[2].Children[1].Value)
+	boolean, _ := cv.Children[3].JSON()
+	assert.Equal(t, "false", string(boolean))
+}
+
+func TestExampleABIDecode7(t *testing.T) {
+
+	// a tuple of dynamic types (which is the same as a fixed-length array of the dynamic types)
+	f := &Entry{
+		Name: "g",
+		Outputs: ParameterArray{
+			{
+				Type: "tuple",
+				Components: ParameterArray{
+					{Type: "string"},
+					{Type: "string"},
+				},
+			},
+		},
+	}
+
+	d, _ := hex.DecodeString("" +
+		// head
+		"0000000000000000000000000000000000000000000000000000000000000020" + // offset of ["c", "d"]
+		"0000000000000000000000000000000000000000000000000000000000000040" + // offset of "c"
+		"0000000000000000000000000000000000000000000000000000000000000080" + // offset of "d"
+		"0000000000000000000000000000000000000000000000000000000000000001" + // count of "c"
+		"6300000000000000000000000000000000000000000000000000000000000000" + // encoding of "c"
+		"0000000000000000000000000000000000000000000000000000000000000001" + // count of "d"
+		"6400000000000000000000000000000000000000000000000000000000000000", // encoding of "d"
+	)
+
+	cv, err := f.Outputs.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "c", cv.Children[0].Children[0].Value)
+	assert.Equal(t, "d", cv.Children[0].Children[1].Value)
+}
+
+func TestExampleABIDecode8(t *testing.T) {
+
+	// a fixed-length array of dynamic types
+	f := &Entry{
+		Name: "g",
+		Outputs: ParameterArray{
+			{Type: "string[2]"},
+		},
+	}
+
+	d, _ := hex.DecodeString("" +
+		// head
+		"0000000000000000000000000000000000000000000000000000000000000020" + // offset of ["c", "d"]
+		"0000000000000000000000000000000000000000000000000000000000000040" + // offset of "c"
+		"0000000000000000000000000000000000000000000000000000000000000080" + // offset of "d"
+		"0000000000000000000000000000000000000000000000000000000000000001" + // count of "c"
+		"6300000000000000000000000000000000000000000000000000000000000000" + // encoding of "c"
+		"0000000000000000000000000000000000000000000000000000000000000001" + // count of "d"
+		"6400000000000000000000000000000000000000000000000000000000000000", // encoding of "d"
+	)
+
+	cv, err := f.Outputs.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "c", cv.Children[0].Children[0].Value)
+	assert.Equal(t, "d", cv.Children[0].Children[1].Value)
+}
+
 func TestDecodeABISignedIntOk(t *testing.T) {
 
 	p := &ParameterArray{
