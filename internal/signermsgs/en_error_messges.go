@@ -58,7 +58,7 @@ var (
 	MsgTupleABINotArrayOrMap       = ffe("FF22038", "Input type %T is not array or map for component %s")
 	MsgTupleInABINoName            = ffe("FF22039", "Tuple child %d does not have a name for component %s")
 	MsgMissingInputKeyABITuple     = ffe("FF22040", "Input map missing key '%s' required for tuple component %s")
-	MsgBadABITypeComponent         = ffe("FF22041", "Bad ABI type component: %s")
+	MsgBadABITypeComponent         = ffe("FF22041", "Bad ABI type component: %d")
 	MsgWrongTypeComponentABIEncode = ffe("FF22042", "Incorrect type expected=%s found=%T for ABI encoding of component %s")
 	MsgInsufficientDataABIEncode   = ffe("FF22043", "Insufficient data elements on input expected=%d found=%d for ABI encoding of component %s")
 	MsgNumberTooLargeABIEncode     = ffe("FF22044", "Numeric value does not fit in bit length %d for ABI encoding of component %s")

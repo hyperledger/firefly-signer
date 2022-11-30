@@ -26,18 +26,23 @@ import (
 )
 
 // walkTupleABIBytes is the main entry point to the logic, decoding a list of parameters at a position
+func walkTupleABIBytes(ctx context.Context, block []byte, offset int, component *typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
+	return walkDynamicChildArrayABIBytes(ctx, "tup", "", block, offset, offset, component, component.tupleChildren)
+}
+
+// decodeABIElement is called for each entry in a tuple, or array, to process the head bytes,
+// and any offset data bytes for that entry. The number of head bytes consumed is returned.
+//
+// Note that this is used for tuples embedded within a parent array or tuple, as that will be
+// a variable structure pointed to from the header. But for the root tuples, the walkTupleABIBytes entry
+// point is used that will kick off the recursive process directly from a given offset.
 //
 // - headStart is the absolute location in the byte array of the beginning of the current header, that all offsets will be relative to
 // - headPosition is the absolute location of where we are reading the header from for this element
 //
 // So for example headStart=4,headPosition=4 would mean we are reading from the beginning of the primary header, after
 // the 4 byte function selector in a function call parameter.
-func walkTupleABIBytes(ctx context.Context, block []byte, offset int, component *typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
-	return walkDynamicLenArrayABIBytes(ctx, "tup", "", block, offset, offset, component, component.tupleChildren)
-}
-
-// decodeABIElement is called for each entry in a tuple, or array, to process the head bytes,
-// and any offset data bytes for that entry. The number of head bytes consumed is returned.
+//
 func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, headStart, headPosition int, component *typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
 
 	switch component.cType {
@@ -68,7 +73,7 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 			for i := 0; i < component.arrayLength; i++ {
 				children[i] = component.arrayChild
 			}
-			_, cv, err = walkDynamicLenArrayABIBytes(ctx, "fix", breadcrumbs, block, headStart, headPosition, component, children)
+			_, cv, err = walkDynamicChildArrayABIBytes(ctx, "fix", breadcrumbs, block, headStart, headPosition, component, children)
 			return 32, cv, err // consumes 32 bytes from head
 		}
 		// If the fixed array, contains only fixed types - decode the fixed array at that position
@@ -90,7 +95,7 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 		}
 		headStart += headOffset
 		headPosition = headStart
-		return walkDynamicLenArrayABIBytes(ctx, "tup", breadcrumbs, block, headOffset, headPosition, component, component.tupleChildren)
+		return walkDynamicChildArrayABIBytes(ctx, "tup", breadcrumbs, block, headOffset, headPosition, component, component.tupleChildren)
 	default:
 		return -1, nil, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, component.cType)
 	}
@@ -211,12 +216,11 @@ func decodeABIFixedArrayBytes(ctx context.Context, breadcrumbs string, block []b
 	return headBytesRead, cv, err
 }
 
+// isDynamicType does a recursive check of a type sub-tree, to see if it is dynamic according to
+// the rules in the ABI specification.
 func isDynamicType(ctx context.Context, tc *typeComponent) (bool, error) {
 	switch tc.cType {
 	case TupleComponent:
-		if len(tc.tupleChildren) == 0 {
-			return false, nil
-		}
 		for _, childType := range tc.tupleChildren {
 			childDynamic, err := isDynamicType(ctx, childType)
 			if err != nil {
@@ -235,6 +239,7 @@ func isDynamicType(ctx context.Context, tc *typeComponent) (bool, error) {
 	case DynamicArrayComponent:
 		return true, nil
 	case ElementaryComponent:
+		// The dynamic() function is because "bytes32" is fixed, but "bytes" is variable.
 		return tc.elementaryType.dynamic(tc), nil
 	default:
 		return false, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, tc.cType)
@@ -265,7 +270,7 @@ func decodeABIDynamicArrayBytes(ctx context.Context, breadcrumbs string, block [
 
 }
 
-func walkDynamicLenArrayABIBytes(ctx context.Context, desc, breadcrumbs string, block []byte, headStart, headPosition int, parent *typeComponent, children []*typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
+func walkDynamicChildArrayABIBytes(ctx context.Context, desc, breadcrumbs string, block []byte, headStart, headPosition int, parent *typeComponent, children []*typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
 	cv = &ComponentValue{
 		Component: parent,
 		Children:  make([]*ComponentValue, len(children)),

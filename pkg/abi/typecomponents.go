@@ -150,6 +150,8 @@ const (
 // We treat it separately.
 const tupleTypeString = "tuple"
 
+var alwaysFixed = func(tc *typeComponent) bool { return false }
+
 var (
 	ElementaryTypeInt = registerElementaryType(elementaryTypeInfo{
 		name:             "int",
@@ -159,7 +161,7 @@ var (
 		mMax:             256,
 		mMod:             8,
 		fixed32:          true,
-		dynamic:          func(tc *typeComponent) bool { return false },
+		dynamic:          alwaysFixed,
 		jsonEncodingType: JSONEncodingTypeInteger,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
@@ -175,7 +177,7 @@ var (
 		mMax:             256,
 		mMod:             8,
 		fixed32:          true,
-		dynamic:          func(tc *typeComponent) bool { return false },
+		dynamic:          alwaysFixed,
 		jsonEncodingType: JSONEncodingTypeInteger,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
@@ -188,7 +190,7 @@ var (
 		suffixType: suffixTypeNone,
 		defaultM:   160, // encoded as "uint160"
 		fixed32:    true,
-		dynamic:    func(tc *typeComponent) bool { return false },
+		dynamic:    alwaysFixed,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getUintBytesFromInterface(ctx, desc, input)
 		},
@@ -201,7 +203,7 @@ var (
 		suffixType: suffixTypeNone,
 		defaultM:   8, // encoded as "uint8"
 		fixed32:    true,
-		dynamic:    func(tc *typeComponent) bool { return false },
+		dynamic:    alwaysFixed,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBoolAsUnsignedIntegerFromInterface(ctx, desc, input)
 		},
@@ -219,7 +221,7 @@ var (
 		nMin:             1,
 		nMax:             80,
 		fixed32:          true,
-		dynamic:          func(tc *typeComponent) bool { return false },
+		dynamic:          alwaysFixed,
 		jsonEncodingType: JSONEncodingTypeFloat,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
@@ -237,7 +239,7 @@ var (
 		nMin:             1,
 		nMax:             80,
 		fixed32:          true,
-		dynamic:          func(tc *typeComponent) bool { return false },
+		dynamic:          alwaysFixed,
 		jsonEncodingType: JSONEncodingTypeFloat,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
@@ -264,7 +266,7 @@ var (
 		suffixType: suffixTypeNone,
 		defaultM:   24, // encoded as "bytes24"
 		fixed32:    true,
-		dynamic:    func(tc *typeComponent) bool { return false },
+		dynamic:    alwaysFixed,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},

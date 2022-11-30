@@ -216,11 +216,7 @@ func TestExampleABIDecode6(t *testing.T) {
 		false,
 	}
 
-	tct, err := params.TypeComponentTree()
-	assert.NoError(t, err)
-	parsedData, err := tct.ParseExternal(values)
-	assert.NoError(t, err)
-	enc, err := parsedData.EncodeABIData()
+	enc, err := params.EncodeABIDataValues(values)
 	assert.NoError(t, err)
 
 	assert.Equal(t,
@@ -606,4 +602,128 @@ func TestDecodeCallDataSigGenerationFailed(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = f.DecodeCallData(d)
 	assert.Regexp(t, "FF22025", err)
+}
+
+func TestIsDynamicType(t *testing.T) {
+	p := &ParameterArray{
+		{Type: "int"},
+		{Type: "int[]"},
+		{Type: "string[0]"},
+		{Type: "string[1]"},
+		{Type: "tuple", Components: ParameterArray{}},
+		{Type: "tuple", Components: ParameterArray{
+			{Type: "int"},
+			{Type: "bytes3"},
+		}},
+		{Type: "tuple", Components: ParameterArray{
+			{Type: "int"},
+			{Type: "string"},
+		}},
+		{Type: "tuple", Components: ParameterArray{
+			{Type: "int"},
+			{Type: "int[]"},
+		}},
+	}
+	tc, err := p.TypeComponentTree()
+	assert.NoError(t, err)
+	ctx := context.Background()
+
+	// Bad type
+	_, err = isDynamicType(ctx, &typeComponent{cType: 99})
+	assert.Regexp(t, "FF22041", err)
+
+	// Fixed type
+	dt, err := isDynamicType(ctx, tc.(*typeComponent).tupleChildren[0])
+	assert.NoError(t, err)
+	assert.False(t, dt)
+
+	// Dynamic array of fixed type
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[1])
+	assert.NoError(t, err)
+	assert.True(t, dt)
+
+	// Zero length fixed array of dynamic length type
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[2])
+	assert.NoError(t, err)
+	assert.False(t, dt)
+
+	// Non-zero length fixed array of dynamic length type
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[3])
+	assert.NoError(t, err)
+	assert.True(t, dt)
+
+	// Zero length tuple
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[4])
+	assert.NoError(t, err)
+	assert.False(t, dt)
+
+	// Non-zero length tuple with fixed types
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[5])
+	assert.NoError(t, err)
+	assert.False(t, dt)
+
+	// Non-zero length tuple with simple dynamic types
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[6])
+	assert.NoError(t, err)
+	assert.True(t, dt)
+
+	// Non-zero length tuple with simple dynamic array type
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[7])
+	assert.NoError(t, err)
+	assert.True(t, dt)
+}
+
+func TestIsDynamicTypeBadNestedTupleType(t *testing.T) {
+	_, err := isDynamicType(context.Background(), &typeComponent{
+		cType: TupleComponent,
+		tupleChildren: []*typeComponent{
+			{cType: 99},
+		},
+	})
+	assert.Regexp(t, "FF22041", err)
+}
+
+func TestDecodeABIElementBadDynamicTypeFixedArray(t *testing.T) {
+
+	block, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020")
+	assert.NoError(t, err)
+
+	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, &typeComponent{
+		cType:       FixedArrayComponent,
+		arrayLength: 1,
+		arrayChild:  &typeComponent{cType: 99},
+	})
+	assert.Regexp(t, "FF22041", err)
+}
+
+func TestDecodeABIElementInsufficientDataFixedArrayDynamicType(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "string[1]"},
+	}
+	tc, err := p.TypeComponentTree()
+	assert.NoError(t, err)
+
+	block, err := hex.DecodeString("00")
+	assert.NoError(t, err)
+
+	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, tc.(*typeComponent).tupleChildren[0])
+	assert.Regexp(t, "FF22045", err)
+}
+
+func TestDecodeABIElementInsufficientDataTuple(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "tuple", Components: ParameterArray{
+			{Type: "string"},
+		}},
+	}
+	tc, err := p.TypeComponentTree()
+	assert.NoError(t, err)
+
+	block, err := hex.DecodeString("00")
+	assert.NoError(t, err)
+
+	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, tc.(*typeComponent).tupleChildren[0])
+	assert.Regexp(t, "FF22045", err)
 }
