@@ -72,17 +72,18 @@ type typeComponent struct {
 // elementaryTypeInfo defines the string parsing rules, as well as a pointer to the functions for
 // serialization to a set of bytes, and back again
 type elementaryTypeInfo struct {
-	name             string           // The name of the type - the alphabetic characters up to an optional suffix
-	suffixType       suffixType       // Whether there is a length suffix, and its type
-	defaultSuffix    string           // If set and there is no suffix supplied, the following suffix is used
-	defaultM         uint16           // If the type implicitly has an M value that is not expressed (such as "function")
-	mMin             uint16           // For suffixes with an M dimension, this is the minimum value
-	mMax             uint16           // For suffixes with an M dimension, this is the maximum (inclusive) value
-	mMod             uint16           // If non-zero, then (M % MMod) == 0 must be true
-	nMin             uint16           // For suffixes with an N dimension, this is the minimum value
-	nMax             uint16           // For suffixes with an N dimension, this is the maximum (inclusive) value
-	fixed32          bool             // True if the is at most 32 bytes in length, so directly fits into an event topic
-	jsonEncodingType JSONEncodingType // categorizes how the type can be read/written from input JSON data
+	name             string                      // The name of the type - the alphabetic characters up to an optional suffix
+	suffixType       suffixType                  // Whether there is a length suffix, and its type
+	defaultSuffix    string                      // If set and there is no suffix supplied, the following suffix is used
+	defaultM         uint16                      // If the type implicitly has an M value that is not expressed (such as "function")
+	mMin             uint16                      // For suffixes with an M dimension, this is the minimum value
+	mMax             uint16                      // For suffixes with an M dimension, this is the maximum (inclusive) value
+	mMod             uint16                      // If non-zero, then (M % MMod) == 0 must be true
+	nMin             uint16                      // For suffixes with an N dimension, this is the minimum value
+	nMax             uint16                      // For suffixes with an N dimension, this is the maximum (inclusive) value
+	fixed32          bool                        // True if the is at most 32 bytes in length, so directly fits into an event topic
+	dynamic          func(c *typeComponent) bool // True if the type is dynamic length
+	jsonEncodingType JSONEncodingType            // categorizes how the type can be read/written from input JSON data
 	readExternalData func(ctx context.Context, desc string, input interface{}) (interface{}, error)
 	encodeABIData    func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error)
 	decodeABIData    func(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error)
@@ -149,6 +150,8 @@ const (
 // We treat it separately.
 const tupleTypeString = "tuple"
 
+var alwaysFixed = func(tc *typeComponent) bool { return false }
+
 var (
 	ElementaryTypeInt = registerElementaryType(elementaryTypeInfo{
 		name:             "int",
@@ -158,6 +161,7 @@ var (
 		mMax:             256,
 		mMod:             8,
 		fixed32:          true,
+		dynamic:          alwaysFixed,
 		jsonEncodingType: JSONEncodingTypeInteger,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
@@ -173,6 +177,7 @@ var (
 		mMax:             256,
 		mMod:             8,
 		fixed32:          true,
+		dynamic:          alwaysFixed,
 		jsonEncodingType: JSONEncodingTypeInteger,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getIntegerFromInterface(ctx, desc, input)
@@ -185,6 +190,7 @@ var (
 		suffixType: suffixTypeNone,
 		defaultM:   160, // encoded as "uint160"
 		fixed32:    true,
+		dynamic:    alwaysFixed,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getUintBytesFromInterface(ctx, desc, input)
 		},
@@ -197,6 +203,7 @@ var (
 		suffixType: suffixTypeNone,
 		defaultM:   8, // encoded as "uint8"
 		fixed32:    true,
+		dynamic:    alwaysFixed,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBoolAsUnsignedIntegerFromInterface(ctx, desc, input)
 		},
@@ -214,6 +221,7 @@ var (
 		nMin:             1,
 		nMax:             80,
 		fixed32:          true,
+		dynamic:          alwaysFixed,
 		jsonEncodingType: JSONEncodingTypeFloat,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
@@ -231,6 +239,7 @@ var (
 		nMin:             1,
 		nMax:             80,
 		fixed32:          true,
+		dynamic:          alwaysFixed,
 		jsonEncodingType: JSONEncodingTypeFloat,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getFloatFromInterface(ctx, desc, input)
@@ -244,6 +253,7 @@ var (
 		mMin:       1,
 		mMax:       32,
 		fixed32:    false,
+		dynamic:    func(tc *typeComponent) bool { return tc.elementarySuffix == "" },
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
@@ -256,6 +266,7 @@ var (
 		suffixType: suffixTypeNone,
 		defaultM:   24, // encoded as "bytes24"
 		fixed32:    true,
+		dynamic:    alwaysFixed,
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getBytesFromInterface(ctx, desc, input)
 		},
@@ -267,6 +278,7 @@ var (
 		name:       "string",
 		suffixType: suffixTypeNone,
 		fixed32:    false,
+		dynamic:    func(tc *typeComponent) bool { return true },
 		readExternalData: func(ctx context.Context, desc string, input interface{}) (interface{}, error) {
 			return getStringFromInterface(ctx, desc, input)
 		},
@@ -355,7 +367,10 @@ func (tc *typeComponent) DecodeABIData(b []byte, offset int) (*ComponentValue, e
 }
 
 func (tc *typeComponent) DecodeABIDataCtx(ctx context.Context, b []byte, offset int) (*ComponentValue, error) {
-	_, cv, err := decodeABIElement(ctx, "", b, offset, offset, tc)
+	if tc.cType != TupleComponent {
+		return nil, i18n.NewError(ctx, signermsgs.MsgDecodeNotTuple, tc.cType)
+	}
+	_, cv, err := walkTupleABIBytes(ctx, b, offset, tc)
 	return cv, err
 }
 

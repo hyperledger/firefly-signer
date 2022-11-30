@@ -84,17 +84,17 @@ func TestExampleABIDecode3(t *testing.T) {
 
 	d, err := hex.DecodeString("a5643bf2" +
 		// head
-		"0000000000000000000000000000000000000000000000000000000000000060" + // location of data for 1st param
-		"0000000000000000000000000000000000000000000000000000000000000001" + // boolean true
-		"00000000000000000000000000000000000000000000000000000000000000a0" + // location of data for 3rd param
+		"0000000000000000000000000000000000000000000000000000000000000060" + //   0: location of data for 1st param
+		"0000000000000000000000000000000000000000000000000000000000000001" + //  32: boolean true
+		"00000000000000000000000000000000000000000000000000000000000000a0" + //  64: location of data for 3rd param
 		// 1st param (dynamic)
-		"0000000000000000000000000000000000000000000000000000000000000004" + // length in bytes
-		"6461766500000000000000000000000000000000000000000000000000000000" + // "dave" padded right
+		"0000000000000000000000000000000000000000000000000000000000000004" + //  96: length in bytes
+		"6461766500000000000000000000000000000000000000000000000000000000" + // 128: "dave" padded right
 		// 3rd param (dynamic)
-		"0000000000000000000000000000000000000000000000000000000000000003" + // length of array
-		"0000000000000000000000000000000000000000000000000000000000000001" + // first value
-		"0000000000000000000000000000000000000000000000000000000000000002" + // second value
-		"0000000000000000000000000000000000000000000000000000000000000003", // third value
+		"0000000000000000000000000000000000000000000000000000000000000003" + // 160: length of array
+		"0000000000000000000000000000000000000000000000000000000000000001" + // 192: 1first value
+		"0000000000000000000000000000000000000000000000000000000000000002" + // 224: second value
+		"0000000000000000000000000000000000000000000000000000000000000003", //  256: third value
 	)
 	assert.NoError(t, err)
 
@@ -201,38 +201,42 @@ func TestExampleABIDecode5(t *testing.T) {
 
 func TestExampleABIDecode6(t *testing.T) {
 
-	// a mix of fixed-length static types, fixed-length of dynamic types and elementary types
-	f := &Entry{
-		Name: "g",
-		Outputs: ParameterArray{
-			{Type: "uint256[3]"},
-			{Type: "address"},
-			{Type: "string[2]"},
-			{Type: "bool"},
-		},
+	params := &ParameterArray{
+		{Type: "uint256[3]"},
+		{Type: "address"},
+		{Type: "string[2]"},
+		{Type: "bool"},
 	}
 
-	d, err := hex.DecodeString("" +
-		// head
-		"000000000000000000000000000000000000000000000000000000005c1b78ea" + // encoding of 1545304298
-		"0000000000000000000000000000000000000000000000000000000000000006" + // encoding of 6
-		"000000000000000000000000000000000000000000000001a055690d9db80000" + // encoding of 30000000000000000000
-		"000000000000000000000000ab1257528b3782fb40d7ed5f72e624b744dffb2f" + // encoding of address 0xab1257528b3782fb40d7ed5f72e624b744dffb2f
-		"00000000000000000000000000000000000000000000000000000000000000c0" + // offset of ["Ethereum", "Hello, Ethereum!"]
-		"0000000000000000000000000000000000000000000000000000000000000000" + // encoding of boolean: false
-		"0000000000000000000000000000000000000000000000000000000000000040" + // offset of "Ethereum"
-		"0000000000000000000000000000000000000000000000000000000000000080" + // offset of "Hello, Ethereum!"
-		"0000000000000000000000000000000000000000000000000000000000000008" + // count of "Ethereum"
-		"457468657265756d000000000000000000000000000000000000000000000000" + // encoding of "Ethereum"
-		"0000000000000000000000000000000000000000000000000000000000000010" + // count of "Hello, Ethereum!"
-		"48656c6c6f2c20457468657265756d2100000000000000000000000000000000", // encoding of "Hello, Ethereum!"
-	)
-	assert.NoError(t, err)
-
-	cv, err := f.Outputs.DecodeABIData(d, 0)
-	assert.NoError(t, err)
-
 	bignumber, _ := big.NewInt(0).SetString("30000000000000000000", 10)
+	values := []interface{}{
+		[]*big.Int{big.NewInt(1545304298), big.NewInt(6), bignumber},
+		"ab1257528b3782fb40d7ed5f72e624b744dffb2f",
+		[]string{"Ethereum", "Hello, Ethereum!"},
+		false,
+	}
+
+	enc, err := params.EncodeABIDataValues(values)
+	assert.NoError(t, err)
+
+	assert.Equal(t,
+		"000000000000000000000000000000000000000000000000000000005c1b78ea"+ //       0: 1545304298           inline in head
+			"0000000000000000000000000000000000000000000000000000000000000006"+ //  32: 6                    inline in head
+			"000000000000000000000000000000000000000000000001a055690d9db80000"+ //  64: 30000000000000000000 inline in head
+			"000000000000000000000000ab1257528b3782fb40d7ed5f72e624b744dffb2f"+ //  96: address              inline in head
+			"00000000000000000000000000000000000000000000000000000000000000c0"+ // 128: offset of string[2] = 192
+			"0000000000000000000000000000000000000000000000000000000000000000"+ // 160: bool - false         inline in head
+			"0000000000000000000000000000000000000000000000000000000000000040"+ // 192: offset of first string = 64 (+192 = 256)
+			"0000000000000000000000000000000000000000000000000000000000000080"+ // 224: offset of second string = 128 (+192 = 320)
+			"0000000000000000000000000000000000000000000000000000000000000008"+ // 256: string length = 8
+			"457468657265756d000000000000000000000000000000000000000000000000"+ // 288: "Ethereum"
+			"0000000000000000000000000000000000000000000000000000000000000010"+ // 320: string length = 16
+			"48656c6c6f2c20457468657265756d2100000000000000000000000000000000", // 352: "Hello, Ethereum!"
+		hex.EncodeToString(enc))
+
+	cv, err := params.DecodeABIData(enc, 0)
+	assert.NoError(t, err)
+
 	assert.Equal(t, big.NewInt(1545304298), cv.Children[0].Children[0].Value)
 	assert.Equal(t, big.NewInt(6), cv.Children[0].Children[1].Value)
 	assert.Equal(t, bignumber, cv.Children[0].Children[2].Value)
@@ -598,4 +602,128 @@ func TestDecodeCallDataSigGenerationFailed(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = f.DecodeCallData(d)
 	assert.Regexp(t, "FF22025", err)
+}
+
+func TestIsDynamicType(t *testing.T) {
+	p := &ParameterArray{
+		{Type: "int"},
+		{Type: "int[]"},
+		{Type: "string[0]"},
+		{Type: "string[1]"},
+		{Type: "tuple", Components: ParameterArray{}},
+		{Type: "tuple", Components: ParameterArray{
+			{Type: "int"},
+			{Type: "bytes3"},
+		}},
+		{Type: "tuple", Components: ParameterArray{
+			{Type: "int"},
+			{Type: "string"},
+		}},
+		{Type: "tuple", Components: ParameterArray{
+			{Type: "int"},
+			{Type: "int[]"},
+		}},
+	}
+	tc, err := p.TypeComponentTree()
+	assert.NoError(t, err)
+	ctx := context.Background()
+
+	// Bad type
+	_, err = isDynamicType(ctx, &typeComponent{cType: 99})
+	assert.Regexp(t, "FF22041", err)
+
+	// Fixed type
+	dt, err := isDynamicType(ctx, tc.(*typeComponent).tupleChildren[0])
+	assert.NoError(t, err)
+	assert.False(t, dt)
+
+	// Dynamic array of fixed type
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[1])
+	assert.NoError(t, err)
+	assert.True(t, dt)
+
+	// Zero length fixed array of dynamic length type
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[2])
+	assert.NoError(t, err)
+	assert.False(t, dt)
+
+	// Non-zero length fixed array of dynamic length type
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[3])
+	assert.NoError(t, err)
+	assert.True(t, dt)
+
+	// Zero length tuple
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[4])
+	assert.NoError(t, err)
+	assert.False(t, dt)
+
+	// Non-zero length tuple with fixed types
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[5])
+	assert.NoError(t, err)
+	assert.False(t, dt)
+
+	// Non-zero length tuple with simple dynamic types
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[6])
+	assert.NoError(t, err)
+	assert.True(t, dt)
+
+	// Non-zero length tuple with simple dynamic array type
+	dt, err = isDynamicType(ctx, tc.(*typeComponent).tupleChildren[7])
+	assert.NoError(t, err)
+	assert.True(t, dt)
+}
+
+func TestIsDynamicTypeBadNestedTupleType(t *testing.T) {
+	_, err := isDynamicType(context.Background(), &typeComponent{
+		cType: TupleComponent,
+		tupleChildren: []*typeComponent{
+			{cType: 99},
+		},
+	})
+	assert.Regexp(t, "FF22041", err)
+}
+
+func TestDecodeABIElementBadDynamicTypeFixedArray(t *testing.T) {
+
+	block, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020")
+	assert.NoError(t, err)
+
+	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, &typeComponent{
+		cType:       FixedArrayComponent,
+		arrayLength: 1,
+		arrayChild:  &typeComponent{cType: 99},
+	})
+	assert.Regexp(t, "FF22041", err)
+}
+
+func TestDecodeABIElementInsufficientDataFixedArrayDynamicType(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "string[1]"},
+	}
+	tc, err := p.TypeComponentTree()
+	assert.NoError(t, err)
+
+	block, err := hex.DecodeString("00")
+	assert.NoError(t, err)
+
+	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, tc.(*typeComponent).tupleChildren[0])
+	assert.Regexp(t, "FF22045", err)
+}
+
+func TestDecodeABIElementInsufficientDataTuple(t *testing.T) {
+
+	p := &ParameterArray{
+		{Type: "tuple", Components: ParameterArray{
+			{Type: "string"},
+		}},
+	}
+	tc, err := p.TypeComponentTree()
+	assert.NoError(t, err)
+
+	block, err := hex.DecodeString("00")
+	assert.NoError(t, err)
+
+	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, tc.(*typeComponent).tupleChildren[0])
+	assert.Regexp(t, "FF22045", err)
 }

@@ -157,6 +157,20 @@ const sampleABI3 = `[
 	}
   ]`
 
+const sampleABI4 = `[
+	{
+		"name": "simple",
+		"type": "function",
+		"inputs": [
+		  {
+			  "name": "a",
+			  "type": "string"
+		  }
+		],
+		"outputs": []
+	}
+  ]`
+
 func testABI(t *testing.T, abiJSON string) (abi ABI) {
 	err := json.Unmarshal([]byte(abiJSON), &abi)
 	assert.NoError(t, err)
@@ -237,6 +251,36 @@ func TestDocsFunctionCallExample(t *testing.T) {
 	assert.Equal(t, `{"amount":"1000000000000000000","recipient":"03706ff580119b130e7d26c5e816913123c24d89"}`, string(jsonData))
 	assert.Equal(t, `["0x03706ff580119b130e7d26c5e816913123c24d89","0xde0b6b3a7640000"]`, string(jsonData2))
 	assert.Equal(t, "0xa9059cbb2ab09eb219583f4a59a5d0623ade346d962bcd4e46b11da047c9049b", sigHash.String())
+}
+
+func TestTLdr(t *testing.T) {
+
+	sampleABI, _ := ParseABI([]byte(`[
+		{
+			"name": "transfer",
+			"inputs": [
+				{"name": "recipient", "internalType": "address", "type": "address" },
+				{"name": "amount", "internalType": "uint256", "type": "uint256"}
+			],
+			"outputs": [{"internalType": "bool", "type": "bool"}],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		}
+	]`))
+	transferABIFn := sampleABI.Functions()["transfer"]
+	sampleABICallBytes, _ := transferABIFn.EncodeCallDataJSON([]byte(
+		`{"recipient":"0x4a0d852ebb58fc88cb260bb270ae240f72edc45b","amount":"100000000000000000"}`,
+	))
+	fmt.Printf("ABI Call Bytes: %s\n", hex.EncodeToString(sampleABICallBytes))
+	values, _ := transferABIFn.DecodeCallData(sampleABICallBytes)
+	outputJSON, _ := NewSerializer().
+		SetFormattingMode(FormatAsObjects).
+		SetByteSerializer(HexByteSerializer0xPrefix).
+		SerializeJSON(values)
+	fmt.Printf("Back to JSON:   %s\n", outputJSON)
+
+	assert.JSONEq(t, `{"recipient":"0x4a0d852ebb58fc88cb260bb270ae240f72edc45b","amount":"100000000000000000"}`, string(outputJSON))
+
 }
 
 func TestABIGetTupleTypeTree(t *testing.T) {
@@ -744,4 +788,52 @@ func TestGetConstructor(t *testing.T) {
 	c = a.Constructor()
 	assert.Equal(t, Constructor, c.Type)
 	assert.Equal(t, 1, len(c.Inputs))
+}
+
+func TestEncodeABIDataJSONHelper(t *testing.T) {
+
+	a, _ := ParseABI([]byte(sampleABI4))
+	_, err := a[0].Inputs.EncodeABIDataJSON([]byte(`[]`))
+	assert.Regexp(t, "FF22037", err)
+
+	b, err := a[0].Inputs.EncodeABIDataJSON([]byte(`["test"]`))
+	assert.NoError(t, err)
+	assert.Equal(t, "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000047465737400000000000000000000000000000000000000000000000000000000", hex.EncodeToString(b))
+
+}
+
+func TestEncodeABIDataValuesHelper(t *testing.T) {
+
+	a, _ := ParseABI([]byte(sampleABI4))
+	_, err := a[0].Inputs.EncodeABIDataValues([]string{})
+	assert.Regexp(t, "FF22037", err)
+
+	b, err := a[0].Inputs.EncodeABIDataValues([]string{"test"})
+	assert.NoError(t, err)
+	assert.Equal(t, "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000047465737400000000000000000000000000000000000000000000000000000000", hex.EncodeToString(b))
+
+}
+
+func TestEncodeCallDataJSONHelper(t *testing.T) {
+
+	a, _ := ParseABI([]byte(sampleABI4))
+	_, err := a[0].EncodeCallDataJSON([]byte(`[]`))
+	assert.Regexp(t, "FF22037", err)
+
+	b, err := a[0].EncodeCallDataJSON([]byte(`["test"]`))
+	assert.NoError(t, err)
+	assert.Equal(t, "113bc475000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000047465737400000000000000000000000000000000000000000000000000000000", hex.EncodeToString(b))
+
+}
+
+func TestEncodeCallDataValuesHelper(t *testing.T) {
+
+	a, _ := ParseABI([]byte(sampleABI4))
+	_, err := a[0].EncodeCallDataValues([]string{})
+	assert.Regexp(t, "FF22037", err)
+
+	b, err := a[0].EncodeCallDataValues([]string{"test"})
+	assert.NoError(t, err)
+	assert.Equal(t, "113bc475000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000047465737400000000000000000000000000000000000000000000000000000000", hex.EncodeToString(b))
+
 }
