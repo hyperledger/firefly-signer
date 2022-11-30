@@ -16,6 +16,32 @@
 
 /*
 
+Tl;dr
+
+	sampleABI, _ := ParseABI([]byte(`[
+		{
+			"name": "transfer",
+			"inputs": [
+				{"name": "recipient", "internalType": "address", "type": "address" },
+				{"name": "amount", "internalType": "uint256", "type": "uint256"}
+			],
+			"outputs": [{"internalType": "bool", "type": "bool"}],
+			"stateMutability": "nonpayable",
+			"type": "function"
+		}
+	]`))
+	transferABIFn := sampleABI.Functions()["transfer"]
+	sampleABICallBytes, _ := transferABIFn.EncodeCallDataJSON([]byte(
+		`{"recipient":"0x4a0d852ebb58fc88cb260bb270ae240f72edc45b","amount":"100000000000000000"}`,
+	))
+	fmt.Printf("ABI Call Bytes: %s\n", hex.EncodeToString(sampleABICallBytes))
+	values, _ := transferABIFn.DecodeCallData(sampleABICallBytes)
+	outputJSON, _ := NewSerializer().
+		SetFormattingMode(FormatAsObjects).
+		SetByteSerializer(HexByteSerializer0xPrefix).
+		SerializeJSON(values)
+	fmt.Printf("Back to JSON:  %s\n", outputJSON)
+
 The abi package allows encoding and decoding of ABI encoded bytes, for the inputs/outputs
 to EVM functions, and the parsing of EVM logs/events.
 
@@ -227,6 +253,11 @@ func (e *Entry) IsFunction() bool {
 	}
 }
 
+func ParseABI(data []byte) (ABI, error) {
+	var abi ABI
+	return abi, json.Unmarshal(data, &abi)
+}
+
 // Validate processes all the components of all the entries in this ABI, to build a parsing tree
 func (a ABI) Validate() (err error) {
 	return a.ValidateCtx(context.Background())
@@ -352,8 +383,36 @@ func (pa ParameterArray) DecodeABIDataCtx(ctx context.Context, b []byte, offset 
 	if err != nil {
 		return nil, err
 	}
-	_, cv, err = decodeABIElement(ctx, "", b, offset, offset, component.(*typeComponent))
+	_, cv, err = walkTupleABIBytes(ctx, b, offset, component.(*typeComponent))
 	return cv, err
+}
+
+// EncodeABIData is a helper to go all the way from JSON data to encoded ABI bytes
+func (pa ParameterArray) EncodeABIDataJSON(jsonData []byte) ([]byte, error) {
+	return pa.EncodeABIDataJSONCtx(context.Background(), jsonData)
+}
+
+// EncodeABIData is a helper to go all the way from JSON data to encoded ABI bytes
+func (pa ParameterArray) EncodeABIDataJSONCtx(ctx context.Context, jsonData []byte) ([]byte, error) {
+	cv, err := pa.ParseJSONCtx(ctx, jsonData)
+	if err != nil {
+		return nil, err
+	}
+	return cv.EncodeABIDataCtx(ctx)
+}
+
+// EncodeABIData goes all the way from interface inputs, to encoded ABI bytes
+// The TypeComponentTree is created and discarded within the function
+func (pa ParameterArray) EncodeABIDataValues(v interface{}) ([]byte, error) {
+	return pa.EncodeABIDataValuesCtx(context.Background(), v)
+}
+
+func (pa ParameterArray) EncodeABIDataValuesCtx(ctx context.Context, v interface{}) ([]byte, error) {
+	cv, err := pa.ParseExternalDataCtx(ctx, v)
+	if err != nil {
+		return nil, err
+	}
+	return cv.EncodeABIDataCtx(ctx)
 }
 
 // String returns the signature string. If a Validate needs to be initiated, and that
@@ -394,6 +453,32 @@ func (e *Entry) FunctionSelectorBytes() ethtypes.HexBytes0xPrefix {
 		return []byte{0, 0, 0, 0}
 	}
 	return id
+}
+
+// EncodeCallDataValues is a helper to go straight from an JSON input, to binary encoded call data
+func (e *Entry) EncodeCallDataJSON(jsonData []byte) ([]byte, error) {
+	return e.EncodeCallDataJSONCtx(context.Background(), jsonData)
+}
+
+func (e *Entry) EncodeCallDataJSONCtx(ctx context.Context, jsonData []byte) ([]byte, error) {
+	cv, err := e.Inputs.ParseJSONCtx(ctx, jsonData)
+	if err != nil {
+		return nil, err
+	}
+	return e.EncodeCallDataCtx(ctx, cv)
+}
+
+// EncodeCallDataValues is a helper to go straight from an interface input, such as a map or array, to call data
+func (e *Entry) EncodeCallDataValues(values interface{}) ([]byte, error) {
+	return e.EncodeCallDataValuesCtx(context.Background(), values)
+}
+
+func (e *Entry) EncodeCallDataValuesCtx(ctx context.Context, values interface{}) ([]byte, error) {
+	cv, err := e.Inputs.ParseExternalDataCtx(ctx, values)
+	if err != nil {
+		return nil, err
+	}
+	return e.EncodeCallDataCtx(ctx, cv)
 }
 
 // EncodeCallData serializes the inputs of the entry, prefixed with the function selector

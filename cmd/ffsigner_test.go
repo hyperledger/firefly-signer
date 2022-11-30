@@ -38,7 +38,7 @@ func TestRunOK(t *testing.T) {
 		defer close(done)
 		err := Execute()
 		if err != nil {
-			assert.Regexp(t, "context deadline", err)
+			assert.Error(t, err)
 		}
 	}()
 

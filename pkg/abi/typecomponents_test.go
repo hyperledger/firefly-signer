@@ -711,3 +711,9 @@ func TestTypeInternalTypeIndexed(t *testing.T) {
 	assert.Equal(t, "uint256[]", tc.Parameter().InternalType)
 	assert.Equal(t, true, tc.Parameter().Indexed)
 }
+
+func TestDecodeABIDataOnNonTuple(t *testing.T) {
+
+	_, err := (&typeComponent{}).DecodeABIData([]byte{}, 0)
+	assert.Regexp(t, "FF22061", err)
+}
