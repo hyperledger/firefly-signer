@@ -171,7 +171,7 @@ func TestSignGetNonceFail(t *testing.T) {
 	defer done()
 
 	bm := s.backend.(*rpcbackendmocks.Backend)
-	bm.On("CallRPC", mock.Anything, mock.Anything, "eth_getTransactionCount", mock.Anything, "pending").Return(fmt.Errorf("pop"))
+	bm.On("CallRPC", mock.Anything, mock.Anything, "eth_getTransactionCount", mock.Anything, "pending").Return(&rpcbackend.RPCError{Message: "pop"})
 
 	_, err := s.processRPC(s.ctx, &rpcbackend.RPCRequest{
 		ID:     fftypes.JSONAnyPtr("1"),

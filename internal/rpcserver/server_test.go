@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger/firefly-signer/mocks/ethsignermocks"
 	"github.com/hyperledger/firefly-signer/mocks/rpcbackendmocks"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
+	"github.com/hyperledger/firefly-signer/pkg/rpcbackend"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -87,7 +88,7 @@ func TestStartFailChainID(t *testing.T) {
 	bm.On("CallRPC", mock.Anything, mock.Anything, "net_version").Run(func(args mock.Arguments) {
 		hi := args[1].(*ethtypes.HexInteger)
 		hi.BigInt().SetInt64(12345)
-	}).Return(fmt.Errorf("pop"))
+	}).Return(&rpcbackend.RPCError{Message: "pop"})
 
 	err := s.Start()
 	assert.Regexp(t, "pop", err)
