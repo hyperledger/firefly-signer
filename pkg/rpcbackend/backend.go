@@ -111,9 +111,8 @@ func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method str
 	if err != nil {
 		if res.Error != nil && res.Error.Code != 0 {
 			return res.Error
-		} else {
-			return &RPCError{Code: int64(RPCCodeInternalError), Message: err.Error()}
 		}
+		return &RPCError{Code: int64(RPCCodeInternalError), Message: err.Error()}
 	}
 	err = json.Unmarshal(res.Result.Bytes(), &result)
 	if err != nil {
