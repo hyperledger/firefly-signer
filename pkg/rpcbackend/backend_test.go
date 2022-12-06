@@ -151,7 +151,7 @@ func TestSyncRPCCallOK(t *testing.T) {
 
 	var txCount ethtypes.HexInteger
 	err := rb.CallRPC(ctx, &txCount, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
-	assert.NoError(t, err)
+	assert.Empty(t, err)
 	assert.Equal(t, int64(0x26), txCount.BigInt().Int64())
 }
 

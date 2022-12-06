@@ -41,7 +41,7 @@ const (
 
 // Backend performs communication with a backend
 type Backend interface {
-	CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) error
+	CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) *RPCError
 	SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error)
 }
 
@@ -70,6 +70,10 @@ type RPCError struct {
 	Data    fftypes.JSONAny `json:"data,omitempty"`
 }
 
+func (e *RPCError) Error() error {
+	return fmt.Errorf(e.Message)
+}
+
 type RPCResponse struct {
 	JSONRpc string           `json:"jsonrpc"`
 	ID      *fftypes.JSONAny `json:"id"`
@@ -90,7 +94,7 @@ func (rc *RPCClient) allocateRequestID(req *RPCRequest) string {
 	return reqID
 }
 
-func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) error {
+func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) *RPCError {
 	req := &RPCRequest{
 		JSONRpc: "2.0",
 		Method:  method,
@@ -99,15 +103,22 @@ func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method str
 	for i, param := range params {
 		b, err := json.Marshal(param)
 		if err != nil {
-			return i18n.NewError(ctx, signermsgs.MsgInvalidParam, i, method, err)
+			return &RPCError{Code: int64(RPCCodeInvalidRequest), Message: i18n.NewError(ctx, signermsgs.MsgInvalidParam, i, method, err).Error()}
 		}
 		req.Params[i] = fftypes.JSONAnyPtrBytes(b)
 	}
 	res, err := rc.SyncRequest(ctx, req)
 	if err != nil {
-		return err
+		if res.Error != nil && res.Error.Code != 0 {
+			return res.Error
+		}
+		return &RPCError{Code: int64(RPCCodeInternalError), Message: err.Error()}
 	}
-	return json.Unmarshal(res.Result.Bytes(), &result)
+	err = json.Unmarshal(res.Result.Bytes(), &result)
+	if err != nil {
+		return &RPCError{Code: int64(RPCCodeParseError), Message: err.Error()}
+	}
+	return nil
 }
 
 // SyncRequest sends an individual RPC request to the backend (always over HTTP currently),

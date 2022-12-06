@@ -82,9 +82,9 @@ func (s *rpcServer) runAPIServer() {
 func (s *rpcServer) Start() error {
 	if s.chainID < 0 {
 		var chainID ethtypes.HexInteger
-		err := s.backend.CallRPC(s.ctx, &chainID, "net_version")
-		if err != nil {
-			return i18n.WrapError(s.ctx, err, signermsgs.MsgQueryChainID)
+		rpcErr := s.backend.CallRPC(s.ctx, &chainID, "net_version")
+		if rpcErr != nil {
+			return i18n.WrapError(s.ctx, rpcErr.Error(), signermsgs.MsgQueryChainID)
 		}
 		s.chainID = chainID.BigInt().Int64()
 	}
