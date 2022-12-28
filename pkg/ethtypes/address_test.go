@@ -24,6 +24,7 @@ import (
 )
 
 func TestAddressCheckSum(t *testing.T) {
+	SetAddressPrefix("0x")
 
 	testStruct := struct {
 		Addr1 AddressWithChecksum `json:"addr1"`
@@ -66,6 +67,7 @@ func TestAddressCheckSum(t *testing.T) {
 }
 
 func TestAddressFailLen(t *testing.T) {
+	SetAddressPrefix("0x")
 
 	testStruct := struct {
 		Addr1 AddressWithChecksum `json:"addr1"`
@@ -80,6 +82,7 @@ func TestAddressFailLen(t *testing.T) {
 }
 
 func TestAddressFailNonHex(t *testing.T) {
+	SetAddressPrefix("0x")
 
 	testStruct := struct {
 		Addr1 AddressWithChecksum `json:"addr1"`
@@ -94,6 +97,7 @@ func TestAddressFailNonHex(t *testing.T) {
 }
 
 func TestAddressFailNonString(t *testing.T) {
+	SetAddressPrefix("0x")
 
 	testStruct := struct {
 		Addr1 AddressWithChecksum `json:"addr1"`
@@ -108,6 +112,8 @@ func TestAddressFailNonString(t *testing.T) {
 }
 
 func TestAddressConstructors(t *testing.T) {
+	SetAddressPrefix("0x")
+
 	assert.Equal(t, "0x497eedc4299dea2f2a364be10025d0ad0f702de3", MustNewAddress("497EEDC4299DEA2F2A364BE10025D0AD0F702DE3").String())
 	assert.Panics(t, func() {
 		MustNewAddress("!Bad")
@@ -116,4 +122,17 @@ func TestAddressConstructors(t *testing.T) {
 	a, err := NewAddressWithChecksum("497EEDC4299DEA2F2A364BE10025D0AD0F702DE3")
 	assert.NoError(t, err)
 	assert.Equal(t, "0x497EEdc4299Dea2f2A364Be10025d0aD0f702De3", a.String())
+}
+
+func TestAddressCustomPrefix(t *testing.T) {
+	SetAddressPrefix("xdc")
+
+	assert.Equal(t, "xdc497eedc4299dea2f2a364be10025d0ad0f702de3", MustNewAddress("497EEDC4299DEA2F2A364BE10025D0AD0F702DE3").String())
+	assert.Panics(t, func() {
+		MustNewAddress("!Bad")
+	})
+
+	a, err := NewAddressWithChecksum("497EEDC4299DEA2F2A364BE10025D0AD0F702DE3")
+	assert.NoError(t, err)
+	assert.Equal(t, "xdc497EEdc4299Dea2f2A364Be10025d0aD0f702De3", a.String())
 }

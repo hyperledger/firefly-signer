@@ -36,6 +36,12 @@ type AddressWithChecksum Address0xHex
 // AddressPlainHex can parse the same, but formats as just flat hex (no prefix)
 type AddressPlainHex AddressWithChecksum
 
+var addressPrefix = "0x"
+
+func SetAddressPrefix(prefix string) {
+	addressPrefix = prefix
+}
+
 func (a *Address0xHex) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
@@ -45,7 +51,7 @@ func (a *Address0xHex) UnmarshalJSON(b []byte) error {
 }
 
 func (a *Address0xHex) SetString(s string) error {
-	b, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
+	b, err := hex.DecodeString(strings.TrimPrefix(s, addressPrefix))
 	if err != nil {
 		return fmt.Errorf("bad address: %s", err)
 	}
@@ -71,7 +77,7 @@ func (a AddressWithChecksum) String() string {
 	hexHash := hex.EncodeToString(hash.Sum(nil))
 
 	buff := strings.Builder{}
-	buff.WriteString("0x")
+	buff.WriteString(addressPrefix)
 	for i := 0; i < 40; i++ {
 		hexHashDigit, _ := strconv.ParseInt(string([]byte{hexHash[i]}), 16, 64)
 		if hexHashDigit >= 8 {
@@ -104,7 +110,7 @@ func (a Address0xHex) MarshalJSON() ([]byte, error) {
 }
 
 func (a Address0xHex) String() string {
-	return "0x" + hex.EncodeToString(a[0:20])
+	return addressPrefix + hex.EncodeToString(a[0:20])
 }
 
 func NewAddress(s string) (*Address0xHex, error) {
