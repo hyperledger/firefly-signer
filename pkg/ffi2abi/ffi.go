@@ -79,7 +79,7 @@ func (s *Schema) ToJSON() string {
 	return string(b)
 }
 
-func ConvertFFIMethodToABI(ctx context.Context, method *fftypes.FFIMethod) (*abi.Entry, error) {
+func ConvertFFIMethodToABI(ctx context.Context, method *fftypes.FFIMethod, errors []*fftypes.FFIError) (*abi.Entry, error) {
 	abiInputs, err := convertFFIParamsToABIParameters(ctx, method.Params)
 	if err != nil {
 		return nil, err
@@ -122,6 +122,19 @@ func ConvertFFIEventDefinitionToABI(ctx context.Context, event *fftypes.FFIEvent
 	return abiEntry, nil
 }
 
+func ConvertFFIErrorDefinitionToABI(ctx context.Context, errorDef *fftypes.FFIErrorDefinition) (*abi.Entry, error) {
+	abiInputs, err := convertFFIParamsToABIParameters(ctx, errorDef.Params)
+	if err != nil {
+		return nil, err
+	}
+	abiEntry := &abi.Entry{
+		Name:   errorDef.Name,
+		Type:   "error",
+		Inputs: abiInputs,
+	}
+	return abiEntry, nil
+}
+
 func ConvertABIToFFI(ctx context.Context, ns, name, version, description string, abi *abi.ABI) (*fftypes.FFI, error) {
 	ffi := &fftypes.FFI{
 		Namespace:   ns,
@@ -130,6 +143,7 @@ func ConvertABIToFFI(ctx context.Context, ns, name, version, description string,
 		Description: description,
 		Methods:     make([]*fftypes.FFIMethod, len(abi.Functions())),
 		Events:      make([]*fftypes.FFIEvent, len(abi.Events())),
+		Errors:      make([]*fftypes.FFIError, len(abi.Errors())),
 	}
 	i := 0
 	for _, f := range abi.Functions() {
@@ -147,6 +161,15 @@ func ConvertABIToFFI(ctx context.Context, ns, name, version, description string,
 			return nil, err
 		}
 		ffi.Events[i] = event
+		i++
+	}
+	i = 0
+	for _, f := range abi.Errors() {
+		e, err := convertABIErrorToFFIError(ctx, f)
+		if err != nil {
+			return nil, err
+		}
+		ffi.Errors[i] = e
 		i++
 	}
 	return ffi, nil
@@ -220,6 +243,28 @@ func convertABIEventToFFIEvent(ctx context.Context, abiEvent *abi.Entry) (*fftyp
 			Name:    abiEvent.Name,
 			Params:  params,
 			Details: details,
+		},
+	}, nil
+}
+
+func convertABIErrorToFFIError(ctx context.Context, abiError *abi.Entry) (*fftypes.FFIError, error) {
+	params := make([]*fftypes.FFIParam, len(abiError.Inputs))
+	for i, input := range abiError.Inputs {
+		typeComponent, err := input.TypeComponentTreeCtx(ctx)
+		if err != nil {
+			return nil, err
+		}
+		schema := getSchemaForABIInput(ctx, typeComponent)
+		param := &fftypes.FFIParam{
+			Name:   input.Name,
+			Schema: fftypes.JSONAnyPtr(schema.ToJSON()),
+		}
+		params[i] = param
+	}
+	return &fftypes.FFIError{
+		FFIErrorDefinition: fftypes.FFIErrorDefinition{
+			Name:   abiError.Name,
+			Params: params,
 		},
 	}, nil
 }

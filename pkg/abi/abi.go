@@ -301,6 +301,16 @@ func (a ABI) Events() map[string]*Entry {
 	return m
 }
 
+func (a ABI) Errors() map[string]*Entry {
+	m := make(map[string]*Entry)
+	for _, e := range a {
+		if e.Name != "" && e.Type == Error {
+			m[e.Name] = e
+		}
+	}
+	return m
+}
+
 // Validate processes all the components of all the parameters in this ABI entry
 func (e *Entry) Validate() (err error) {
 	return e.ValidateCtx(context.Background())
