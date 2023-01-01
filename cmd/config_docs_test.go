@@ -30,10 +30,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const configDocHeader = `# Configuration Reference`
+
 func TestConfigDocsUpToDate(t *testing.T) {
 	// Initialize config of all plugins
 	initConfig()
-	generatedConfig, err := config.GenerateConfigMarkdown(context.Background(), config.GetKnownKeys())
+	generatedConfig, err := config.GenerateConfigMarkdown(context.Background(), configDocHeader, config.GetKnownKeys())
 	assert.NoError(t, err)
 	configOnDisk, err := os.ReadFile(filepath.Join("..", "config.md"))
 	assert.NoError(t, err)
