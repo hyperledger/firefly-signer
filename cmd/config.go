@@ -24,6 +24,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const configReferenceHeader = `---
+layout: default
+title: pages.reference
+parent: Reference
+nav_order: 2
+---
+
+# Configuration Reference
+{: .no_toc }
+
+<!-- ## Table of contents
+
+{: .no_toc .text-delta }
+1. TOC
+{:toc} -->
+
+---`
+
 func configCommand() *cobra.Command {
 	versionCmd := &cobra.Command{
 		Use:   "docs",
@@ -31,7 +49,7 @@ func configCommand() *cobra.Command {
 		Long:  "",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			initConfig()
-			b, err := config.GenerateConfigMarkdown(context.Background(), "# Configuration Reference", config.GetKnownKeys())
+			b, err := config.GenerateConfigMarkdown(context.Background(), configReferenceHeader, config.GetKnownKeys())
 			fmt.Println(string(b))
 			return err
 		},
