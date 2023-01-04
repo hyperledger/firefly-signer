@@ -79,7 +79,7 @@ func (s *Schema) ToJSON() string {
 	return string(b)
 }
 
-func ConvertFFIMethodToABI(ctx context.Context, method *fftypes.FFIMethod, errors []*fftypes.FFIError) (*abi.Entry, error) {
+func ConvertFFIMethodToABI(ctx context.Context, method *fftypes.FFIMethod) (*abi.Entry, error) {
 	abiInputs, err := convertFFIParamsToABIParameters(ctx, method.Params)
 	if err != nil {
 		return nil, err
