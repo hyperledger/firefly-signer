@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -295,6 +295,16 @@ func (a ABI) Events() map[string]*Entry {
 	m := make(map[string]*Entry)
 	for _, e := range a {
 		if e.Name != "" && e.Type == Event {
+			m[e.Name] = e
+		}
+	}
+	return m
+}
+
+func (a ABI) Errors() map[string]*Entry {
+	m := make(map[string]*Entry)
+	for _, e := range a {
+		if e.Name != "" && e.Type == Error {
 			m[e.Name] = e
 		}
 	}

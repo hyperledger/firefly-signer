@@ -98,7 +98,7 @@ func TestSchemaTypeInvalidFFIType(t *testing.T) {
 		"type": "uint256"
 	}
 }`)
-	assert.Regexp(t, "oneOf failed", err)
+	assert.Regexp(t, "compilation failed", err)
 }
 
 func TestSchemaTypeMissing(t *testing.T) {

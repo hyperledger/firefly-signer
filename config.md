@@ -70,10 +70,10 @@ nav_order: 2
 |credentials|CORS setting to control whether a browser allows credentials to be sent to this API|`boolean`|`true`
 |debug|Whether debug is enabled for the CORS implementation|`boolean`|`false`
 |enabled|Whether CORS is enabled|`boolean`|`true`
-|headers|CORS setting to control the allowed headers|`string`|`[*]`
+|headers|CORS setting to control the allowed headers|`[]string`|`[*]`
 |maxAge|The maximum age a browser should rely on CORS checks|[`time.Duration`](https://pkg.go.dev/time#Duration)|`600`
-|methods| CORS setting to control the allowed methods|`string`|`[GET POST PUT PATCH DELETE]`
-|origins|CORS setting to control the allowed origins|`string`|`[*]`
+|methods| CORS setting to control the allowed methods|`[]string`|`[GET POST PUT PATCH DELETE]`
+|origins|CORS setting to control the allowed origins|`[]string`|`[*]`
 
 ## fileWallet
 
@@ -147,6 +147,18 @@ nav_order: 2
 |readTimeout|The maximum time to wait when reading from an HTTP connection|duration|`15s`
 |shutdownTimeout|The maximum amount of time to wait for any open HTTP requests to finish before shutting down the HTTP server|[`time.Duration`](https://pkg.go.dev/time#Duration)|`10s`
 |writeTimeout|The maximum time to wait when writing to a HTTP connection|duration|`15s`
+
+## server.auth
+
+|Key|Description|Type|Default Value|
+|---|-----------|----|-------------|
+|type|The auth plugin to use for server side authentication of requests|`string`|`<nil>`
+
+## server.auth.basic
+
+|Key|Description|Type|Default Value|
+|---|-----------|----|-------------|
+|passwordfile|The path to a .htpasswd file to use for authenticating requests. Passwords should be hashed with bcrypt.|`string`|`<nil>`
 
 ## server.tls
 

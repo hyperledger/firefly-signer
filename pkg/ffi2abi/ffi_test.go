@@ -399,6 +399,15 @@ func TestConvertABIToFFI(t *testing.T) {
 			}},
 			Outputs: abi.ParameterArray{},
 		},
+		{
+			Name: "biggerThanTen",
+			Type: "error",
+			Inputs: abi.ParameterArray{{
+				Name:         "value",
+				Type:         "uint256",
+				InternalType: "uint256",
+			}},
+		},
 	}
 
 	schema := fftypes.JSONAnyPtr(`{"type":"integer","details":{"type":"uint256","internalType":"uint256"}}`)
@@ -434,6 +443,19 @@ func TestConvertABIToFFI(t *testing.T) {
 			{
 				FFIEventDefinition: fftypes.FFIEventDefinition{
 					Name: "Updated",
+					Params: fftypes.FFIParams{
+						{
+							Name:   "value",
+							Schema: schema,
+						},
+					},
+				},
+			},
+		},
+		Errors: []*fftypes.FFIError{
+			{
+				FFIErrorDefinition: fftypes.FFIErrorDefinition{
+					Name: "biggerThanTen",
 					Params: fftypes.FFIParams{
 						{
 							Name:   "value",
