@@ -1,6 +1,6 @@
 module github.com/hyperledger/firefly-signer
 
-go 1.17
+go 1.19
 
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.1.3

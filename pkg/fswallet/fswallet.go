@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -177,11 +177,15 @@ func (w *fsWallet) matchFilename(ctx context.Context, f fs.FileInfo) *ethtypes.A
 
 func (w *fsWallet) Refresh(ctx context.Context) error {
 	log.L(ctx).Infof("Refreshing account list at %s", w.conf.Path)
-	files, err := ioutil.ReadDir(w.conf.Path)
+	files, err := os.ReadDir(w.conf.Path)
 	if err != nil {
 		return i18n.WrapError(ctx, err, signermsgs.MsgReadDirFile)
 	}
-	w.notifyNewFiles(ctx, files...)
+	fileInfo := make([]fs.FileInfo, len(files))
+	for i, file := range files {
+		fileInfo[i], _ = file.Info()
+	}
+	w.notifyNewFiles(ctx, fileInfo...)
 	return nil
 }
 
@@ -274,7 +278,7 @@ func (w *fsWallet) GetWalletFile(ctx context.Context, addr ethtypes.Address0xHex
 
 func (w *fsWallet) loadWalletFile(ctx context.Context, addr ethtypes.Address0xHex, primaryFilename string) (keystorev3.WalletFile, error) {
 
-	b, err := ioutil.ReadFile(primaryFilename)
+	b, err := os.ReadFile(primaryFilename)
 	if err != nil {
 		log.L(ctx).Errorf("Failed to read '%s': %s", primaryFilename, err)
 		return nil, i18n.NewError(ctx, signermsgs.MsgWalletFailed, addr)
@@ -287,7 +291,7 @@ func (w *fsWallet) loadWalletFile(ctx context.Context, addr ethtypes.Address0xHe
 	log.L(ctx).Debugf("Reading keyfile=%s passwordfile=%s", keyFilename, passwordFilename)
 
 	if keyFilename != primaryFilename {
-		b, err = ioutil.ReadFile(keyFilename)
+		b, err = os.ReadFile(keyFilename)
 		if err != nil {
 			log.L(ctx).Errorf("Failed to read '%s' (keyfile): %s", keyFilename, err)
 			return nil, i18n.NewError(ctx, signermsgs.MsgWalletFailed, addr)
@@ -296,7 +300,7 @@ func (w *fsWallet) loadWalletFile(ctx context.Context, addr ethtypes.Address0xHe
 
 	var password []byte
 	if passwordFilename != "" {
-		password, err = ioutil.ReadFile(passwordFilename)
+		password, err = os.ReadFile(passwordFilename)
 		if err != nil {
 			log.L(ctx).Debugf("Failed to read '%s' (password file): %s", passwordFilename, err)
 		} else if w.conf.Filenames.PasswordTrimSpace {
@@ -310,7 +314,7 @@ func (w *fsWallet) loadWalletFile(ctx context.Context, addr ethtypes.Address0xHe
 			log.L(ctx).Errorf("No password file available for address, and no default password file: %s", addr)
 			return nil, i18n.NewError(ctx, signermsgs.MsgWalletFailed, addr)
 		}
-		password, err = ioutil.ReadFile(w.conf.DefaultPasswordFile)
+		password, err = os.ReadFile(w.conf.DefaultPasswordFile)
 		if err != nil {
 			log.L(ctx).Errorf("Failed to read '%s' (default password file): %s", w.conf.DefaultPasswordFile, err)
 			return nil, i18n.NewError(ctx, signermsgs.MsgWalletFailed, addr)

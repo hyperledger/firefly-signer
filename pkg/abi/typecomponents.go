@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -26,22 +26,23 @@ import (
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
-// TypeComponent is a modelled representation of a component of an ABI type.
-// We don't just go to the tuple level, we go down all the way through the arrays too.
-// This breaks things down into the way in which they are serialized/parsed.
-// Example "((uint256,string[2],string[])[][3][],string)" becomes:
-// - tuple1
-//   - variable size array
-//      - fixed size [3] array
-//         - variable size array
-//            - tuple2
-//               - uint256
-//               - fixed size [2] array
-//                  - string
-//               - variable size array
-//                   - string
-//   - string
-// This thus matches the way a JSON structure would exist to supply values in
+/* TypeComponent is a modelled representation of a component of an ABI type.
+ * We don't just go to the tuple level, we go down all the way through the arrays too.
+ * This breaks things down into the way in which they are serialized/parsed.
+ * Example "((uint256,string[2],string[])[][3][],string)" becomes:
+ * - tuple1
+ *   - variable size array
+ *      - fixed size [3] array
+ *         - variable size array
+ *            - tuple2
+ *               - uint256
+ *               - fixed size [2] array
+ *                  - string
+ *               - variable size array
+ *                   - string
+ *   - string
+ * This thus matches the way a JSON structure would exist to supply values in
+ */
 type TypeComponent interface {
 	String() string                     // gives the signature for this type level of the type component hierarchy
 	ComponentType() ComponentType       // classification of the component type (tuple, array or elemental)
