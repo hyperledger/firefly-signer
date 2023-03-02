@@ -18,6 +18,7 @@ package ethsigner
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEncodeExistingLegacyEIP155(t *testing.T) {
+func TestEncodeExistingLegacyEIP155RoundTrip(t *testing.T) {
 
 	inputData, err := hex.DecodeString(
 		"3674e15c00000000000000000000000000000000000000000000000000000000000000a03f04a4e93ded4d2aaa1a41d617e55c59ac5f1b28a47047e2a526e76d45eb9681d19642e9120d63a9b7f5f537565a430d8ad321ef1bc76689a4b3edc861c640fc00000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000000966665f73797374656d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002e516d58747653456758626265506855684165364167426f3465796a7053434b437834515a4c50793548646a6177730000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a1f7502c8f8797999c0c6b9c2da653ea736598ed0daa856c47ae71411aa8fea2")
@@ -54,12 +55,16 @@ func TestEncodeExistingLegacyEIP155(t *testing.T) {
 	rlpList := txn.BuildLegacy()
 	rlpList = txn.addSignature(rlpList, sig)
 	raw := rlpList.Encode()
-
 	assert.Equal(t, expectedRaw, raw)
 
+	decodedTx, err := NewTransactionFromBytes(raw)
+	assert.NoError(t, err)
+	txnJson, _ := json.Marshal(txn)
+	decodedTxJson, _ := json.Marshal(decodedTx)
+	assert.Equal(t, string(txnJson), string(decodedTxJson))
 }
 
-func TestEncodeExistingEIP1559(t *testing.T) {
+func TestEncodeExistingEIP1559RoundTrip(t *testing.T) {
 
 	// Sample from TX 0x61ca9c99c1d752fb3bda568b8566edf33ba93585c64a970566e6dfb540a5cbc1
 
@@ -93,7 +98,6 @@ func TestEncodeExistingEIP1559(t *testing.T) {
 	raw := append([]byte{TransactionType1559}, rlpList.Encode()...)
 
 	assert.Equal(t, ethtypes.HexBytesPlain(expectedRaw).String(), ethtypes.HexBytesPlain(raw).String())
-
 }
 
 func TestSignAutoEIP155(t *testing.T) {

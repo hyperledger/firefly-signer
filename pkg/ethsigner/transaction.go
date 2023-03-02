@@ -17,6 +17,7 @@
 package ethsigner
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -213,4 +214,61 @@ func (t *Transaction) addSignature(rlpList rlp.List, sig *secp256k1.SignatureDat
 	rlpList = append(rlpList, rlp.WrapInt(sig.R))
 	rlpList = append(rlpList, rlp.WrapInt(sig.S))
 	return rlpList
+}
+
+func NewTransactionFromBytes(txData ethtypes.HexBytes0xPrefix) (*Transaction, error) {
+	rlpList, _, err := rlp.Decode(txData)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction data: %s", err)
+	}
+
+	if rlpList == nil {
+		return nil, fmt.Errorf("invalid transaction data: EOF")
+	}
+	return NewTransaction(rlpList.(rlp.List))
+}
+
+func NewTransaction(rlpList rlp.List) (*Transaction, error) {
+	// rebuild the tx
+	tx := &Transaction{}
+	tx.Nonce = ethtypes.NewHexInteger(big.NewInt(0)) // ensure we always restore nonce
+
+	if len(rlpList[0].(rlp.Data)) > 0 {
+		tx.Nonce = (*ethtypes.HexInteger)(rlpList[0].(rlp.Data).Int())
+	}
+
+	if len(rlpList[1].(rlp.Data)) > 0 {
+		tx.GasPrice = (*ethtypes.HexInteger)(rlpList[1].(rlp.Data).Int())
+	}
+
+	if len(rlpList[2].(rlp.Data)) > 0 {
+		tx.GasLimit = (*ethtypes.HexInteger)(rlpList[2].(rlp.Data).Int())
+	}
+
+	if len(rlpList[3].(rlp.Data)) > 0 {
+		var toAddr ethtypes.Address0xHex
+		dataBytes, ok := rlpList[3].(rlp.Data)
+		if !ok {
+			return nil, fmt.Errorf("cannot read 'to' parameter")
+		}
+		err := toAddr.SetString(hex.EncodeToString(dataBytes))
+
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse 'to' parameter")
+		}
+		tx.To = &toAddr
+	}
+	if len(rlpList[4].(rlp.Data)) > 0 {
+		tx.Value = (*ethtypes.HexInteger)(rlpList[4].(rlp.Data).Int())
+	}
+
+	if len(rlpList[5].(rlp.Data)) > 0 {
+		dataBytes := rlpList[5].(rlp.Data)
+		data, err := ethtypes.NewHexBytes0xPrefix(hex.EncodeToString(dataBytes))
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse 'data' parameter")
+		}
+		tx.Data = data
+	}
+	return tx, nil
 }
