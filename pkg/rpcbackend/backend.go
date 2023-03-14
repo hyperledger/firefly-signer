@@ -52,23 +52,9 @@ func NewRPCClient(client *resty.Client) Backend {
 	}
 }
 
-// NewRPCClientWithOption Constructor
-func NewRPCClientWithOption(client *resty.Client, options RPCClientOptions) Backend {
-	rpcClient := &RPCClient{
-		client: client,
-	}
-
-	if options.MaxConcurrentRequest > 0 {
-		rpcClient.concurrencySlots = make(chan bool, options.MaxConcurrentRequest)
-	}
-
-	return rpcClient
-}
-
 type RPCClient struct {
-	client           *resty.Client
-	concurrencySlots chan bool
-	requestCounter   int64
+	client         *resty.Client
+	requestCounter int64
 }
 
 type RPCClientOptions struct {
@@ -145,13 +131,6 @@ func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method str
 // In all return paths *including error paths* the RPCResponse is populated
 // so the caller has an RPC structure to send back to the front-end caller.
 func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error) {
-	if rc.concurrencySlots != nil {
-		rc.concurrencySlots <- true
-		defer func() {
-			<-rc.concurrencySlots
-		}()
-	}
-
 	// We always set the back-end request ID - as we need to support requests coming in from
 	// multiple concurrent clients on our front-end that might use clashing IDs.
 	var beReq = *rpcReq
