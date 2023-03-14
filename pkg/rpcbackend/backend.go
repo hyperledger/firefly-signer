@@ -146,7 +146,12 @@ func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method str
 // so the caller has an RPC structure to send back to the front-end caller.
 func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error) {
 	if rc.concurrencySlots != nil {
-		rc.concurrencySlots <- true
+		select {
+		case rc.concurrencySlots <- true:
+			// wait for the concurrency slot and continue
+		case <-ctx.Done():
+			return nil, fmt.Errorf("request with id %s failed due to canceled context", rpcReq.ID)
+		}
 		defer func() {
 			<-rc.concurrencySlots
 		}()
