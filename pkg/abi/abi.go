@@ -14,6 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+package abi
+
 /*
 
 Tl;dr
@@ -170,7 +172,6 @@ with a number of built-in options as follows:
   - Hex with "0x" prefix
   - Hex without any prefix
 */
-package abi
 
 import (
 	"bytes"

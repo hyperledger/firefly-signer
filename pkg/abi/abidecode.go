@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -30,19 +30,20 @@ func walkTupleABIBytes(ctx context.Context, block []byte, offset int, component 
 	return walkDynamicChildArrayABIBytes(ctx, "tup", "", block, offset, offset, component, component.tupleChildren)
 }
 
-// decodeABIElement is called for each entry in a tuple, or array, to process the head bytes,
-// and any offset data bytes for that entry. The number of head bytes consumed is returned.
-//
-// Note that this is used for tuples embedded within a parent array or tuple, as that will be
-// a variable structure pointed to from the header. But for the root tuples, the walkTupleABIBytes entry
-// point is used that will kick off the recursive process directly from a given offset.
-//
-// - headStart is the absolute location in the byte array of the beginning of the current header, that all offsets will be relative to
-// - headPosition is the absolute location of where we are reading the header from for this element
-//
-// So for example headStart=4,headPosition=4 would mean we are reading from the beginning of the primary header, after
-// the 4 byte function selector in a function call parameter.
-//
+/*
+decodeABIElement is called for each entry in a tuple, or array, to process the head bytes,
+and any offset data bytes for that entry. The number of head bytes consumed is returned.
+
+Note that this is used for tuples embedded within a parent array or tuple, as that will be
+a variable structure pointed to from the header. But for the root tuples, the walkTupleABIBytes entry
+point is used that will kick off the recursive process directly from a given offset.
+
+- headStart is the absolute location in the byte array of the beginning of the current header, that all offsets will be relative to
+- headPosition is the absolute location of where we are reading the header from for this element
+
+So for example headStart=4,headPosition=4 would mean we are reading from the beginning of the primary header, after
+the 4 byte function selector in a function call parameter.
+*/
 func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, headStart, headPosition int, component *typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
 
 	switch component.cType {
