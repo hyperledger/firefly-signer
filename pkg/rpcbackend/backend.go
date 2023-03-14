@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -71,6 +71,10 @@ type RPCClient struct {
 	requestCounter   int64
 }
 
+type RPCClientOptions struct {
+	MaxConcurrentRequest int64
+}
+
 type RPCRequest struct {
 	JSONRpc string             `json:"jsonrpc"`
 	ID      *fftypes.JSONAny   `json:"id"`
@@ -141,15 +145,12 @@ func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method str
 // In all return paths *including error paths* the RPCResponse is populated
 // so the caller has an RPC structure to send back to the front-end caller.
 func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error) {
-<<<<<<< Updated upstream
-=======
 	if rc.concurrencySlots != nil {
 		rc.concurrencySlots <- true
 		defer func() {
 			<-rc.concurrencySlots
 		}()
 	}
->>>>>>> Stashed changes
 
 	// We always set the back-end request ID - as we need to support requests coming in from
 	// multiple concurrent clients on our front-end that might use clashing IDs.
