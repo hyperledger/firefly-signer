@@ -78,4 +78,5 @@ var (
 	MsgAddressMismatch             = ffe("FF22059", "Address '%s' loaded from wallet file does not match requested lookup address / filename '%s'")
 	MsgFailedToStartListener       = ffe("FF22060", "Failed to start filesystem listener: %s")
 	MsgDecodeNotTuple              = ffe("FF22061", "Decode can only be called against a root tuple component type=%d")
+	MsgRequestCanceledContext             = ffe("FF22062", "Request with id %s failed due to canceled context")
 )
