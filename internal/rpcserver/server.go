@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -40,8 +40,13 @@ type Server interface {
 
 func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err error) {
 
+	restyClient, err := ffresty.New(ctx, signerconfig.BackendConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &rpcServer{
-		backend:       rpcbackend.NewRPCClient(ffresty.New(ctx, signerconfig.BackendConfig)),
+		backend:       rpcbackend.NewRPCClient(restyClient),
 		apiServerDone: make(chan error),
 		wallet:        wallet,
 		chainID:       config.GetInt64(signerconfig.BackendChainID),
