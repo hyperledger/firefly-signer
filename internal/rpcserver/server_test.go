@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/fftls"
 	"github.com/hyperledger/firefly-common/pkg/httpserver"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
 	"github.com/hyperledger/firefly-signer/mocks/ethsignermocks"
@@ -57,6 +58,20 @@ func newTestServer(t *testing.T) (string, *rpcServer, func()) {
 			_ = s.WaitStop()
 		}
 
+}
+
+func TestBadTLSConfig(t *testing.T) {
+	signerconfig.Reset()
+	tlsConf := signerconfig.BackendConfig.SubSection("tls")
+	tlsConf.Set(fftls.HTTPConfTLSEnabled, true)
+	tlsConf.Set(fftls.HTTPConfTLSCAFile, "!!!!!badness")
+	signerconfig.ServerConfig.Set(httpserver.HTTPConfPort, 12345)
+	signerconfig.ServerConfig.Set(httpserver.HTTPConfAddress, "127.0.0.1")
+
+	w := &ethsignermocks.Wallet{}
+
+	_, err := NewServer(context.Background(), w)
+	assert.Regexp(t, "FF00153", err)
 }
 
 func TestStartStop(t *testing.T) {

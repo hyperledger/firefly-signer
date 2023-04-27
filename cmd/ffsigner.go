@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -106,8 +106,8 @@ func run() error {
 
 func runServer(server rpcserver.Server) error {
 	err := server.Start()
-	if err != nil {
-		return err
+	if err == nil {
+		err = server.WaitStop()
 	}
-	return server.WaitStop()
+	return err
 }

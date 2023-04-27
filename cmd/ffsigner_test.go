@@ -96,3 +96,13 @@ func TestRunFailServer(t *testing.T) {
 	assert.Regexp(t, err, "pop")
 
 }
+
+func TestRunServerOK(t *testing.T) {
+
+	s := &rpcservermocks.Server{}
+	s.On("Start").Return(nil)
+	s.On("WaitStop").Return(nil)
+	err := runServer(s)
+	assert.NoError(t, err)
+
+}

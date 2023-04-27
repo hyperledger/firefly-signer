@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -139,7 +139,7 @@ func encodeABIBytes(ctx context.Context, desc string, tc *typeComponent, value i
 	return data, false, nil
 }
 
-func encodeABIString(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
+func encodeABIString(ctx context.Context, desc string, _ *typeComponent, value interface{}) (data []byte, dynamic bool, err error) {
 	s, ok := value.(string)
 	if !ok {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "string", value, desc)
@@ -185,6 +185,9 @@ func encodeABIUnsignedInteger(ctx context.Context, desc string, tc *typeComponen
 	}
 
 	// Reject integers that do not fit in the specified type
+	if i.Sign() < 0 {
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgNegativeUnsignedABIEncode, tc.m, desc)
+	}
 	if i.BitLen() > int(tc.m) {
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgNumberTooLargeABIEncode, tc.m, desc)
 	}
