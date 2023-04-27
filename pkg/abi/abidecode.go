@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -42,7 +42,6 @@ func walkTupleABIBytes(ctx context.Context, block []byte, offset int, component 
 //
 // So for example headStart=4,headPosition=4 would mean we are reading from the beginning of the primary header, after
 // the 4 byte function selector in a function call parameter.
-//
 func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, headStart, headPosition int, component *typeComponent) (headBytesRead int, cv *ComponentValue, err error) {
 
 	switch component.cType {
@@ -102,7 +101,7 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 
 }
 
-func decodeABISignedInt(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
+func decodeABISignedInt(ctx context.Context, desc string, block []byte, _, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
 	cv = &ComponentValue{Component: component}
 	if headPosition+32 > len(block) {
 		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, desc)
@@ -111,7 +110,7 @@ func decodeABISignedInt(ctx context.Context, desc string, block []byte, headStar
 	return cv, err
 }
 
-func decodeABIUnsignedInt(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
+func decodeABIUnsignedInt(ctx context.Context, desc string, block []byte, _, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
 	cv = &ComponentValue{Component: component}
 	if headPosition+32 > len(block) {
 		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, desc)

@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -137,7 +137,7 @@ func (w *fsWallet) AddListener(listener chan<- ethtypes.Address0xHex) {
 }
 
 // GetAccounts returns the currently cached list of known addresses
-func (w *fsWallet) GetAccounts(ctx context.Context) ([]*ethtypes.Address0xHex, error) {
+func (w *fsWallet) GetAccounts(_ context.Context) ([]*ethtypes.Address0xHex, error) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 	accounts := make([]*ethtypes.Address0xHex, len(w.addressList))

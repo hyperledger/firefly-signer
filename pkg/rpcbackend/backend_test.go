@@ -61,7 +61,9 @@ func newTestServer(t *testing.T, rpcHandler testRPCHander) (context.Context, *RP
 	prefix := signerconfig.BackendConfig
 	prefix.Set(ffresty.HTTPConfigURL, fmt.Sprintf("http://%s", server.Listener.Addr()))
 
-	rb := NewRPCClient(ffresty.New(ctx, signerconfig.BackendConfig)).(*RPCClient)
+	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
+	assert.NoError(t, err)
+	rb := NewRPCClient(c).(*RPCClient)
 
 	return ctx, rb, func() {
 		cancelCtx()

@@ -392,6 +392,17 @@ func TestEncodeUnsignedIntegerPositiveOk(t *testing.T) {
 
 }
 
+func TestEncodeUnsignedIntegerNegativeFail(t *testing.T) {
+
+	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())
+	assert.NoError(t, err)
+
+	twoPow256minus1 := big.NewInt(-1)
+	_, _, err = encodeABIUnsignedInteger(context.Background(), "test", bytes32Component, twoPow256minus1)
+	assert.Regexp(t, "FF22062", err)
+
+}
+
 func TestEncodeUnsignedIntegerTooLarge(t *testing.T) {
 
 	bytes32Component, err := (&Parameter{Type: "int256"}).parseABIParameterComponents(context.Background())

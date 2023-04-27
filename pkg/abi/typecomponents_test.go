@@ -41,28 +41,31 @@ func TestElementalTypeInfoRules(t *testing.T) {
 func TestABISignatures1(t *testing.T) {
 
 	abiString := `[{
-		"type":"error",
-		"inputs": [{"name":"available","type":"uint256"},{"name":"required","type":"uint256"}],
-		"name":"InsufficientBalance"
+			"type":"error",
+			"inputs": [{"name":"available","type":"uint256"},{"name":"required","type":"uint256"}],
+			"name":"InsufficientBalance"
 		}, {
-		"type":"event",
-		"inputs": [{"name":"a","type":"uint256","indexed":true},{"name":"b","type":"bytes32","indexed":false}],
-		"name":"Event"
+			"type":"event",
+			"inputs": [{"name":"a","type":"uint256","indexed":true},{"name":"b","type":"bytes32","indexed":false}],
+			"name":"Event"
 		}, {
-		"type":"event",
-		"inputs": [{"name":"a","type":"uint256","indexed":true},{"name":"b","type":"bytes32","indexed":false}],
-		"name":"Event2"
+			"type":"event",
+			"inputs": [{"name":"a","type":"uint256","indexed":true},{"name":"b","type":"bytes32","indexed":false}],
+			"name":"Event2"
 		}, {
-		"type":"function",
-		"inputs": [{"name":"a","type":"uint256"}],
-		"name":"foo",
-		"outputs": []
-	}]`
+			"type":"function",
+			"inputs": [{"name":"a","type":"uint256"}],
+			"name":"foo",
+			"outputs": []
+	    }
+	]`
 	var abi ABI
 	err := json.Unmarshal([]byte(abiString), &abi)
 	assert.NoError(t, err)
 	assert.NotNil(t, abi.Events()["Event2"])
 	assert.Nil(t, abi.Functions()["Event2"])
+	assert.NotNil(t, abi.Errors()["InsufficientBalance"])
+	assert.Nil(t, abi.Functions()["InsufficientBalance"])
 
 	sig0, err := abi[0].Signature()
 	assert.NoError(t, err)
