@@ -282,6 +282,45 @@ func TestExampleABIDecode7(t *testing.T) {
 	assert.Equal(t, "d", cv.Children[0].Children[1].Value)
 }
 
+func TestExampleABIDecodeTuple(t *testing.T) {
+
+	f := &Entry{
+		Name: "coupon",
+		Outputs: ParameterArray{
+			{
+				Type: "tuple[]",
+				Name: "tokenspec",
+				Components: ParameterArray{
+					{Type: "uint256", Name: "_tokenId"},
+					{Type: "string", Name: "_tokenURL"},
+					{Type: "uint256", Name: "_startDate"},
+					{Type: "uint256", Name: "_endDate"},
+				},
+			},
+		},
+	}
+
+	d, _ := hex.DecodeString("" +
+		"0000000000000000000000000000000000000000000000000000000000000020" +
+		"0000000000000000000000000000000000000000000000000000000000000001" +
+		"0000000000000000000000000000000000000000000000000000000000000020" +
+		"000000000000000000000000000000000000000000000000000000000000007b" +
+		"0000000000000000000000000000000000000000000000000000000000000080" +
+		"000000000000000000000000000000000000000000000000000000000031079d" +
+		"0000000000000000000000000000000000000000000000000000000000005e4d" +
+		"000000000000000000000000000000000000000000000000000000000000000b" +
+		"7468697369736d7975726c000000000000000000000000000000000000000000",
+	)
+
+	cv, err := f.Outputs.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, big.NewInt(123), cv.Children[0].Children[0].Children[0].Value)
+	assert.Equal(t, "thisismyurl", cv.Children[0].Children[0].Children[1].Value)
+	assert.Equal(t, big.NewInt(3213213), cv.Children[0].Children[0].Children[2].Value)
+	assert.Equal(t, big.NewInt(24141), cv.Children[0].Children[0].Children[3].Value)
+}
+
 func TestExampleABIDecode8(t *testing.T) {
 
 	// a fixed-length array of dynamic types
