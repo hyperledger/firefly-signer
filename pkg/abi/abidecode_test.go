@@ -312,6 +312,7 @@ func TestExampleABIDecodeTupleDifferentOrder(t *testing.T) {
 	assert.Equal(t, "thisismyurl", cv.Children[0].Children[0].Children[2].Value)
 	assert.Equal(t, big.NewInt(2414), cv.Children[0].Children[0].Children[3].Value)
 }
+
 func TestExampleABIDecodeTuple(t *testing.T) {
 
 	f := &Entry{
@@ -344,6 +345,71 @@ func TestExampleABIDecodeTuple(t *testing.T) {
 	assert.Equal(t, big.NewInt(3213213), cv.Children[0].Children[0].Children[2].Value)
 	assert.Equal(t, big.NewInt(2414), cv.Children[0].Children[0].Children[3].Value)
 }
+
+func TestExampleABIDecodeDoubleNestedTuple(t *testing.T) {
+
+	f := &Entry{
+		Name: "f",
+		Outputs: ParameterArray{
+			{
+				Type: "tuple[]",
+				Name: "nested",
+				Components: ParameterArray{
+					{Type: "uint256", Name: "a"},
+					{Type: "string", Name: "b"},
+					{Type: "tuple", Name: "c", Components: ParameterArray{
+						{Type: "uint256", Name: "c1"},
+						{Type: "string", Name: "c2"},
+						{Type: "uint256", Name: "c3"},
+					}},
+					{Type: "uint256", Name: "d"},
+				},
+			},
+		},
+	}
+
+	b, err := f.Outputs.EncodeABIDataJSON([]byte(`{
+		"nested": [{
+			"a": 11111,
+			"b": "test22222",
+			"c": {
+				"c1": 33333,
+				"c2": "test44444",
+				"c3": 55555
+			},
+			"d": 66666
+		}]
+	}`))
+	assert.NoError(t, err)
+
+	// The encoding looks right to me
+	assert.Equal(t,
+		"0000000000000000000000000000000000000000000000000000000000000020"+ // 0   - 32 - offset for the start of the dynamic array
+			"0000000000000000000000000000000000000000000000000000000000000001"+ // 32  - 1  - number of tuples in the dynamic array
+			"0000000000000000000000000000000000000000000000000000000000000020"+ // 64  - 32 - offset of the data for the tuple at position 0 in the array
+			"0000000000000000000000000000000000000000000000000000000000002b67"+ // 96  - 11111 - value "a"
+			"0000000000000000000000000000000000000000000000000000000000000080"+ // 128 - 128 - offset of the string data for "b", relative to 96 = 224
+			"00000000000000000000000000000000000000000000000000000000000000c0"+ // 160 - 192 - offset of the tuple data for "c", relative to 96 = 288
+			"000000000000000000000000000000000000000000000000000000000001046a"+ // 192 - 66666 - value of "d"
+			"0000000000000000000000000000000000000000000000000000000000000009"+ // 224 - 9  - length of the string data for "b"
+			"7465737432323232320000000000000000000000000000000000000000000000"+ // 256 - "test22222"
+			"0000000000000000000000000000000000000000000000000000000000008235"+ // 288 - 33333 - value of "c1"
+			"0000000000000000000000000000000000000000000000000000000000000060"+ // 320 - 96 - offset of the string data for "c2", relative to 288 = 384
+			"000000000000000000000000000000000000000000000000000000000000d903"+ // 352 - 55555 - value of "c3"
+			"0000000000000000000000000000000000000000000000000000000000000009"+ // 384 - 9 - length of the string data for "c2"
+			"7465737434343434340000000000000000000000000000000000000000000000", // 416 - "test44444"
+		hex.EncodeToString(b))
+
+	cv, err := f.Outputs.DecodeABIData(b, 0)
+
+	assert.Equal(t, big.NewInt(11111), cv.Children[0].Children[0].Children[0].Value)
+	assert.Equal(t, "test22222", cv.Children[0].Children[0].Children[1].Value)
+	assert.Equal(t, big.NewInt(33333), cv.Children[0].Children[0].Children[2].Children[0].Value)
+	assert.Equal(t, "test44444", cv.Children[0].Children[0].Children[2].Children[1].Value)
+	assert.Equal(t, big.NewInt(55555), cv.Children[0].Children[0].Children[2].Children[2].Value)
+	assert.Equal(t, big.NewInt(66666), cv.Children[0].Children[0].Children[3].Value)
+}
+
 func TestExampleABIDecodeTupleFixed(t *testing.T) {
 
 	f := &Entry{

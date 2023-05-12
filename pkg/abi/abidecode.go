@@ -94,7 +94,8 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 		}
 		headStart += headOffset
 		headPosition = headStart
-		return walkDynamicChildArrayABIBytes(ctx, "tup", breadcrumbs, block, headStart, headPosition, component, component.tupleChildren)
+		_, cv, err := walkDynamicChildArrayABIBytes(ctx, "tup", breadcrumbs, block, headStart, headPosition, component, component.tupleChildren)
+		return 32, cv, err
 	default:
 		return -1, nil, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, component.cType)
 	}
