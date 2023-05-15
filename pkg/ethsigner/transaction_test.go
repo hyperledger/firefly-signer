@@ -18,13 +18,16 @@ package ethsigner
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"testing"
 
+	"github.com/hyperledger/firefly-signer/mocks/secp256k1mocks"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/rlp"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestEncodeExistingLegacyEIP155(t *testing.T) {
@@ -226,4 +229,39 @@ func TestSignFail(t *testing.T) {
 	_, err = txn.SignEIP1559(nil, 0)
 	assert.Error(t, err)
 
+}
+
+func TestSignNilSigner(t *testing.T) {
+	txn := Transaction{}
+	_, err := txn.Sign(nil, 1001)
+	assert.Regexp(t, "FF22064", err)
+}
+
+func TestSignLegacyOriginalNilSigner(t *testing.T) {
+	txn := Transaction{}
+	_, err := txn.SignLegacyOriginal(nil)
+	assert.Regexp(t, "FF22064", err)
+}
+
+func TestSignLegacyOriginaSignerError(t *testing.T) {
+	txn := Transaction{}
+	msn := &secp256k1mocks.Signer{}
+	msn.On("Sign", mock.Anything).Return(nil, fmt.Errorf("pop"))
+	_, err := txn.SignLegacyOriginal(msn)
+	assert.Regexp(t, "pop", err)
+}
+
+func TestSignLegacyEIP155Error(t *testing.T) {
+	txn := Transaction{}
+	msn := &secp256k1mocks.Signer{}
+	msn.On("Sign", mock.Anything).Return(nil, fmt.Errorf("pop"))
+	_, err := txn.SignLegacyEIP155(msn, 12345)
+	assert.Regexp(t, "pop", err)
+}
+func TestSignEIP1559Error(t *testing.T) {
+	txn := Transaction{}
+	msn := &secp256k1mocks.Signer{}
+	msn.On("Sign", mock.Anything).Return(nil, fmt.Errorf("pop"))
+	_, err := txn.SignEIP1559(msn, 12345)
+	assert.Regexp(t, "pop", err)
 }

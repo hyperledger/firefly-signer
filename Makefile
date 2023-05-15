@@ -31,6 +31,7 @@ mocks-$(strip $(1))-$(strip $(2)): ${MOCKERY}
 endef
 
 $(eval $(call makemock, pkg/ethsigner,       Wallet,  ethsignermocks))
+$(eval $(call makemock, pkg/secp256k1,       Signer,  secp256k1mocks))
 $(eval $(call makemock, internal/rpcserver,  Server,  rpcservermocks))
 $(eval $(call makemock, pkg/rpcbackend,      Backend, rpcbackendmocks))
 
