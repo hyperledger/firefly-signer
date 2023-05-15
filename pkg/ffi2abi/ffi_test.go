@@ -863,6 +863,27 @@ func TestConvertABIToFFIBadEventType(t *testing.T) {
 	assert.Regexp(t, "FF22025", err)
 }
 
+func TestConvertABIToFFIBadErrorType(t *testing.T) {
+	abiJSON := `[
+		{
+			"inputs": [
+				{
+					"internalType": "string",
+					"name": "name",
+					"type": "foobar"
+				}
+			],
+			"name": "BadError",
+			"type": "error"
+		}
+	]`
+
+	var abi *abi.ABI
+	json.Unmarshal([]byte(abiJSON), &abi)
+	_, err := ConvertABIToFFI(context.Background(), "ns1", "name", "version", "description", abi)
+	assert.Regexp(t, "FF22025", err)
+}
+
 func TestConvertABIEventFFIEvent(t *testing.T) {
 	abiJSON := `[
 		{
@@ -895,6 +916,37 @@ func TestConvertABIEventFFIEvent(t *testing.T) {
 	assert.JSONEq(t, string(expectedABIEventJSON), string(actualABIEventJSON))
 }
 
+func TestConvertABIErrorFFIError(t *testing.T) {
+	abiJSON := `[
+		{
+			"inputs": [
+				{
+					"internalType": "string",
+					"name": "name",
+					"type": "string"
+				}
+			],
+			"name": "MyError",
+			"type": "error"
+		}
+	]`
+
+	var abi *abi.ABI
+	json.Unmarshal([]byte(abiJSON), &abi)
+	ffi, err := ConvertABIToFFI(context.Background(), "ns1", "name", "version", "description", abi)
+	assert.NoError(t, err)
+
+	actualABIError, err := ConvertFFIErrorDefinitionToABI(context.Background(), &ffi.Errors[0].FFIErrorDefinition)
+	assert.NoError(t, err)
+
+	expectedABIErrorJSON, err := json.Marshal(abi.Errors()["MyError"])
+	assert.NoError(t, err)
+	actualABIErrorJSON, err := json.Marshal(actualABIError)
+	assert.NoError(t, err)
+
+	assert.JSONEq(t, string(expectedABIErrorJSON), string(actualABIErrorJSON))
+}
+
 func TestConvertFFIEventDefinitionToABIInvalidSchema(t *testing.T) {
 	e := &fftypes.FFIEventDefinition{
 		Params: fftypes.FFIParams{
@@ -905,6 +957,19 @@ func TestConvertFFIEventDefinitionToABIInvalidSchema(t *testing.T) {
 		},
 	}
 	_, err := ConvertFFIEventDefinitionToABI(context.Background(), e)
+	assert.Regexp(t, "FF22052", err)
+}
+
+func TestConvertFFIErrorDefinitionToABIInvalidSchema(t *testing.T) {
+	e := &fftypes.FFIErrorDefinition{
+		Params: fftypes.FFIParams{
+			&fftypes.FFIParam{
+				Name:   "badField",
+				Schema: fftypes.JSONAnyPtr("foobar"),
+			},
+		},
+	}
+	_, err := ConvertFFIErrorDefinitionToABI(context.Background(), e)
 	assert.Regexp(t, "FF22052", err)
 }
 
