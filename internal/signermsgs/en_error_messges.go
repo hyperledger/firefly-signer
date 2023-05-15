@@ -80,4 +80,5 @@ var (
 	MsgDecodeNotTuple              = ffe("FF22061", "Decode can only be called against a root tuple component type=%d")
 	MsgNegativeUnsignedABIEncode   = ffe("FF22062", "Negative numeric value is invalid for component %s")
 	MsgRequestCanceledContext      = ffe("FF22063", "Request with id %s failed due to canceled context")
+	MsgInvalidSigner               = ffe("FF22064", "Invalid signer")
 )

@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -17,10 +17,13 @@
 package ethsigner
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
 
+	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/rlp"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
@@ -99,7 +102,7 @@ func (t *Transaction) Build1559(chainID int64) rlp.List {
 // Never picks legacy-legacy (non EIP-155), or EIP-2930
 func (t *Transaction) Sign(signer secp256k1.Signer, chainID int64) ([]byte, error) {
 	if signer == nil {
-		return nil, fmt.Errorf("invalid signer")
+		return nil, i18n.NewError(context.Background(), signermsgs.MsgInvalidSigner)
 	}
 	if t.MaxPriorityFeePerGas.BigInt().Sign() > 0 || t.MaxFeePerGas.BigInt().Sign() > 0 {
 		return t.SignEIP1559(signer, chainID)
@@ -130,7 +133,7 @@ func (t *Transaction) SignaturePayloadLegacyOriginal() *TransactionSignaturePayl
 // SignLegacyOriginal uses legacy transaction structure, with legacy V value (27/28)
 func (t *Transaction) SignLegacyOriginal(signer secp256k1.Signer) ([]byte, error) {
 	if signer == nil {
-		return nil, fmt.Errorf("invalid signer")
+		return nil, i18n.NewError(context.Background(), signermsgs.MsgInvalidSigner)
 	}
 	signatureData := t.SignaturePayloadLegacyOriginal()
 	sig, err := signer.Sign(signatureData.data)

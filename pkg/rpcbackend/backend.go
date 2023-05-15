@@ -47,9 +47,7 @@ type Backend interface {
 
 // NewRPCClient Constructor
 func NewRPCClient(client *resty.Client) Backend {
-	return &RPCClient{
-		client: client,
-	}
+	return NewRPCClientWithOption(client, RPCClientOptions{})
 }
 
 // NewRPCClientWithOption Constructor
@@ -126,15 +124,14 @@ func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method str
 		req.Params[i] = fftypes.JSONAnyPtrBytes(b)
 	}
 	res, err := rc.SyncRequest(ctx, req)
+	if err == nil {
+		err = json.Unmarshal(res.Result.Bytes(), &result)
+	}
 	if err != nil {
 		if res.Error != nil && res.Error.Code != 0 {
 			return res.Error
 		}
 		return &RPCError{Code: int64(RPCCodeInternalError), Message: err.Error()}
-	}
-	err = json.Unmarshal(res.Result.Bytes(), &result)
-	if err != nil {
-		return &RPCError{Code: int64(RPCCodeParseError), Message: err.Error()}
 	}
 	return nil
 }

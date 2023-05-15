@@ -35,7 +35,7 @@ import (
 
 type testRPCHander func(rpcReq *RPCRequest) (int, *RPCResponse)
 
-func newTestServer(t *testing.T, rpcHandler testRPCHander) (context.Context, *RPCClient, func()) {
+func newTestServer(t *testing.T, rpcHandler testRPCHander, options ...RPCClientOptions) (context.Context, *RPCClient, func()) {
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +63,7 @@ func newTestServer(t *testing.T, rpcHandler testRPCHander) (context.Context, *RP
 
 	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
 	assert.NoError(t, err)
+
 	rb := NewRPCClient(c).(*RPCClient)
 
 	return ctx, rb, func() {
@@ -203,6 +204,27 @@ func TestSyncRPCCallErrorResponse(t *testing.T) {
 	assert.Regexp(t, "pop", err)
 }
 
+func TestSyncRPCCallBadJSONResponse(t *testing.T) {
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{!!!!`))
+	}))
+	defer server.Close()
+
+	signerconfig.Reset()
+	prefix := signerconfig.BackendConfig
+	prefix.Set(ffresty.HTTPConfigURL, server.URL)
+	c, err := ffresty.New(context.Background(), signerconfig.BackendConfig)
+	assert.NoError(t, err)
+	rb := NewRPCClient(c).(*RPCClient)
+
+	var txCount ethtypes.HexInteger
+	rpcErr := rb.CallRPC(context.Background(), &txCount, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
+	assert.Regexp(t, "FF22012", rpcErr.Error())
+}
+
 func TestSyncRPCCallErrorBadInput(t *testing.T) {
 
 	ctx, rb, done := newTestServer(t, func(rpcReq *RPCRequest) (status int, rpcRes *RPCResponse) { return 500, nil })
@@ -226,4 +248,44 @@ func TestSyncRPCCallServerDown(t *testing.T) {
 func TestSafeMessageGetter(t *testing.T) {
 
 	assert.Empty(t, (&RPCResponse{}).Message())
+}
+
+func TestSyncRequestConcurrency(t *testing.T) {
+
+	blocked := make(chan struct{})
+	blocking := make(chan bool, 1)
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		blocking <- true
+		<-blocked
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{}`))
+	}))
+	defer server.Close()
+
+	signerconfig.Reset()
+	prefix := signerconfig.BackendConfig
+	prefix.Set(ffresty.HTTPConfigURL, server.URL)
+	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
+	assert.NoError(t, err)
+	rb := NewRPCClientWithOption(c, RPCClientOptions{
+		MaxConcurrentRequest: 1,
+	}).(*RPCClient)
+
+	bgDone := make(chan struct{})
+	go func() {
+		_, err := rb.SyncRequest(ctx, &RPCRequest{})
+		assert.Regexp(t, "FF22012", err)
+		close(bgDone)
+	}()
+	<-blocking
+
+	cancelCtx()
+	_, err = rb.SyncRequest(ctx, &RPCRequest{})
+	assert.Regexp(t, "FF22063", err)
+
+	close(blocked)
+	<-bgDone
+
 }
