@@ -225,6 +225,27 @@ func TestSyncRPCCallBadJSONResponse(t *testing.T) {
 	assert.Regexp(t, "FF22012", rpcErr.Error())
 }
 
+func TestSyncRPCCallFailParseJSONResponse(t *testing.T) {
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write([]byte(`{"result":"not an object"}`))
+	}))
+	defer server.Close()
+
+	signerconfig.Reset()
+	prefix := signerconfig.BackendConfig
+	prefix.Set(ffresty.HTTPConfigURL, server.URL)
+	c, err := ffresty.New(context.Background(), signerconfig.BackendConfig)
+	assert.NoError(t, err)
+	rb := NewRPCClient(c).(*RPCClient)
+
+	var mapResult map[string]interface{}
+	rpcErr := rb.CallRPC(context.Background(), &mapResult, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
+	assert.Regexp(t, "FF22065", rpcErr.Error())
+}
+
 func TestSyncRPCCallErrorBadInput(t *testing.T) {
 
 	ctx, rb, done := newTestServer(t, func(rpcReq *RPCRequest) (status int, rpcRes *RPCResponse) { return 500, nil })

@@ -81,4 +81,5 @@ var (
 	MsgNegativeUnsignedABIEncode   = ffe("FF22062", "Negative numeric value is invalid for component %s")
 	MsgRequestCanceledContext      = ffe("FF22063", "Request with id %s failed due to canceled context")
 	MsgInvalidSigner               = ffe("FF22064", "Invalid signer")
+	MsgResultParseFailed           = ffe("FF22065", "Failed to parse result (expected=%T): %s")
 )
