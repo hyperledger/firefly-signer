@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,7 +19,7 @@ package rpcserver
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"unicode"
@@ -35,7 +35,7 @@ func (s *rpcServer) rpcHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context() // will include logging ID from FireFly server framework
 
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		s.replyRPCParseError(ctx, w, b)
 		return

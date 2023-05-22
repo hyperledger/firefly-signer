@@ -19,6 +19,8 @@ package fswallet
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/hyperledger/firefly-common/pkg/config"
@@ -171,6 +173,32 @@ func TestRefreshOK(t *testing.T) {
 	ctx, f, done := newTestTOMLMetadataWallet(t, true)
 	defer done()
 	err := f.Refresh(ctx)
+	assert.NoError(t, err)
+
+}
+
+func TestRefreshStatFail(t *testing.T) {
+
+	config.RootConfigReset()
+	logrus.SetLevel(logrus.TraceLevel)
+
+	tmpDir := t.TempDir()
+	os.Mkdir(path.Join(tmpDir, "baddir"), 0000)
+
+	unitTestConfig := config.RootSection("ut_fs_config")
+	InitConfig(unitTestConfig)
+	unitTestConfig.Set(ConfigPath, tmpDir)
+	unitTestConfig.Set(ConfigFilenamesPrimaryExt, ".toml")
+	unitTestConfig.Set(ConfigMetadataKeyFileProperty, `{{ index .signing "key-file" }}`)
+	unitTestConfig.Set(ConfigMetadataPasswordFileProperty, `{{ index .signing "password-file" }}`)
+	unitTestConfig.Set(ConfigDisableListener, true)
+	ctx := context.Background()
+
+	ff, err := NewFilesystemWallet(ctx, ReadConfig(unitTestConfig))
+	assert.NoError(t, err)
+	defer ff.Close()
+
+	err = ff.Refresh(ctx)
 	assert.NoError(t, err)
 
 }
