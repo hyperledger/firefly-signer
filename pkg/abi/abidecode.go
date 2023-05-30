@@ -100,8 +100,13 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 			headStart += headOffset
 			headPosition = headStart
 		}
-		_, cv, err := walkDynamicChildArrayABIBytes(ctx, "tup", breadcrumbs, block, headStart, headPosition, component, component.tupleChildren)
-		return 32, cv, err
+
+		headBytesRead, cv, err := walkDynamicChildArrayABIBytes(ctx, "tup", breadcrumbs, block, headStart, headPosition, component, component.tupleChildren)
+		if dynamic {
+			// In the case where it's dynamic we only read one block
+			headBytesRead = 32
+		}
+		return headBytesRead, cv, err
 	default:
 		return -1, nil, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, component.cType)
 	}

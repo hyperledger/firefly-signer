@@ -439,6 +439,112 @@ func TestExampleABIDecodeDoubleNestedTuple(t *testing.T) {
 	assert.Equal(t, big.NewInt(66666), cv.Children[0].Children[0].Children[3].Value)
 }
 
+func TestExampleABIDecodeStaticNestedTupleInDynamicTuple(t *testing.T) {
+
+	f := &Entry{
+		Name: "f",
+		Outputs: ParameterArray{
+			{
+				Type: "tuple[]",
+				Name: "nested",
+				Components: ParameterArray{
+					{Type: "uint256", Name: "a"},
+					{Type: "string", Name: "b"},
+					{Type: "tuple", Name: "c", Components: ParameterArray{
+						{Type: "uint256", Name: "c1"},
+						{Type: "uint256", Name: "c2"},
+					}},
+					{Type: "uint256", Name: "d"},
+				},
+			},
+		},
+	}
+
+	b, err := f.Outputs.EncodeABIDataJSON([]byte(`{
+		"nested": [{
+			"a": 11111,
+			"b": "test22222",
+			"c": {
+				"c1": 33333,
+				"c2": 44444
+			},
+			"d": 55555
+		}]
+	}`))
+	assert.NoError(t, err)
+
+	assert.Equal(t,
+		"0000000000000000000000000000000000000000000000000000000000000020"+ // 0   - 32 - offset for the start of the dynamic array
+			"0000000000000000000000000000000000000000000000000000000000000001"+ // 32  - 1  - number of tuples in the dynamic array
+			"0000000000000000000000000000000000000000000000000000000000000020"+ // 64  - 32 - offset of the data for the tuple at position 0 in the array
+			"0000000000000000000000000000000000000000000000000000000000002b67"+ // 96  - 11111 - value "a"
+			"00000000000000000000000000000000000000000000000000000000000000a0"+ // 128 - 160 - offset of the string data for "b", relative to 96 = 224
+			"0000000000000000000000000000000000000000000000000000000000008235"+ // 160 - 33333 - value of "c1"
+			"000000000000000000000000000000000000000000000000000000000000ad9c"+ // 192 - 44444 - value of "c2"
+			"000000000000000000000000000000000000000000000000000000000000d903"+ // 224 - 55555 - value of "d"
+			"0000000000000000000000000000000000000000000000000000000000000009"+ // 256 - 9  - length of the string data for "b"
+			"7465737432323232320000000000000000000000000000000000000000000000", // 288 - "test22222"
+		hex.EncodeToString(b))
+
+	cv, err := f.Outputs.DecodeABIData(b, 0)
+
+	assert.Equal(t, big.NewInt(11111), cv.Children[0].Children[0].Children[0].Value)
+	assert.Equal(t, "test22222", cv.Children[0].Children[0].Children[1].Value)
+	assert.Equal(t, big.NewInt(33333), cv.Children[0].Children[0].Children[2].Children[0].Value)
+	assert.Equal(t, big.NewInt(44444), cv.Children[0].Children[0].Children[2].Children[1].Value)
+	assert.Equal(t, big.NewInt(55555), cv.Children[0].Children[0].Children[3].Value)
+}
+
+func TestExampleABIDecodeDoubleStaticNestedTuple(t *testing.T) {
+
+	f := &Entry{
+		Name: "f",
+		Outputs: ParameterArray{
+			{
+				Type: "tuple[]",
+				Name: "nested",
+				Components: ParameterArray{
+					{Type: "uint256", Name: "a"},
+					{Type: "tuple", Name: "c", Components: ParameterArray{
+						{Type: "uint256", Name: "c1"},
+						{Type: "uint256", Name: "c2"},
+					}},
+					{Type: "uint256", Name: "d"},
+				},
+			},
+		},
+	}
+
+	b, err := f.Outputs.EncodeABIDataJSON([]byte(`{
+		"nested": [{
+			"a": 11111,
+			"c": {
+				"c1": 22222,
+				"c2": 33333
+			},
+			"d": 44444
+		}]
+	}`))
+	assert.NoError(t, err)
+
+	// The encoding looks right to me
+	assert.Equal(t,
+		"0000000000000000000000000000000000000000000000000000000000000020"+ // 0  - 32 - offset for the start of the dynamic array
+			"0000000000000000000000000000000000000000000000000000000000000001"+ // 32 - 1  - number of tuples in the dynamic array
+			"0000000000000000000000000000000000000000000000000000000000002b67"+ // 64 - 11111 - value of "a"
+			"00000000000000000000000000000000000000000000000000000000000056ce"+ // 96 - 22222 - value of "c1"
+			"0000000000000000000000000000000000000000000000000000000000008235"+ // 128 - 33333 - value of "c2"
+			"000000000000000000000000000000000000000000000000000000000000ad9c", // 160 - 44444 - value of "d"
+		hex.EncodeToString(b))
+
+	cv, err := f.Outputs.DecodeABIData(b, 0)
+
+	assert.Equal(t, big.NewInt(11111), cv.Children[0].Children[0].Children[0].Value)
+	assert.Equal(t, big.NewInt(22222), cv.Children[0].Children[0].Children[1].Children[0].Value)
+	assert.Equal(t, big.NewInt(33333), cv.Children[0].Children[0].Children[1].Children[1].Value)
+	assert.Equal(t, big.NewInt(44444), cv.Children[0].Children[0].Children[2].Value)
+}
+
 func TestExampleABIDecodeTupleFixed(t *testing.T) {
 
 	f := &Entry{
@@ -863,7 +969,6 @@ func TestIsDynamicTypeBadNestedTupleType(t *testing.T) {
 	})
 	assert.Regexp(t, "FF22041", err)
 }
-
 func TestDecodeABIElementBadDynamicTypeFixedArray(t *testing.T) {
 
 	block, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020")
@@ -873,6 +978,20 @@ func TestDecodeABIElementBadDynamicTypeFixedArray(t *testing.T) {
 		cType:       FixedArrayComponent,
 		arrayLength: 1,
 		arrayChild:  &typeComponent{cType: 99},
+	})
+	assert.Regexp(t, "FF22041", err)
+}
+
+func TestDecodeABIElementBadDynamicTypeTuple(t *testing.T) {
+
+	block, err := hex.DecodeString("0000000000000000000000000000000000000000000000000000000000000020")
+	assert.NoError(t, err)
+
+	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, &typeComponent{
+		cType: TupleComponent,
+		tupleChildren: []*typeComponent{
+			{cType: 99},
+		},
 	})
 	assert.Regexp(t, "FF22041", err)
 }

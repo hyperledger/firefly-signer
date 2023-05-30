@@ -48,7 +48,7 @@ func (cv *ComponentValue) encodeABIData(ctx context.Context, desc string) ([]byt
 	case DynamicArrayComponent:
 		return cv.encodeABIChildren(ctx, desc, true /* always dynamic */, true /* need length */)
 	case TupleComponent:
-		return cv.encodeABIChildren(ctx, desc, true /* always dynamic */, false /* no length */)
+		return cv.encodeABIChildren(ctx, desc, false /* only dynamic if the children are dynamic */, false /* no length */)
 	default:
 		return nil, false, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, tc.cType)
 	}
