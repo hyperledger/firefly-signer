@@ -161,8 +161,6 @@ func decodeABILength(ctx context.Context, desc string, block []byte, offset int)
 	if offset+32 > len(block) {
 		return -1, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIArrayCount, desc)
 	}
-	newBlock := block[offset : offset+32]
-	fmt.Println(newBlock)
 	i := new(big.Int).SetBytes(block[offset : offset+32])
 	if i.BitLen() > 32 {
 		return -1, i18n.NewError(ctx, signermsgs.MsgABIArrayCountTooLarge, i.Text(10), desc)
