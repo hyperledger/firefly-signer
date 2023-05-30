@@ -88,14 +88,25 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 		}
 		return 32, cv, err
 	case TupleComponent:
-		headOffset, err := decodeABILength(ctx, breadcrumbs, block, headPosition)
+		dynamic, err := isDynamicType(ctx, component)
 		if err != nil {
 			return -1, nil, err
 		}
-		headStart += headOffset
-		headPosition = headStart
-		_, cv, err := walkDynamicChildArrayABIBytes(ctx, "tup", breadcrumbs, block, headStart, headPosition, component, component.tupleChildren)
-		return 32, cv, err
+		if dynamic {
+			headOffset, err := decodeABILength(ctx, breadcrumbs, block, headPosition)
+			if err != nil {
+				return -1, nil, err
+			}
+			headStart += headOffset
+			headPosition = headStart
+		}
+
+		headBytesRead, cv, err := walkDynamicChildArrayABIBytes(ctx, "tup", breadcrumbs, block, headStart, headPosition, component, component.tupleChildren)
+		if dynamic {
+			// In the case where it's dynamic we only read one block
+			headBytesRead = 32
+		}
+		return headBytesRead, cv, err
 	default:
 		return -1, nil, i18n.NewError(ctx, signermsgs.MsgBadABITypeComponent, component.cType)
 	}
