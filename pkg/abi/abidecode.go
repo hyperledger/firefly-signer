@@ -88,12 +88,18 @@ func decodeABIElement(ctx context.Context, breadcrumbs string, block []byte, hea
 		}
 		return 32, cv, err
 	case TupleComponent:
-		headOffset, err := decodeABILength(ctx, breadcrumbs, block, headPosition)
+		dynamic, err := isDynamicType(ctx, component)
 		if err != nil {
 			return -1, nil, err
 		}
-		headStart += headOffset
-		headPosition = headStart
+		if dynamic {
+			headOffset, err := decodeABILength(ctx, breadcrumbs, block, headPosition)
+			if err != nil {
+				return -1, nil, err
+			}
+			headStart += headOffset
+			headPosition = headStart
+		}
 		_, cv, err := walkDynamicChildArrayABIBytes(ctx, "tup", breadcrumbs, block, headStart, headPosition, component, component.tupleChildren)
 		return 32, cv, err
 	default:
@@ -150,6 +156,8 @@ func decodeABILength(ctx context.Context, desc string, block []byte, offset int)
 	if offset+32 > len(block) {
 		return -1, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIArrayCount, desc)
 	}
+	newBlock := block[offset : offset+32]
+	fmt.Println(newBlock)
 	i := new(big.Int).SetBytes(block[offset : offset+32])
 	if i.BitLen() > 32 {
 		return -1, i18n.NewError(ctx, signermsgs.MsgABIArrayCountTooLarge, i.Text(10), desc)

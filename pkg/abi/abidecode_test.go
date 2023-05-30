@@ -346,6 +346,35 @@ func TestExampleABIDecodeTuple(t *testing.T) {
 	assert.Equal(t, big.NewInt(2414), cv.Children[0].Children[0].Children[3].Value)
 }
 
+// TestExampleABIDecodeNonDynamicTuple is responsible for testing a duple that does
+// not have any dynamic fields
+func TestExampleABIDecodeNonDynamicTuple(t *testing.T) {
+
+	f := &Entry{
+		Name: "coupon",
+		Outputs: ParameterArray{
+			{
+				Type: "tuple",
+				Name: "mystruct",
+				Components: ParameterArray{
+					{Type: "address", Name: "account"},
+					{Type: "uint256", Name: "value"},
+				},
+			},
+		},
+	}
+
+	d, _ := hex.DecodeString("" +
+		"000000000000000000000000d2d8a61d774f552301d71aa99a78aff2e4765ca7" +
+		"000000000000000000000000000000000000000000000000000000000000007b")
+
+	cv, err := f.Outputs.DecodeABIData(d, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, big.NewInt(123), cv.Children[0].Children[1].Value)
+	address, _ := cv.Children[0].Children[0].JSON()
+	assert.Equal(t, "\"d2d8a61d774f552301d71aa99a78aff2e4765ca7\"", string(address))
+}
+
 func TestExampleABIDecodeDoubleNestedTuple(t *testing.T) {
 
 	f := &Entry{
