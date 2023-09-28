@@ -149,7 +149,8 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 		case rc.concurrencySlots <- true:
 			// wait for the concurrency slot and continue
 		case <-ctx.Done():
-			return nil, i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
+			err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
+			return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err
 		}
 		defer func() {
 			<-rc.concurrencySlots
