@@ -37,31 +37,20 @@ type WSBackend interface {
 	Subscribe(ctx context.Context, subChannel chan *RPCSubscriptionRequest, params ...interface{}) (error *RPCError)
 	UnsubscribeAll(ctx context.Context) (error *RPCError)
 	Connect(ctx context.Context) error
+	Close()
 }
 
 // NewRPCClient Constructor
 func NewWSRPCClient(client wsclient.WSClient) WSBackend {
-	return NewWSRPCClientWithOption(client, RPCClientOptions{})
-}
-
-// NewRPCClientWithOption Constructor
-func NewWSRPCClientWithOption(client wsclient.WSClient, options RPCClientOptions) WSBackend {
-	wsRPCClient := &WSRPCClient{
+	return &WSRPCClient{
 		client:               client,
 		subscriptions:        make(map[string]chan *RPCSubscriptionRequest),
 		pendingSubscriptions: make(map[string]chan *RPCSubscriptionRequest),
 	}
-
-	if options.MaxConcurrentRequest > 0 {
-		wsRPCClient.concurrencySlots = make(chan bool, options.MaxConcurrentRequest)
-	}
-
-	return wsRPCClient
 }
 
 type WSRPCClient struct {
 	client               wsclient.WSClient
-	concurrencySlots     chan bool
 	requestCounter       int64
 	subscriptions        map[string]chan *RPCSubscriptionRequest
 	pendingSubscriptions map[string]chan *RPCSubscriptionRequest
@@ -75,6 +64,10 @@ func (rc *WSRPCClient) Connect(ctx context.Context) error {
 	}
 	go rc.receiveLoop(ctx)
 	return nil
+}
+
+func (rc *WSRPCClient) Close() {
+	rc.client.Close()
 }
 
 func (rc *WSRPCClient) allocateRequestID(req *RPCRequest) string {
@@ -128,18 +121,6 @@ func (rc *WSRPCClient) CallRPC(ctx context.Context, method string, params ...int
 }
 
 func (rc *WSRPCClient) request(ctx context.Context, rpcReq *RPCRequest) (id string, err error) {
-	if rc.concurrencySlots != nil {
-		select {
-		case rc.concurrencySlots <- true:
-			// wait for the concurrency slot and continue
-		case <-ctx.Done():
-			return "", i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
-		}
-		defer func() {
-			<-rc.concurrencySlots
-		}()
-	}
-
 	// We always set the back-end request ID - as we need to support requests coming in from
 	// multiple concurrent clients on our front-end that might use clashing IDs.
 	reqID := rc.allocateRequestID(rpcReq)
