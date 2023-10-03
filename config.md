@@ -26,6 +26,7 @@ nav_order: 2
 |expectContinueTimeout|See [ExpectContinueTimeout in the Go docs](https://pkg.go.dev/net/http#Transport)|[`time.Duration`](https://pkg.go.dev/time#Duration)|`1s`
 |headers|Adds custom headers to HTTP requests|`map[string]string`|`<nil>`
 |idleTimeout|The max duration to hold a HTTP keepalive connection between calls|[`time.Duration`](https://pkg.go.dev/time#Duration)|`475ms`
+|maxConnsPerHost|The max number of connections, per unique hostname. Zero means no limit|`int`|`0`
 |maxIdleConns|The max number of idle connections to hold pooled|`int`|`100`
 |passthroughHeadersEnabled|Enable passing through the set of allowed HTTP request headers|`boolean`|`false`
 |requestTimeout|The maximum amount of time that a request is allowed to remain open|[`time.Duration`](https://pkg.go.dev/time#Duration)|`30s`
@@ -51,6 +52,7 @@ nav_order: 2
 |---|-----------|----|-------------|
 |count|The maximum number of times to retry|`int`|`5`
 |enabled|Enables retries|`boolean`|`false`
+|errorStatusCodeRegex|The regex that the error response status code must match to trigger retry|`string`|`<nil>`
 |initWaitTime|The initial retry delay|[`time.Duration`](https://pkg.go.dev/time#Duration)|`250ms`
 |maxWaitTime|The maximum retry delay|[`time.Duration`](https://pkg.go.dev/time#Duration)|`30s`
 
@@ -69,6 +71,7 @@ nav_order: 2
 
 |Key|Description|Type|Default Value|
 |---|-----------|----|-------------|
+|connectionTimeout|The amount of time to wait while establishing a connection (or auto-reconnection)|[`time.Duration`](https://pkg.go.dev/time#Duration)|`45s`
 |heartbeatInterval|The amount of time to wait between heartbeat signals on the WebSocket connection|[`time.Duration`](https://pkg.go.dev/time#Duration)|`30s`
 |initialConnectAttempts|The number of attempts FireFly will make to connect to the WebSocket when starting up, before failing|`int`|`5`
 |path|The WebSocket sever URL to which FireFly should connect|WebSocket URL `string`|`<nil>`

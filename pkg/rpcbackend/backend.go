@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-common/pkg/log"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/sirupsen/logrus"
 )
 
@@ -78,6 +79,18 @@ type RPCRequest struct {
 	ID      *fftypes.JSONAny   `json:"id"`
 	Method  string             `json:"method"`
 	Params  []*fftypes.JSONAny `json:"params,omitempty"`
+}
+
+type RPCSubscriptionRequest struct {
+	JSONRpc string                 `json:"jsonrpc"`
+	ID      *fftypes.JSONAny       `json:"id"`
+	Method  string                 `json:"method"`
+	Params  *RPCSubscriptionParams `json:"params"`
+}
+
+type RPCSubscriptionParams struct {
+	Subscription ethtypes.HexBytes0xPrefix `json:"subscription"`
+	Result       *fftypes.JSONAny          `json:"result"`
 }
 
 type RPCError struct {

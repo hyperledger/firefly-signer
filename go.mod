@@ -7,7 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gorilla/mux v1.8.0
-	github.com/hyperledger/firefly-common v1.2.11
+	github.com/hyperledger/firefly-common v1.3.1-0.20231003142556-37246a8c5e72
 	github.com/karlseguin/ccache v2.0.3+incompatible
 	github.com/pelletier/go-toml v1.9.5
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.2
@@ -69,7 +69,7 @@ require (
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
-	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect; indirectå
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
