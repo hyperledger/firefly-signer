@@ -31,13 +31,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// RPCCallAndSubscribe performs communication over a websocket with a JSON/RPC endpoint
+// WebSocketRPCClient performs communication over a websocket with an Ethereum JSON/RPC endpoint
 //
 // - Manages websocket connect/reconnect with keepalive etc.
 // - Manages subscriptions with a local ID, so they re-established automatically after reconnect
 // - Allows synchronous exchange over the WebSocket so you don't have to maintain a separate HTTP connection too
-type RPCCallAndSubscribe interface {
-	RPCCaller
+type WebSocketRPCClient interface {
+	RPC
 	Subscribe(ctx context.Context, params ...interface{}) (sub Subscription, error *RPCError)
 	Subscriptions() []Subscription
 	UnsubscribeAll(ctx context.Context) (error *RPCError)
@@ -46,7 +46,7 @@ type RPCCallAndSubscribe interface {
 }
 
 // NewRPCClient Constructor
-func NewWSRPCClient(wsConf *wsclient.WSConfig) RPCCallAndSubscribe {
+func NewWSRPCClient(wsConf *wsclient.WSConfig) WebSocketRPCClient {
 	return &wsRPCClient{
 		wsConf:             *wsConf,
 		calls:              make(map[string]chan *RPCResponse),

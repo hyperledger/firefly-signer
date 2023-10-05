@@ -39,13 +39,13 @@ const (
 	RPCCodeInternalError  RPCCode = -32603
 )
 
-type RPCCaller interface {
+type RPC interface {
 	CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) *RPCError
 }
 
 // Backend performs communication with a backend
 type Backend interface {
-	RPCCaller
+	RPC
 	SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error)
 }
 
