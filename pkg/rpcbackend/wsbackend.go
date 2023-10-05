@@ -35,55 +35,63 @@ import (
 type WSBackend interface {
 	RPCCaller
 	Subscribe(ctx context.Context, params ...interface{}) (sub Subscription, error *RPCError)
+	Subscriptions() []Subscription
 	UnsubscribeAll(ctx context.Context) (error *RPCError)
 	Connect(ctx context.Context) error
 	Close()
 }
 
 // NewRPCClient Constructor
-func NewWSRPCClient(client wsclient.WSClient) WSBackend {
+func NewWSRPCClient(wsConf *wsclient.WSConfig) WSBackend {
 	return &wsRPCClient{
-		client:        client,
-		calls:         make(map[string]chan *RPCResponse),
-		pendingSubs:   make(map[string]chan *newSubResponse),
-		subscriptions: make(map[string]*sub),
+		wsConf:             *wsConf,
+		calls:              make(map[string]chan *RPCResponse),
+		configuredSubs:     make(map[fftypes.UUID]*sub),
+		pendingSubsByReqID: make(map[string]*sub),
+		activeSubsBySubID:  make(map[string]*sub),
 	}
 }
 
 type Subscription interface {
-	ID() string
+	LocalID() *fftypes.UUID // does not change through reconnects
 	Notifications() chan *RPCSubscriptionNotification
 	Unsubscribe(ctx context.Context) *RPCError
 }
 
 type RPCSubscriptionNotification struct {
-	Subscription Subscription
+	CurrentSubID string // will change on each reconnect
 	Result       *fftypes.JSONAny
 }
 
 type wsRPCClient struct {
-	mux            sync.Mutex
-	client         wsclient.WSClient
-	requestCounter int64
-	calls          map[string]chan *RPCResponse
-	pendingSubs    map[string]chan *newSubResponse
-	subscriptions  map[string]*sub
+	mux                sync.Mutex
+	wsConf             wsclient.WSConfig
+	client             wsclient.WSClient
+	requestCounter     int64
+	calls              map[string]chan *RPCResponse
+	configuredSubs     map[fftypes.UUID]*sub
+	pendingSubsByReqID map[string]*sub
+	activeSubsBySubID  map[string]*sub
 }
 
 type sub struct {
+	localID        *fftypes.UUID
 	rc             *wsRPCClient
 	ctx            context.Context
 	cancelCtx      context.CancelFunc
-	subscriptionID string
+	params         []interface{}
+	pendingReqID   string
+	currentSubID   string
+	newSubResponse chan *RPCError
 	notifications  chan *RPCSubscriptionNotification
 }
 
-type newSubResponse struct {
-	s      *sub
-	rpcErr *RPCError
-}
+func (rc *wsRPCClient) Connect(ctx context.Context) (err error) {
+	rc.client, err = wsclient.New(ctx, &rc.wsConf, nil, rc.handleReconnect)
+	if err != nil {
+		return err
+	}
 
-func (rc *wsRPCClient) Connect(ctx context.Context) error {
 	if err := rc.client.Connect(); err != nil {
 		return err
 	}
@@ -92,7 +100,24 @@ func (rc *wsRPCClient) Connect(ctx context.Context) error {
 }
 
 func (rc *wsRPCClient) Close() {
-	rc.client.Close()
+	if rc.client != nil {
+		rc.client.Close()
+	}
+}
+
+func (rc *wsRPCClient) handleReconnect(ctx context.Context, w wsclient.WSClient) error {
+	if !rc.wsConf.DisableReconnect {
+		subs := rc.clearActiveReturnConfiguredSubs()
+		for _, s := range subs {
+			reqID, rpcErr := s.sendSubscribe(ctx)
+			log.L(ctx).Infof("RPC[%s]: Resubscribing %s after WebSocket reconnect", reqID, s.localID)
+			if rpcErr != nil {
+				log.L(ctx).Errorf("Failed to send resubscribe: %s", rpcErr)
+				return rpcErr.Error()
+			}
+		}
+	}
+	return nil
 }
 
 func (rc *wsRPCClient) addInflightRequest(req *RPCRequest) (string, chan *RPCResponse) {
@@ -106,24 +131,24 @@ func (rc *wsRPCClient) addInflightRequest(req *RPCRequest) (string, chan *RPCRes
 	return reqID, resChl
 }
 
-func (rc *wsRPCClient) addInflightSub(req *RPCRequest) (string, chan *newSubResponse) {
+func (rc *wsRPCClient) addInflightSub(s *sub) string {
 	rc.mux.Lock()
 	defer rc.mux.Unlock()
 	rc.requestCounter++
-	reqID := fmt.Sprintf("%.9d", rc.requestCounter)
-	req.ID = fftypes.JSONAnyPtr(`"` + reqID + `"`)
-	resChl := make(chan *newSubResponse, 1)
-	rc.pendingSubs[reqID] = resChl
-	return reqID, resChl
+	s.pendingReqID = fmt.Sprintf("%.9d", rc.requestCounter)
+	s.currentSubID = ""
+	rc.pendingSubsByReqID[s.pendingReqID] = s
+	return s.pendingReqID
 }
 
-func (rc *wsRPCClient) popInflight(rpcID string) (chan *newSubResponse, chan *RPCResponse) {
+func (rc *wsRPCClient) popInflight(rpcID string) (*sub, chan *RPCResponse) {
 	rc.mux.Lock()
 	defer rc.mux.Unlock()
-	inflightSub, ok := rc.pendingSubs[rpcID]
+	s, ok := rc.pendingSubsByReqID[rpcID]
 	if ok {
-		delete(rc.pendingSubs, rpcID)
-		return inflightSub, nil
+		s.pendingReqID = ""
+		delete(rc.pendingSubsByReqID, rpcID)
+		return s, nil
 	}
 	inflightCall, ok := rc.calls[rpcID]
 	if ok {
@@ -133,29 +158,78 @@ func (rc *wsRPCClient) popInflight(rpcID string) (chan *newSubResponse, chan *RP
 	return nil, nil
 }
 
-func (rc *wsRPCClient) addSubscription(s *sub) {
+func (rc *wsRPCClient) addActiveSub(s *sub, subscriptionID string) {
 	rc.mux.Lock()
 	defer rc.mux.Unlock()
-	rc.subscriptions[s.subscriptionID] = s
+	s.currentSubID = subscriptionID
+	rc.activeSubsBySubID[s.currentSubID] = s
 }
 
-func (rc *wsRPCClient) removeSubscription(s *sub) {
+func (rc *wsRPCClient) getActiveSub(subID string) *sub {
 	rc.mux.Lock()
 	defer rc.mux.Unlock()
-	delete(rc.subscriptions, s.subscriptionID)
+	return rc.activeSubsBySubID[subID]
 }
 
-func (rc *wsRPCClient) getSubscription(subscriptionID string) *sub {
+func (rc *wsRPCClient) removeSubscription(s *sub) string {
 	rc.mux.Lock()
 	defer rc.mux.Unlock()
-	return rc.subscriptions[subscriptionID]
+	// Removes from configured, pending and active lists
+	delete(rc.configuredSubs, *s.localID)
+	if s.currentSubID != "" {
+		delete(rc.activeSubsBySubID, s.currentSubID)
+	}
+	if s.pendingReqID != "" {
+		delete(rc.pendingSubsByReqID, s.pendingReqID)
+	}
+	s.cancelCtx() // we unblock the receiver if it was previously trying to dispatch to this subscription, before invoking unsubscribe
+	return s.currentSubID
 }
 
-func (rc *wsRPCClient) getAllSubscriptions() []*sub {
+func (rc *wsRPCClient) addConfiguredSub(ctx context.Context, params []interface{}) (*sub, chan *RPCError) {
 	rc.mux.Lock()
 	defer rc.mux.Unlock()
-	subs := make([]*sub, 0, len(rc.subscriptions))
-	for _, s := range rc.subscriptions {
+	s := &sub{
+		rc:             rc,
+		localID:        fftypes.NewUUID(),
+		params:         params,
+		newSubResponse: make(chan *RPCError),
+		notifications:  make(chan *RPCSubscriptionNotification), // blocking channel for these, but Unsubscribe will unblock by cancelling ctx
+	}
+	s.ctx, s.cancelCtx = context.WithCancel(ctx)
+	rc.configuredSubs[*s.localID] = s
+	// need to return newSubResponse because it's a use-once thing (not on reconnect)
+	// and will be nilled out (under lock) when the first creation response comes in
+	return s, s.newSubResponse
+}
+
+func (rc *wsRPCClient) removeConfiguredSub(id *fftypes.UUID) {
+	rc.mux.Lock()
+	defer rc.mux.Unlock()
+	delete(rc.configuredSubs, *id)
+}
+
+func (rc *wsRPCClient) clearActiveReturnConfiguredSubs() map[fftypes.UUID]*sub {
+	rc.mux.Lock()
+	defer rc.mux.Unlock()
+	// Clear the active state as considered now invalid after a reconnect
+	rc.activeSubsBySubID = make(map[string]*sub)
+	rc.pendingSubsByReqID = make(map[string]*sub)
+	// Return all the configured ones so we can re-establish them on the new connecti
+	subs := make(map[fftypes.UUID]*sub)
+	for id, s := range rc.configuredSubs {
+		s.currentSubID = ""
+		s.pendingReqID = ""
+		subs[id] = s
+	}
+	return subs
+}
+
+func (rc *wsRPCClient) getAllSubs() []*sub {
+	rc.mux.Lock()
+	defer rc.mux.Unlock()
+	subs := make([]*sub, 0)
+	for _, s := range rc.configuredSubs {
 		subs = append(subs, s)
 	}
 	return subs
@@ -169,29 +243,36 @@ func (rc *wsRPCClient) removeInflightRequest(reqID string) {
 
 func (rc *wsRPCClient) Subscribe(ctx context.Context, params ...interface{}) (sub Subscription, error *RPCError) {
 
-	// We can't just use RPCCall here, because we have to intercept the response differently on the routine
-	rpcReq, rpcErr := buildRequest(ctx, "eth_subscribe", params)
+	s, newSubResponse := rc.addConfiguredSub(ctx, params)
+
+	reqID, rpcErr := s.sendSubscribe(ctx)
 	if rpcErr != nil {
-		return nil, rpcErr
-	}
-
-	reqID, resChannel := rc.addInflightSub(rpcReq)
-	defer rc.removeInflightRequest(reqID)
-
-	if rpcErr = rc.sendRPC(ctx, reqID, rpcReq); rpcErr != nil {
+		rc.removeConfiguredSub(s.localID)
 		return nil, rpcErr
 	}
 
 	select {
-	case nsr := <-resChannel:
-		return nsr.s, nsr.rpcErr
+	case rpcErr := <-newSubResponse:
+		return s, rpcErr
 	case <-ctx.Done():
+		rc.removeConfiguredSub(s.localID)
 		return nil, NewRPCError(ctx, RPCCodeInternalError, signermsgs.MsgRequestCanceledContext, reqID)
 	}
 }
 
-func (s *sub) ID() string {
-	return s.subscriptionID
+func (s *sub) sendSubscribe(ctx context.Context) (string, *RPCError) {
+	rpcReq, rpcErr := buildRequest(ctx, "eth_subscribe", s.params)
+	if rpcErr != nil {
+		return "", rpcErr
+	}
+	reqID := s.rc.addInflightSub(s)
+	rpcReq.ID = fftypes.JSONAnyPtr(`"` + reqID + `"`)
+
+	return reqID, s.rc.sendRPC(ctx, s.pendingReqID, rpcReq)
+}
+
+func (s *sub) LocalID() *fftypes.UUID {
+	return s.localID
 }
 
 func (s *sub) Notifications() chan *RPCSubscriptionNotification {
@@ -199,25 +280,36 @@ func (s *sub) Notifications() chan *RPCSubscriptionNotification {
 }
 
 func (s *sub) Unsubscribe(ctx context.Context) *RPCError {
-	s.cancelCtx() // we unblock the receiver if it was previously trying to dispatch to this subscription, before invoking unsubscribe
-	s.rc.removeSubscription(s)
+	currentSubID := s.rc.removeSubscription(s)
 	var resultBool bool
-	rpcErr := s.rc.CallRPC(ctx, &resultBool, "eth_unsubscribe", s.subscriptionID)
-	if rpcErr != nil {
-		return rpcErr
+	if currentSubID != "" {
+		// If currently active, we need to unsubscribe
+		rpcErr := s.rc.CallRPC(ctx, &resultBool, "eth_unsubscribe", currentSubID)
+		if rpcErr != nil {
+			return rpcErr
+		}
 	}
-	log.L(ctx).Infof("Unsubscribed '%s' (result=%t)", s.subscriptionID, resultBool)
+	log.L(ctx).Infof("Unsubscribed %s (subid=%s,result=%t)", s.localID, currentSubID, resultBool)
 	close(s.notifications)
 	return nil
 }
 
 func (rc *wsRPCClient) UnsubscribeAll(ctx context.Context) (lastErr *RPCError) {
-	for _, s := range rc.getAllSubscriptions() {
+	for _, s := range rc.getAllSubs() {
 		if lastErr = s.Unsubscribe(ctx); lastErr != nil {
-			log.L(ctx).Errorf("Failed to unsubscribe %s: %s", s.subscriptionID, lastErr)
+			log.L(ctx).Errorf("Failed to unsubscribe %s: %s", s.localID, lastErr)
 		}
 	}
 	return lastErr
+}
+
+func (rc *wsRPCClient) Subscriptions() []Subscription {
+	subs := rc.getAllSubs()
+	iSubs := make([]Subscription, len(subs))
+	for i, s := range subs {
+		iSubs[i] = s
+	}
+	return iSubs
 }
 
 func (rc *wsRPCClient) sendRPC(ctx context.Context, reqID string, rpcReq *RPCRequest) *RPCError {
@@ -292,28 +384,32 @@ func (rc *wsRPCClient) handleSubscriptionNotification(ctx context.Context, rpcRe
 		return
 	}
 
-	sub := rc.getSubscription(subParams.Subscription)
-	if sub == nil {
+	s := rc.getActiveSub(subParams.Subscription)
+	if s == nil {
 		log.L(ctx).Warnf("RPC[%s] <-- Notification for unknown subscription '%s'", rpcRes.ID.AsString(), subParams.Subscription)
 		return
 	}
 
 	// This is a notification that should match an active subscription
+	log.L(ctx).Debugf("RPC[%s] <-- Notification for subscription %s (serverId=%s)", rpcRes.ID.AsString(), s.localID, s.currentSubID)
 	select {
-	case sub.notifications <- &RPCSubscriptionNotification{
-		Subscription: sub,
+	case s.notifications <- &RPCSubscriptionNotification{
+		CurrentSubID: s.currentSubID,
 		Result:       subParams.Result,
 	}:
-	case <-sub.ctx.Done():
+	case <-s.ctx.Done():
 		// The subscription has been unsubscribed, or we're closing
-		log.L(ctx).Warnf("RPC[%s] <-- Received subscription event after unsubscribe/close %s", rpcRes.ID.AsString(), sub.subscriptionID)
+		log.L(ctx).Warnf("RPC[%s] <-- Received subscription event after unsubscribe/close %s (serverId=%s)", rpcRes.ID.AsString(), s.localID, s.currentSubID)
 	}
 }
 
-func (rc *wsRPCClient) handleSubscriptionConfirm(ctx context.Context, rpcRes *RPCResponse, inflightSubscribe chan *newSubResponse) {
+func (rc *wsRPCClient) handleSubscriptionConfirm(ctx context.Context, rpcRes *RPCResponse, inflightSub *sub) {
+	resChl := inflightSub.newSubResponse
+	inflightSub.newSubResponse = nil // we only dispatch once (it's only new once, on reconnect it's old and there's nobody to tell if we fail)
 	if rpcRes.Error != nil && rpcRes.Error.Code != 0 {
-		inflightSubscribe <- &newSubResponse{
-			rpcErr: rpcRes.Error,
+		log.L(ctx).Warnf("RPC[%s] <-- Error creating subscription %s: %s", rpcRes.ID.AsString(), inflightSub.localID, rpcRes.Params)
+		if resChl != nil {
+			resChl <- rpcRes.Error
 		}
 		return
 	}
@@ -323,22 +419,15 @@ func (rc *wsRPCClient) handleSubscriptionConfirm(ctx context.Context, rpcRes *RP
 	}
 	if len(subscriptionID) == 0 {
 		log.L(ctx).Warnf("RPC[%s] <-- Unable to extract subscription id from eth_subscribe response: %s", rpcRes.ID.AsString(), rpcRes.Params)
-		inflightSubscribe <- &newSubResponse{
-			rpcErr: NewRPCError(ctx, RPCCodeInternalError, signermsgs.MsgSubscribeResponseInvalid),
+		if resChl != nil {
+			resChl <- NewRPCError(ctx, RPCCodeInternalError, signermsgs.MsgSubscribeResponseInvalid)
 		}
 		return
 	}
-	s := &sub{
-		rc:             rc,
-		subscriptionID: subscriptionID,
-		notifications:  make(chan *RPCSubscriptionNotification), // blocking channel for these, but Unsubscribe will unblock by cancelling ctx
-	}
-	s.ctx, s.cancelCtx = context.WithCancel(ctx)
-	log.L(ctx).Infof("Subscribed '%s'", s.subscriptionID)
-	rc.addSubscription(s)
-	inflightSubscribe <- &newSubResponse{
-		s: s,
-	}
+	log.L(ctx).Infof("Subscribed %s with server subscription ID '%s'", inflightSub.localID, subscriptionID)
+	rc.addActiveSub(inflightSub, subscriptionID)
+	// all was good, if someone is waiting to be told, notify them
+	resChl <- nil
 }
 
 func (rc *wsRPCClient) receiveLoop(ctx context.Context) {
@@ -349,16 +438,18 @@ func (rc *wsRPCClient) receiveLoop(ctx context.Context) {
 			return
 		}
 		rpcRes := RPCResponse{}
-		if err := json.Unmarshal(bytes, &rpcRes); err != nil {
+		err := json.Unmarshal(bytes, &rpcRes)
+		switch {
+		case err != nil:
 			log.L(ctx).Errorf("RPC <-- ERROR invalid data '%s': %s", bytes, err)
-		} else if rpcRes.Method == "eth_subscription" {
+		case rpcRes.Method == "eth_subscription":
 			rc.handleSubscriptionNotification(ctx, &rpcRes)
-		} else {
+		default:
 			// ID should match a request we sent
-			inflightSubscribe, inflightCall := rc.popInflight(rpcRes.ID.AsString())
+			inflightSub, inflightCall := rc.popInflight(rpcRes.ID.AsString())
 			switch {
-			case inflightSubscribe != nil:
-				rc.handleSubscriptionConfirm(ctx, &rpcRes, inflightSubscribe)
+			case inflightSub != nil:
+				rc.handleSubscriptionConfirm(ctx, &rpcRes, inflightSub)
 			case inflightCall != nil:
 				inflightCall <- &rpcRes // assured not to block as we allocate one slot, and pop first time we see it
 			default:

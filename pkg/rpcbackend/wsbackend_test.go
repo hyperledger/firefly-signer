@@ -48,11 +48,9 @@ func newTestWSRPC(t *testing.T) (context.Context, *wsRPCClient, chan string, cha
 	wsConfig.WSKeyPath = "/test"
 	wsConfig.HeartbeatInterval = 50 * time.Millisecond
 	wsConfig.InitialConnectAttempts = 2
+	wsConfig.DisableReconnect = true
 
-	wsc, err := wsclient.New(context.Background(), wsConfig, nil, nil)
-	assert.NoError(t, err)
-
-	rc := NewWSRPCClient(wsc)
+	rc := NewWSRPCClient(wsConfig)
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	return ctx, rc.(*wsRPCClient), toServer, fromServer, func() {
 		rc.Close()
@@ -69,16 +67,24 @@ func TestWSRPCConnect(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestWSRPCConfError(t *testing.T) {
+	// Init clean config
+	wsConfig := generateConfig()
+	wsConfig.HTTPURL = "!!!!:::"
+
+	wsRPCClient := NewWSRPCClient(wsConfig)
+
+	err := wsRPCClient.Connect(context.Background())
+	assert.Regexp(t, "FF00149", err)
+}
+
 func TestWSRPCConnectError(t *testing.T) {
 	// Init clean config
 	wsConfig := generateConfig()
 
-	wsc, err := wsclient.New(context.Background(), wsConfig, nil, nil)
-	assert.NoError(t, err)
+	wsRPCClient := NewWSRPCClient(wsConfig)
 
-	wsRPCClient := NewWSRPCClient(wsc)
-
-	err = wsRPCClient.Connect(context.Background())
+	err := wsRPCClient.Connect(context.Background())
 	assert.Regexp(t, "FF00148", err)
 }
 
@@ -107,7 +113,9 @@ func TestWSRPCSubscribe(t *testing.T) {
 
 	s, rpcErr := rc.Subscribe(ctx, "newHeads")
 	assert.Nil(t, rpcErr)
-	assert.NotEmpty(t, s, s.ID())
+	assert.NotEmpty(t, s, s.LocalID())
+
+	assert.Len(t, rc.Subscriptions(), 1)
 
 	fromServer <- `{"jsonrpc":"2.0","method":"eth_subscription","params":{"result":{"extraData":"0xd983010305844765746887676f312e342e328777696e646f7773","gasLimit":"0x47e7c4","gasUsed":"0x38658","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","nonce":"0x084149998194cc5f","number":"0x1348c9","parentHash":"0x7736fab79e05dc611604d22470dadad26f56fe494421b5b333de816ce1f25701","receiptRoot":"0x2fab35823ad00c7bb388595cb46652fe7886e00660a01e867824d3dceb1c8d36","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","stateRoot":"0xb3346685172db67de536d8765c43c31009d0eb3bd9c501c9be3229203f15f378","timestamp":"0x56ffeff8","transactionsRoot":"0x0167ffa60e3ebc0b080cdb95f7c0087dd6c0e61413140e39d94d3468d7c9689f","hash":"0xb3346685172db67de536d8765c43c31009d0eb3bd9c501c9be3229203f15f378"},"subscription":"0x9ce59a13059e417087c02d3236a0b1cc"}}`
 
@@ -128,7 +136,9 @@ func TestWSRPCSubscribe(t *testing.T) {
 
 	rpcErr = s.Unsubscribe(ctx)
 	assert.Nil(t, rpcErr)
-	assert.Empty(t, rc.subscriptions)
+	assert.Empty(t, rc.pendingSubsByReqID)
+	assert.Empty(t, rc.activeSubsBySubID)
+	assert.Empty(t, rc.configuredSubs)
 
 	res, ok := <-s.Notifications()
 	assert.Nil(t, res)
@@ -306,7 +316,7 @@ func TestHandleSubscriptionNotificationClosed(t *testing.T) {
 	ctx, rc, _, _, done := newTestWSRPC(t)
 	done()
 
-	rc.subscriptions["12345"] = &sub{
+	rc.activeSubsBySubID["12345"] = &sub{
 		ctx: ctx, // closed
 	}
 	rc.handleSubscriptionNotification(ctx, &RPCResponse{
@@ -318,21 +328,87 @@ func TestHandleSubscriptionConfirmServerError(t *testing.T) {
 	ctx, rc, _, _, done := newTestWSRPC(t)
 	defer done()
 
-	inflightSubscribe := make(chan *newSubResponse, 1)
+	errChl := make(chan *RPCError, 1)
 	rc.handleSubscriptionConfirm(ctx, &RPCResponse{
 		Error: &RPCError{
 			Code:    int64(RPCCodeInternalError),
 			Message: "pop",
 		},
-	}, inflightSubscribe)
-	res := <-inflightSubscribe
-	assert.Regexp(t, "pop", res.rpcErr.Error())
+	}, &sub{
+		newSubResponse: errChl,
+	})
+	rpcErr := <-errChl
+	assert.Regexp(t, "pop", rpcErr.Error())
 }
 
 func TestHandleSubscriptionConfirmBadSub(t *testing.T) {
 	ctx, rc, _, _, done := newTestWSRPC(t)
 	defer done()
 
-	inflightSubscribe := make(chan *newSubResponse, 1)
-	rc.handleSubscriptionConfirm(ctx, &RPCResponse{}, inflightSubscribe)
+	errChl := make(chan *RPCError, 1)
+	rc.handleSubscriptionConfirm(ctx, &RPCResponse{}, &sub{newSubResponse: errChl})
+	rpcErr := <-errChl
+	assert.Regexp(t, "FF22066", rpcErr.Error())
+}
+
+func TestRemoveSubscriptionPending(t *testing.T) {
+	ctx, rc, _, _, done := newTestWSRPC(t)
+	defer done()
+
+	s := &sub{
+		localID:      fftypes.NewUUID(),
+		pendingReqID: "12345",
+	}
+	s.ctx, s.cancelCtx = context.WithCancel(ctx)
+	rc.pendingSubsByReqID["12345"] = s
+	rc.removeSubscription(s)
+	assert.Empty(t, rc.pendingSubsByReqID)
+}
+
+func TestHandleReonnnectOK(t *testing.T) {
+	ctx, rc, toServer, fromServer, done := newTestWSRPC(t)
+	defer done()
+
+	var err error
+	rc.client, err = wsclient.New(ctx, &rc.wsConf, nil, nil /* so we can invoke it directly */)
+	assert.NoError(t, err)
+
+	err = rc.client.Connect()
+	assert.NoError(t, err)
+
+	rc.wsConf.DisableReconnect = false
+
+	go rc.receiveLoop(ctx)
+
+	s, errChl := rc.addConfiguredSub(ctx, []interface{}{"newHeads"})
+
+	go func() {
+		msg := <-toServer
+		assert.Equal(t, `{"jsonrpc":"2.0","id":"000000001","method":"eth_subscribe","params":["newHeads"]}`, msg)
+		fromServer <- `{"jsonrpc":"2.0","id":"000000001","result":"0x9ce59a13059e417087c02d3236a0b1cc"}`
+	}()
+
+	err = rc.handleReconnect(ctx, rc.client)
+	assert.NoError(t, err)
+	rpcErr := <-errChl
+	assert.Nil(t, rpcErr)
+	assert.Equal(t, "0x9ce59a13059e417087c02d3236a0b1cc", s.currentSubID)
+}
+
+func TestHandleReonnnectFail(t *testing.T) {
+	ctx, rc, _, _, done := newTestWSRPC(t)
+	defer done()
+
+	var err error
+	rc.client, err = wsclient.New(ctx, &rc.wsConf, nil, nil /* so we can invoke it directly */)
+	assert.NoError(t, err)
+
+	rc.wsConf.DisableReconnect = false
+
+	_, _ = rc.addConfiguredSub(ctx, []interface{}{
+		map[bool]bool{false: true}, // cannot be serialized
+	})
+
+	err = rc.handleReconnect(ctx, rc.client)
+	assert.Regexp(t, "FF22011", err)
 }
