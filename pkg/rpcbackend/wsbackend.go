@@ -31,8 +31,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// WSBackend performs communication with a backend
-type WSBackend interface {
+// RPCCallAndSubscribe performs communication over a websocket with a JSON/RPC endpoint
+//
+// - Manages websocket connect/reconnect with keepalive etc.
+// - Manages subscriptions with a local ID, so they re-established automatically after reconnect
+// - Allows synchronous exchange over the WebSocket so you don't have to maintain a separate HTTP connection too
+type RPCCallAndSubscribe interface {
 	RPCCaller
 	Subscribe(ctx context.Context, params ...interface{}) (sub Subscription, error *RPCError)
 	Subscriptions() []Subscription
@@ -42,7 +46,7 @@ type WSBackend interface {
 }
 
 // NewRPCClient Constructor
-func NewWSRPCClient(wsConf *wsclient.WSConfig) WSBackend {
+func NewWSRPCClient(wsConf *wsclient.WSConfig) RPCCallAndSubscribe {
 	return &wsRPCClient{
 		wsConf:             *wsConf,
 		calls:              make(map[string]chan *RPCResponse),
