@@ -72,6 +72,7 @@ type wsRPCClient struct {
 	wsConf             wsclient.WSConfig
 	client             wsclient.WSClient
 	requestCounter     int64
+	connected          chan struct{}
 	calls              map[string]chan *RPCResponse
 	configuredSubs     map[fftypes.UUID]*sub
 	pendingSubsByReqID map[string]*sub
@@ -95,11 +96,23 @@ func (rc *wsRPCClient) Connect(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	go rc.receiveLoop(log.WithLogField(ctx, "role", "rpc_websocket"))
 
+	// Wait until the afterConnect hook has been driven
+	connected := make(chan struct{})
+	rc.connected = connected
 	if err := rc.client.Connect(); err != nil {
 		return err
 	}
-	go rc.receiveLoop(log.WithLogField(ctx, "role", "rpc_websocket"))
+	return rc.waitConnected(ctx, connected)
+}
+
+func (rc *wsRPCClient) waitConnected(ctx context.Context, connected chan struct{}) error {
+	select {
+	case <-connected:
+	case <-ctx.Done():
+		return i18n.NewError(ctx, signermsgs.MsgContextCancelledWSConnect)
+	}
 	return nil
 }
 
@@ -111,15 +124,25 @@ func (rc *wsRPCClient) Close() {
 
 func (rc *wsRPCClient) handleReconnect(ctx context.Context, w wsclient.WSClient) error {
 	if !rc.wsConf.DisableReconnect {
-		subs := rc.clearActiveReturnConfiguredSubs()
+		calls, subs := rc.clearActiveReturnConfiguredSubs()
+		for rpcID, c := range calls {
+			rc.deliverCallResponse(ctx, c, &RPCResponse{
+				ID:    fftypes.JSONAnyPtr(`"` + rpcID + `"`),
+				Error: NewRPCError(ctx, RPCCodeInternalError, signermsgs.MsgWebSocketReconnected),
+			})
+		}
 		for _, s := range subs {
-			reqID, rpcErr := s.sendSubscribe(ctx)
-			log.L(ctx).Infof("RPC[%s]: Resubscribing %s after WebSocket reconnect", reqID, s.localID)
+			log.L(ctx).Infof("Resubscribing %s after WebSocket reconnect", s.localID)
+			_, rpcErr := s.sendSubscribe(ctx)
 			if rpcErr != nil {
 				log.L(ctx).Errorf("Failed to send resubscribe: %s", rpcErr)
 				return rpcErr.Error()
 			}
 		}
+	}
+	if rc.connected != nil {
+		close(rc.connected)
+		rc.connected = nil
 	}
 	return nil
 }
@@ -213,9 +236,12 @@ func (rc *wsRPCClient) removeConfiguredSub(id *fftypes.UUID) {
 	delete(rc.configuredSubs, *id)
 }
 
-func (rc *wsRPCClient) clearActiveReturnConfiguredSubs() map[fftypes.UUID]*sub {
+func (rc *wsRPCClient) clearActiveReturnConfiguredSubs() (map[string]chan *RPCResponse, map[fftypes.UUID]*sub) {
 	rc.mux.Lock()
 	defer rc.mux.Unlock()
+	// Return a copy of all the in-flight RPC calls, before we clear those (as they will all be defunct now)
+	calls := rc.calls
+	rc.calls = make(map[string]chan *RPCResponse)
 	// Clear the active state as considered now invalid after a reconnect
 	rc.activeSubsBySubID = make(map[string]*sub)
 	rc.pendingSubsByReqID = make(map[string]*sub)
@@ -226,7 +252,7 @@ func (rc *wsRPCClient) clearActiveReturnConfiguredSubs() map[fftypes.UUID]*sub {
 		s.pendingReqID = ""
 		subs[id] = s
 	}
-	return subs
+	return calls, subs
 }
 
 func (rc *wsRPCClient) getAllSubs() []*sub {
@@ -407,7 +433,7 @@ func (rc *wsRPCClient) handleSubscriptionNotification(ctx context.Context, rpcRe
 	}
 }
 
-func (rc *wsRPCClient) handleSubscriptionConfirm(ctx context.Context, rpcRes *RPCResponse, inflightSub *sub) {
+func (rc *wsRPCClient) handleSubscriptionConfirm(ctx context.Context, inflightSub *sub, rpcRes *RPCResponse) {
 	resChl := inflightSub.newSubResponse
 	inflightSub.newSubResponse = nil // we only dispatch once (it's only new once, on reconnect it's old and there's nobody to tell if we fail)
 	if rpcRes.Error != nil && rpcRes.Error.Code != 0 {
@@ -434,6 +460,15 @@ func (rc *wsRPCClient) handleSubscriptionConfirm(ctx context.Context, rpcRes *RP
 	resChl <- nil
 }
 
+func (rc *wsRPCClient) deliverCallResponse(ctx context.Context, inflightCall chan *RPCResponse, rpcRes *RPCResponse) {
+	select {
+	case inflightCall <- rpcRes:
+	default:
+		// only considered for the very edge case of reconnect - the inflight response should only be
+		// in the map until it's sent a single response, and there's a slot to ensure it never blocks
+	}
+}
+
 func (rc *wsRPCClient) receiveLoop(ctx context.Context) {
 	for {
 		bytes, ok := <-rc.client.Receive()
@@ -453,9 +488,9 @@ func (rc *wsRPCClient) receiveLoop(ctx context.Context) {
 			inflightSub, inflightCall := rc.popInflight(rpcRes.ID.AsString())
 			switch {
 			case inflightSub != nil:
-				rc.handleSubscriptionConfirm(ctx, &rpcRes, inflightSub)
+				rc.handleSubscriptionConfirm(ctx, inflightSub, &rpcRes)
 			case inflightCall != nil:
-				inflightCall <- &rpcRes // assured not to block as we allocate one slot, and pop first time we see it
+				rc.deliverCallResponse(ctx, inflightCall, &rpcRes)
 			default:
 				log.L(ctx).Warnf("RPC[%s] <-- Received unexpected RPC response: %+v", rpcRes.ID.AsString(), rpcRes)
 			}

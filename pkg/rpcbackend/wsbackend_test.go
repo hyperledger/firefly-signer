@@ -53,8 +53,8 @@ func newTestWSRPC(t *testing.T) (context.Context, *wsRPCClient, chan string, cha
 	rc := NewWSRPCClient(wsConfig)
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	return ctx, rc.(*wsRPCClient), toServer, fromServer, func() {
-		rc.Close()
 		close()
+		rc.Close()
 		cancelCtx()
 	}
 }
@@ -329,13 +329,13 @@ func TestHandleSubscriptionConfirmServerError(t *testing.T) {
 	defer done()
 
 	errChl := make(chan *RPCError, 1)
-	rc.handleSubscriptionConfirm(ctx, &RPCResponse{
+	rc.handleSubscriptionConfirm(ctx, &sub{
+		newSubResponse: errChl,
+	}, &RPCResponse{
 		Error: &RPCError{
 			Code:    int64(RPCCodeInternalError),
 			Message: "pop",
 		},
-	}, &sub{
-		newSubResponse: errChl,
 	})
 	rpcErr := <-errChl
 	assert.Regexp(t, "pop", rpcErr.Error())
@@ -346,7 +346,7 @@ func TestHandleSubscriptionConfirmBadSub(t *testing.T) {
 	defer done()
 
 	errChl := make(chan *RPCError, 1)
-	rc.handleSubscriptionConfirm(ctx, &RPCResponse{}, &sub{newSubResponse: errChl})
+	rc.handleSubscriptionConfirm(ctx, &sub{newSubResponse: errChl}, &RPCResponse{})
 	rpcErr := <-errChl
 	assert.Regexp(t, "FF22066", rpcErr.Error())
 }
@@ -382,10 +382,12 @@ func TestHandleReonnnectOK(t *testing.T) {
 
 	s, errChl := rc.addConfiguredSub(ctx, []interface{}{"newHeads"})
 
+	inflightID, inflightRes := rc.addInflightRequest(&RPCRequest{})
+
 	go func() {
 		msg := <-toServer
-		assert.Equal(t, `{"jsonrpc":"2.0","id":"000000001","method":"eth_subscribe","params":["newHeads"]}`, msg)
-		fromServer <- `{"jsonrpc":"2.0","id":"000000001","result":"0x9ce59a13059e417087c02d3236a0b1cc"}`
+		assert.Equal(t, `{"jsonrpc":"2.0","id":"000000002","method":"eth_subscribe","params":["newHeads"]}`, msg)
+		fromServer <- `{"jsonrpc":"2.0","id":"000000002","result":"0x9ce59a13059e417087c02d3236a0b1cc"}`
 	}()
 
 	err = rc.handleReconnect(ctx, rc.client)
@@ -393,6 +395,10 @@ func TestHandleReonnnectOK(t *testing.T) {
 	rpcErr := <-errChl
 	assert.Nil(t, rpcErr)
 	assert.Equal(t, "0x9ce59a13059e417087c02d3236a0b1cc", s.currentSubID)
+
+	rpcRes := <-inflightRes
+	assert.Regexp(t, "FF22067", rpcRes.Error.Error())
+	assert.Equal(t, inflightID, rpcRes.ID.AsString())
 }
 
 func TestHandleReonnnectFail(t *testing.T) {
@@ -411,4 +417,24 @@ func TestHandleReonnnectFail(t *testing.T) {
 
 	err = rc.handleReconnect(ctx, rc.client)
 	assert.Regexp(t, "FF22011", err)
+}
+
+func TestConnectClosedContextFail(t *testing.T) {
+	ctx, rc, _, _, done := newTestWSRPC(t)
+
+	err := rc.Connect(ctx)
+	assert.NoError(t, err)
+	done()
+
+	connected := make(chan struct{})
+	rc.connected = connected
+	err = rc.waitConnected(ctx, connected)
+	assert.Regexp(t, "FF22068", err)
+}
+
+func TestDeliverCallResponseNonBlocking(t *testing.T) {
+	ctx, rc, _, _, done := newTestWSRPC(t)
+	defer done()
+
+	rc.deliverCallResponse(ctx, make(chan *RPCResponse), &RPCResponse{})
 }
