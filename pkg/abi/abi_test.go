@@ -296,11 +296,16 @@ func TestABIGetTupleTypeTree(t *testing.T) {
 	assert.Equal(t, TupleComponent, tc.ComponentType())
 	assert.Len(t, tc.TupleChildren(), 3)
 	assert.Equal(t, "(uint256,string[2],bytes)", tc.String())
+	assert.False(t, tc.ElementaryFixed()) // not fixed, as not elementary
 
 	assert.Equal(t, ElementaryComponent, tc.TupleChildren()[0].ComponentType())
 	assert.Equal(t, ElementaryTypeUint, tc.TupleChildren()[0].ElementaryType())
+	assert.Equal(t, "256", tc.TupleChildren()[0].ElementarySuffix()) // alias resolved
+	assert.True(t, tc.TupleChildren()[0].ElementaryFixed())
 
 	assert.Equal(t, FixedArrayComponent, tc.TupleChildren()[1].ComponentType())
+	assert.Equal(t, 2, tc.TupleChildren()[1].FixedArrayLen())
+	assert.Equal(t, BaseTypeString, tc.TupleChildren()[1].ArrayChild().ElementaryType().BaseType())
 	assert.Equal(t, ElementaryComponent, tc.TupleChildren()[1].ArrayChild().ComponentType())
 	assert.Equal(t, ElementaryTypeString, tc.TupleChildren()[1].ArrayChild().ElementaryType())
 

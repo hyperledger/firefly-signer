@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -47,6 +47,19 @@ type ComponentValue struct {
 // (YAML, TOML etc.).
 func (cv *ComponentValue) JSON() ([]byte, error) {
 	return NewSerializer().SerializeJSON(cv)
+}
+
+func (cv *ComponentValue) ElementaryABIData() ([]byte, bool, error) {
+	return cv.ElementaryABIDataCtx(context.Background())
+}
+
+func (cv *ComponentValue) ElementaryABIDataCtx(ctx context.Context) (data []byte, dynamic bool, err error) {
+	c := cv.Component
+	et := cv.Component.ElementaryType().(*elementaryTypeInfo)
+	if et == nil {
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgNotABIElementaryType, c.String())
+	}
+	return et.encodeABIData(ctx, c.String(), c.(*typeComponent), cv.Value)
 }
 
 // getPtrValOrRawTypeNil sees if v is a pointer, with a non-nil value. If so returns that value, else nil

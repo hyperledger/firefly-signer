@@ -47,7 +47,10 @@ type TypeComponent interface {
 	String() string                     // gives the signature for this type level of the type component hierarchy
 	ComponentType() ComponentType       // classification of the component type (tuple, array or elemental)
 	ElementaryType() ElementaryTypeInfo // only non-nil for elementary components
+	ElementarySuffix() string           // only on elementary types with a suffix - expands "aliases" (so "uint" would have "256")
+	ElementaryFixed() bool              // whether the elementary type if fixed
 	ArrayChild() TypeComponent          // only non-nil for array components
+	FixedArrayLen() int                 // only for fixed-array components
 	TupleChildren() []TypeComponent     // only non-nil for tuple components
 	KeyName() string                    // the name of the ABI property/component, only set for top-level parameters and tuple entries
 	Parameter() *Parameter              // the ABI property/component, only set for top-level parameters and tuple entries
@@ -73,7 +76,7 @@ type typeComponent struct {
 // elementaryTypeInfo defines the string parsing rules, as well as a pointer to the functions for
 // serialization to a set of bytes, and back again
 type elementaryTypeInfo struct {
-	name             string                      // The name of the type - the alphabetic characters up to an optional suffix
+	name             BaseTypeName                // The name of the type - the alphabetic characters up to an optional suffix
 	suffixType       suffixType                  // Whether there is a length suffix, and its type
 	defaultSuffix    string                      // If set and there is no suffix supplied, the following suffix is used
 	defaultM         uint16                      // If the type implicitly has an M value that is not expressed (such as "function")
@@ -114,7 +117,7 @@ func (et *elementaryTypeInfo) String() string {
 		}
 		return s
 	default:
-		return et.name
+		return string(et.name)
 	}
 }
 
@@ -122,7 +125,11 @@ func (et *elementaryTypeInfo) JSONEncodingType() JSONEncodingType {
 	return et.jsonEncodingType
 }
 
-var elementaryTypes = map[string]*elementaryTypeInfo{}
+func (et *elementaryTypeInfo) BaseType() BaseTypeName {
+	return et.name
+}
+
+var elementaryTypes = map[BaseTypeName]*elementaryTypeInfo{}
 
 func registerElementaryType(et elementaryTypeInfo) ElementaryTypeInfo {
 	elementaryTypes[et.name] = &et
@@ -133,6 +140,7 @@ func registerElementaryType(et elementaryTypeInfo) ElementaryTypeInfo {
 // You can do an equality check against the appropriate constant, to check if this is the type you are expecting.
 // e.g.
 type ElementaryTypeInfo interface {
+	BaseType() BaseTypeName             // const for each of the elementary types
 	String() string                     // gives a summary of the rules the elemental type (used in error reporting)
 	JSONEncodingType() JSONEncodingType // categorizes JSON input/output type to one of a small number of options
 }
@@ -147,6 +155,20 @@ const (
 	JSONEncodingTypeString                          // JSON string containing any unicode characters
 )
 
+type BaseTypeName string
+
+const (
+	BaseTypeInt      BaseTypeName = "int"
+	BaseTypeUInt     BaseTypeName = "uint"
+	BaseTypeAddress  BaseTypeName = "address"
+	BaseTypeBool     BaseTypeName = "bool"
+	BaseTypeFixed    BaseTypeName = "fixed"
+	BaseTypeUFixed   BaseTypeName = "ufixed"
+	BaseTypeBytes    BaseTypeName = "bytes"
+	BaseTypeFunction BaseTypeName = "function"
+	BaseTypeString   BaseTypeName = "string"
+)
+
 // tupleTypeString appears in the same place in the ABI as elementary type strings, but it is not an elementary type.
 // We treat it separately.
 const tupleTypeString = "tuple"
@@ -155,7 +177,7 @@ var alwaysFixed = func(tc *typeComponent) bool { return false }
 
 var (
 	ElementaryTypeInt = registerElementaryType(elementaryTypeInfo{
-		name:             "int",
+		name:             BaseTypeInt,
 		suffixType:       suffixTypeMRequired,
 		defaultSuffix:    "256",
 		mMin:             8,
@@ -171,7 +193,7 @@ var (
 		decodeABIData: decodeABISignedInt,
 	})
 	ElementaryTypeUint = registerElementaryType(elementaryTypeInfo{
-		name:             "uint",
+		name:             BaseTypeUInt,
 		suffixType:       suffixTypeMRequired,
 		defaultSuffix:    "256",
 		mMin:             8,
@@ -187,7 +209,7 @@ var (
 		decodeABIData: decodeABIUnsignedInt,
 	})
 	ElementaryTypeAddress = registerElementaryType(elementaryTypeInfo{
-		name:       "address",
+		name:       BaseTypeAddress,
 		suffixType: suffixTypeNone,
 		defaultM:   160, // encoded as "uint160"
 		fixed32:    true,
@@ -200,7 +222,7 @@ var (
 		decodeABIData:    decodeABIUnsignedInt,
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
-		name:       "bool",
+		name:       BaseTypeBool,
 		suffixType: suffixTypeNone,
 		defaultM:   8, // encoded as "uint8"
 		fixed32:    true,
@@ -213,7 +235,7 @@ var (
 		decodeABIData:    decodeABIUnsignedInt,
 	})
 	ElementaryTypeFixed = registerElementaryType(elementaryTypeInfo{
-		name:             "fixed",
+		name:             BaseTypeFixed,
 		suffixType:       suffixTypeMxNRequired,
 		defaultSuffix:    "128x18",
 		mMin:             8,
@@ -231,7 +253,7 @@ var (
 		decodeABIData: decodeABISignedFloat,
 	})
 	ElementaryTypeUfixed = registerElementaryType(elementaryTypeInfo{
-		name:             "ufixed",
+		name:             BaseTypeUFixed,
 		suffixType:       suffixTypeMxNRequired,
 		defaultSuffix:    "128x18",
 		mMin:             8,
@@ -249,7 +271,7 @@ var (
 		decodeABIData: decodeABIUnsignedFloat,
 	})
 	ElementaryTypeBytes = registerElementaryType(elementaryTypeInfo{
-		name:       "bytes",
+		name:       BaseTypeBytes,
 		suffixType: suffixTypeMOptional, // note that "bytes" without a suffix is a special dynamic sized byte sequence
 		mMin:       1,
 		mMax:       32,
@@ -263,7 +285,7 @@ var (
 		decodeABIData:    decodeABIBytes,
 	})
 	ElementaryTypeFunction = registerElementaryType(elementaryTypeInfo{
-		name:       "function",
+		name:       BaseTypeFunction,
 		suffixType: suffixTypeNone,
 		defaultM:   24, // encoded as "bytes24"
 		fixed32:    true,
@@ -276,7 +298,7 @@ var (
 		decodeABIData:    decodeABIBytes,
 	})
 	ElementaryTypeString = registerElementaryType(elementaryTypeInfo{
-		name:       "string",
+		name:       BaseTypeString,
 		suffixType: suffixTypeNone,
 		fixed32:    false,
 		dynamic:    func(tc *typeComponent) bool { return true },
@@ -339,12 +361,27 @@ func (tc *typeComponent) ElementaryType() ElementaryTypeInfo {
 	return tc.elementaryType
 }
 
+func (tc *typeComponent) ElementarySuffix() string {
+	return tc.elementarySuffix
+}
+
+func (tc *typeComponent) ElementaryFixed() bool {
+	if tc.elementaryType != nil {
+		return !tc.elementaryType.dynamic(tc)
+	}
+	return false
+}
+
 func (tc *typeComponent) KeyName() string {
 	return tc.keyName
 }
 
 func (tc *typeComponent) ArrayChild() TypeComponent {
 	return tc.arrayChild
+}
+
+func (tc *typeComponent) FixedArrayLen() int {
+	return tc.arrayLength
 }
 
 func (tc *typeComponent) TupleChildren() []TypeComponent {
@@ -414,7 +451,7 @@ func (p *Parameter) parseABIParameterComponents(ctx context.Context) (tc *typeCo
 			}
 		}
 	} else {
-		et, ok := elementaryTypes[etStr]
+		et, ok := elementaryTypes[BaseTypeName(etStr)]
 		if !ok {
 			return nil, i18n.NewError(ctx, signermsgs.MsgUnsupportedABIType, etStr, abiTypeString)
 		}
