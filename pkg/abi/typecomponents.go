@@ -56,6 +56,7 @@ type TypeComponent interface {
 	Parameter() *Parameter              // the ABI property/component, only set for top-level parameters and tuple entries
 	ParseExternal(v interface{}) (*ComponentValue, error)
 	ParseExternalCtx(ctx context.Context, v interface{}) (*ComponentValue, error)
+	ParseExternalDesc(ctx context.Context, v interface{}, desc string) (*ComponentValue, error)
 	DecodeABIData(d []byte, offset int) (*ComponentValue, error)
 	DecodeABIDataCtx(ctx context.Context, d []byte, offest int) (*ComponentValue, error)
 }
@@ -88,10 +89,12 @@ type elementaryTypeInfo struct {
 	fixed32          bool                        // True if the is at most 32 bytes in length, so directly fits into an event topic
 	dynamic          func(c *typeComponent) bool // True if the type is dynamic length
 	jsonEncodingType JSONEncodingType            // categorizes how the type can be read/written from input JSON data
-	readExternalData func(ctx context.Context, desc string, input interface{}) (interface{}, error)
+	readExternalData DataReader
 	encodeABIData    func(ctx context.Context, desc string, tc *typeComponent, value interface{}) (data []byte, dynamic bool, err error)
 	decodeABIData    func(ctx context.Context, desc string, block []byte, headStart, headPosition int, component *typeComponent) (cv *ComponentValue, err error)
 }
+
+type DataReader func(ctx context.Context, desc string, input interface{}) (interface{}, error)
 
 func (et *elementaryTypeInfo) String() string {
 	switch et.suffixType {
@@ -129,6 +132,10 @@ func (et *elementaryTypeInfo) BaseType() BaseTypeName {
 	return et.name
 }
 
+func (et *elementaryTypeInfo) DataReader() DataReader {
+	return et.readExternalData
+}
+
 var elementaryTypes = map[BaseTypeName]*elementaryTypeInfo{}
 
 func registerElementaryType(et elementaryTypeInfo) ElementaryTypeInfo {
@@ -143,6 +150,7 @@ type ElementaryTypeInfo interface {
 	BaseType() BaseTypeName             // const for each of the elementary types
 	String() string                     // gives a summary of the rules the elemental type (used in error reporting)
 	JSONEncodingType() JSONEncodingType // categorizes JSON input/output type to one of a small number of options
+	DataReader() DataReader             // allows a side-door into the ABI code read data - caller has to know what to expect
 }
 
 type JSONEncodingType int
@@ -397,7 +405,11 @@ func (tc *typeComponent) ParseExternal(input interface{}) (*ComponentValue, erro
 }
 
 func (tc *typeComponent) ParseExternalCtx(ctx context.Context, input interface{}) (*ComponentValue, error) {
-	return tc.parseExternal(ctx, "", input)
+	return tc.ParseExternalDesc(ctx, input, "")
+}
+
+func (tc *typeComponent) ParseExternalDesc(ctx context.Context, input interface{}, desc string) (*ComponentValue, error) {
+	return tc.parseExternal(ctx, desc, input)
 }
 
 func (tc *typeComponent) DecodeABIData(b []byte, offset int) (*ComponentValue, error) {

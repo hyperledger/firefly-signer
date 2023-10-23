@@ -379,17 +379,21 @@ func getStringInterfaceMap(ctx context.Context, breadcrumbs string, input interf
 	return iMap, nil
 }
 
+func (tc *typeComponent) readElementaryType(ctx context.Context, breadcrumbs string, input interface{}) (cv *ComponentValue, err error) {
+	value, err := tc.elementaryType.readExternalData(ctx, breadcrumbs, input)
+	if err != nil {
+		return nil, err
+	}
+	return &ComponentValue{
+		Component: tc,
+		Value:     value,
+	}, nil
+}
+
 func walkInput(ctx context.Context, breadcrumbs string, input interface{}, component *typeComponent) (cv *ComponentValue, err error) {
 	switch component.cType {
 	case ElementaryComponent:
-		value, err := component.elementaryType.readExternalData(ctx, breadcrumbs, input)
-		if err != nil {
-			return nil, err
-		}
-		return &ComponentValue{
-			Component: component,
-			Value:     value,
-		}, nil
+		return component.readElementaryType(ctx, breadcrumbs, input)
 	case FixedArrayComponent, DynamicArrayComponent:
 		return walkArrayInput(ctx, breadcrumbs, input, component)
 	case TupleComponent:

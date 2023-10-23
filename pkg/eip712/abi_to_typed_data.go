@@ -17,7 +17,6 @@
 package eip712
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"regexp"
@@ -25,81 +24,14 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly-signer/pkg/abi"
-	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"golang.org/x/crypto/sha3"
 )
 
 var internalTypeStructExtractor = regexp.MustCompile(`^struct (.*\.)?([^.]+)$`)
 
-// EIP-712 hashStruct() implementation using abi.ComponentValue as an input definition
-//
-// This file takes ComponentValue trees from the ABI encoding package,
-// and traverses them into EIP-712 encodable structures according to
-// the rules laid out in:
-//
-//	https://eips.ethereum.org/EIPS/eip-712
-func HashStructABI(ctx context.Context, v *abi.ComponentValue) (ethtypes.HexBytes0xPrefix, error) {
-	encodedType, err := EncodeTypeABI(ctx, v.Component)
-	if err != nil {
-		return nil, err
-	}
-
-	encodedData, err := EncodeDataABI(ctx, v)
-	if err != nil {
-		return nil, err
-	}
-
-	// typeHash = keccak256(encodeType(typeOf(s)))
-	typeHash := hashString(encodedType)
-	/// hashStruct(s : 𝕊) = keccak256(typeHash ‖ encodeData(s))
-	hash := sha3.NewLegacyKeccak256()
-	hash.Write(typeHash)
-	hash.Write([]byte(encodedData))
-	return hash.Sum(nil), nil
-}
-
-func hashString(s string) ethtypes.HexBytes0xPrefix {
-	hash := sha3.NewLegacyKeccak256()
-	hash.Write([]byte(s))
-	return hash.Sum(nil)
-}
-
-// EIP-712 encodeType() implementation using abi.TypeComponent as an input definition
-//
-// Builds the map of struct names to types
-func EncodeTypeABI(ctx context.Context, tc abi.TypeComponent) (string, error) {
-	primaryName, typeSet, err := ABItoEIP712TypeSet(ctx, tc)
-	if err != nil {
-		return "", err
-	}
-	return typeSet.Encode(primaryName), nil
-}
-
-// EIP-712 encodeData() implementation using abi.ComponentValue as an input definition
-//
-// Recurses into the structure following the rules of EIP-712 to construct the encoded hash.
-func EncodeDataABI(ctx context.Context, v *abi.ComponentValue) (ethtypes.HexBytes0xPrefix, error) {
-	tc := v.Component
-	switch tc.ComponentType() {
-	case abi.TupleComponent, abi.DynamicArrayComponent, abi.FixedArrayComponent:
-		// Concatenate an encoding of each component
-		buff := new(bytes.Buffer)
-		for _, child := range v.Children {
-			childData, err := EncodeDataABI(ctx, child)
-			if err != nil {
-				return nil, err
-			}
-			buff.Write(childData)
-		}
-		return buff.Bytes(), nil
-	case abi.ElementaryComponent:
-		return encodeElementaryDataABI(ctx, v)
-	default:
-		return nil, i18n.NewError(ctx, signermsgs.MsgEIP712UnknownABICompType, tc.ComponentType())
-	}
-}
-
-func ABItoEIP712TypeSet(ctx context.Context, tc abi.TypeComponent) (primaryType string, typeSet TypeSet, err error) {
+// Convert an ABI tuple definition, into the EIP-712 structure that's embedded into the
+// "eth_signTypedData" signing request payload. It's a much simpler structure that
+// flattens out a map of types (requiring each type to be named by a struct definition)
+func ABItoTypedDataV4(ctx context.Context, tc abi.TypeComponent) (primaryType string, typeSet TypeSet, err error) {
 	if tc.ComponentType() != abi.TupleComponent {
 		return "", nil, i18n.NewError(ctx, signermsgs.MsgEIP712PrimaryNotTuple, tc.String())
 	}
@@ -141,7 +73,7 @@ func mapABIType(ctx context.Context, tc abi.TypeComponent) (string, error) {
 func mapElementaryABIType(ctx context.Context, tc abi.TypeComponent) (string, error) {
 	et := tc.ElementaryType()
 	if et == nil {
-		return "", i18n.NewError(ctx, signermsgs.MsgEIP712NotElementary, tc)
+		return "", i18n.NewError(ctx, signermsgs.MsgNotElementary, tc)
 	}
 	switch et.BaseType() {
 	case abi.BaseTypeAddress, abi.BaseTypeBool, abi.BaseTypeString:
@@ -159,40 +91,6 @@ func mapElementaryABIType(ctx context.Context, tc abi.TypeComponent) (string, er
 	default:
 		// EIP-712 does not support the other types
 		return "", i18n.NewError(ctx, signermsgs.MsgEIP712UnsupportedABIType, tc)
-	}
-}
-
-func encodeElementaryDataABI(ctx context.Context, v *abi.ComponentValue) (ethtypes.HexBytes0xPrefix, error) {
-	tc := v.Component
-	et := tc.ElementaryType()
-	if et == nil {
-		return nil, i18n.NewError(ctx, signermsgs.MsgEIP712NotElementary, tc)
-	}
-	switch et.BaseType() {
-	case abi.BaseTypeAddress, abi.BaseTypeBool, abi.BaseTypeInt, abi.BaseTypeUInt:
-		// Types that need no transposition
-		b, _, err := v.ElementaryABIDataCtx(ctx)
-		return b, err
-	case abi.BaseTypeBytes:
-		if tc.ElementaryFixed() {
-			// If it's bytes1 -> bytes32
-			b, _, err := v.ElementaryABIDataCtx(ctx)
-			return b, err
-		}
-		b, ok := v.Value.([]byte)
-		if !ok {
-			return nil, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "[]byte", v.Value, v.Component.KeyName())
-		}
-		return b, nil
-	case abi.BaseTypeString:
-		s, ok := v.Value.(string)
-		if !ok {
-			return nil, i18n.NewError(ctx, signermsgs.MsgWrongTypeComponentABIEncode, "string", v.Value, v.Component.KeyName())
-		}
-		return []byte(s), nil
-	default:
-		// EIP-712 does not support the other types
-		return nil, i18n.NewError(ctx, signermsgs.MsgEIP712UnsupportedABIType, tc)
 	}
 }
 
