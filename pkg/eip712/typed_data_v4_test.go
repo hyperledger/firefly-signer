@@ -25,31 +25,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const PersonType = `[
-	{
-		"name": "name",
-		"type": "string"
-	},
-	{
-		"name": "wallet",
-		"type": "address"
-	}
-]`
+const PersonType = `[{"name": "name","type": "string"},{"name": "wallet","type": "address"}]`
 
-const MailType = `[
-	{
-		"name": "from",
-		"type": "Person"
-	},
-	{
-		"name": "to",
-		"type": "Person"
-	},
-	{
-		"name": "contents",
-		"type": "string"
-	}
-]`
+const MailType = `[{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "string"}]`
 
 func TestMessage_ExampleFromEIP712Spec(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
@@ -75,13 +53,13 @@ func TestMessage_ExampleFromEIP712Spec(t *testing.T) {
 					"type": "address"
 				}
 			],
-			"Person": `+PersonType+`,
-			"Mail": `+MailType+`
+			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
+			"Mail": [{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "string"}]
 		},
 		"primaryType": "Mail",
 		"domain": {
 			"name": "Ether Mail",
-			"version": "1",
+			"version": "V4",
 			"chainId": 1,
 			"verifyingContract": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"
 		},
@@ -102,7 +80,7 @@ func TestMessage_ExampleFromEIP712Spec(t *testing.T) {
 	ctx := context.Background()
 	ed, err := EncodeTypedDataV4(ctx, &p)
 	assert.NoError(t, err)
-	assert.Equal(t, "0xbe609aee343fb3c4b28e1df9e632fca64fcfaede20f02e86244efddf30957bd2", ed.String())
+	assert.Equal(t, "0xde26f53b35dd5ffdc13f8297e5cc7bbcb1a04bf33803bd2bf4a45eb251360cb8", ed.String())
 }
 
 func TestMessage_EmptyMessage(t *testing.T) {
@@ -127,8 +105,8 @@ func TestMessage_EmptyDomain(t *testing.T) {
 	var p SignTypedDataPayload
 	err := json.Unmarshal([]byte(`{
 		"types": {
-			"Person": `+PersonType+`,
-			"Mail": `+MailType+`
+			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
+			"Mail": [{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "string"}]
 		},
 		"primaryType": "Mail",
 		"message": {
@@ -149,4 +127,28 @@ func TestMessage_EmptyDomain(t *testing.T) {
 	ed, err := EncodeTypedDataV4(ctx, &p)
 	assert.NoError(t, err)
 	assert.Equal(t, "0x25c3d40a39e639a4d0b6e4d2ace5e1281e039c88494d97d8d08f99a6ea75d775", ed.String())
+}
+
+func TestMessage_NilReference(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
+			"Mail": [{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "string"}]
+		},
+		"primaryType": "Mail",
+		"message": {
+			"from": null,
+			"to": null,
+			"contents": "Hello, Bob!"
+		}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	ed, err := EncodeTypedDataV4(ctx, &p)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x326faa52849c078e0e04abe863b29fc28d9d2885d2c4b515fcfb7ba1fac30534", ed.String())
 }

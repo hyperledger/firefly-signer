@@ -93,4 +93,5 @@ var (
 	MsgEIP712InvalidArraySuffix    = ffe("FF22074", "Type '%s' has invalid array suffix")
 	MsgEIP712ValueNotArray         = ffe("FF22075", "Value for '%s' not an array (%T)")
 	MsgEIP712InvalidArrayLen       = ffe("FF22076", "Value for '%s' must have %d entries (found %d)")
+	MsgEIP712Version4Required      = ffe("FF22077", "Domain version must be 'V4': %s")
 )

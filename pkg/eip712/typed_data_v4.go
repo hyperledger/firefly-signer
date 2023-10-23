@@ -57,11 +57,18 @@ type Domain struct {
 
 const EIP712Domain = "EIP712Domain"
 
-func EncodeTypedDataV4(ctx context.Context, payload *SignTypedDataPayload) (ethtypes.HexBytes0xPrefix, error) {
+func EncodeTypedDataV4(ctx context.Context, payload *SignTypedDataPayload) (encoded ethtypes.HexBytes0xPrefix, err error) {
 	// Add empty EIP712Domain type specification if missing
 	if _, found := payload.Types[EIP712Domain]; !found {
 		payload.Types[EIP712Domain] = Type{}
 	}
+	if payload.Domain == nil {
+		payload.Domain = make(map[string]interface{})
+	}
+	if v, didSupplyVersion := payload.Domain["version"].(string); didSupplyVersion && v != "V4" {
+		return nil, i18n.NewError(ctx, signermsgs.MsgEIP712Version4Required, v)
+	}
+	payload.Domain["version"] = "V4"
 
 	// Start with the EIP-712 prefix
 	buf := new(bytes.Buffer)
@@ -83,7 +90,10 @@ func EncodeTypedDataV4(ctx context.Context, payload *SignTypedDataPayload) (etht
 		}
 		buf.Write(structHash)
 	}
-	return keccak256(buf.Bytes()), nil
+
+	encoded = buf.Bytes()
+	log.L(ctx).Tracef("Encoded EIP-712: %s", encoded)
+	return keccak256(encoded), nil
 }
 
 // A map from type names to types is encoded per encodeType:
@@ -191,39 +201,49 @@ func encodeData(ctx context.Context, typeName string, v interface{}, allTypes Ty
 		return nil, err
 	}
 	// Check the value we have is a map
+	var vMap map[string]interface{}
 	switch vt := v.(type) {
 	case nil:
-		// special rule for a nil value - we don't even include the type info, just return a nil bytes array
-		bytes32Enc, _ := abiElementalType(ctx, "bytes32")
-		encoded, _ = abiEncode(ctx, bytes32Enc, []byte{ /* empty */ }, breadcrumbs)
 	case map[string]interface{}:
-		typeHashed := keccak256([]byte(typeEncoded))
-		buf := bytes.NewBuffer(typeHashed)
-		log.L(ctx).Tracef("hashType(%s): %s", typeName, typeHashed)
-		// Encode the data of the struct, and write it after the hash of the type
-		for _, tm := range t {
-			b, err := encodeElement(ctx, tm.Type, vt[tm.Name], allTypes, nextCrumb(breadcrumbs, tm.Name))
-			if err != nil {
-				return nil, err
-			}
-			buf.Write(b)
-		}
-		encoded = buf.Bytes()
+		vMap = vt
 	default:
 		return nil, i18n.NewError(ctx, signermsgs.MsgEIP712ValueNotMap, breadcrumbs, v)
 	}
+	if vMap == nil {
+		// V4 says the caller writes an empty bytes32, rather than a hash of anything
+		return nil, nil
+	}
+	typeHashed := keccak256([]byte(typeEncoded))
+	buf := bytes.NewBuffer(typeHashed)
+	log.L(ctx).Tracef("hashType(%s): %s", typeName, typeHashed)
+	// Encode the data of the struct, and write it after the hash of the type
+	for _, tm := range t {
+		b, err := encodeElement(ctx, tm.Type, vMap[tm.Name], allTypes, nextCrumb(breadcrumbs, tm.Name))
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(b)
+	}
+	encoded = buf.Bytes()
 	log.L(ctx).Tracef("encodeData(%s, %T): %s", typeName, v, encoded)
 	return encoded, nil
 }
 
-func hashStruct(ctx context.Context, typeName string, v interface{}, allTypes TypeSet, breadcrumbs string) (ethtypes.HexBytes0xPrefix, error) {
+func hashStruct(ctx context.Context, typeName string, v interface{}, allTypes TypeSet, breadcrumbs string) (result ethtypes.HexBytes0xPrefix, err error) {
 	encoded, err := encodeData(ctx, typeName, v, allTypes, breadcrumbs)
 	if err != nil {
 		return nil, err
 	}
-	hashed := keccak256(encoded)
-	log.L(ctx).Tracef("hashStruct(%s): %s", typeName, hashed)
-	return hashed, nil
+	if encoded == nil {
+		// special rule for a nil value - we don't even include the type info, just return a nil bytes array
+		bytes32Enc, _ := abiElementalType(ctx, "bytes32")
+		encoded, _ = abiEncode(ctx, bytes32Enc, "0x0000000000000000000000000000000000000000000000000000000000000000", breadcrumbs)
+		result = encoded
+	} else {
+		result = keccak256(encoded)
+	}
+	log.L(ctx).Tracef("hashStruct(%s): %s", typeName, result)
+	return result, nil
 }
 
 func encodeElement(ctx context.Context, typeName string, v interface{}, allTypes TypeSet, breadcrumbs string) (ethtypes.HexBytes0xPrefix, error) {
