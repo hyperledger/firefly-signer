@@ -16,86 +16,226 @@
 
 package eip712
 
-// func TestSimpleStruct(t *testing.T) {
+import (
+	"context"
+	"encoding/json"
+	"testing"
 
-// 	// struct Mail {
-// 	// 	address from;
-// 	// 	address to;
-// 	// 	string contents;
-// 	// }
-// 	mailABI := []byte(`{
-// 		"components": [
-// 			{
-// 				"internalType": "address",
-// 				"name": "from",
-// 				"type": "address"
-// 			},
-// 			{
-// 				"internalType": "address",
-// 				"name": "to",
-// 				"type": "address"
-// 			},
-// 			{
-// 				"internalType": "string",
-// 				"name": "contents",
-// 				"type": "string"
-// 			}
-// 		],
-// 		"internalType": "struct EIP712Examples.Mail",
-// 		"name": "",
-// 		"type": "tuple"
-// 	}`)
-// 	var abiElem abi.Parameter
-// 	err := json.Unmarshal(mailABI, &abiElem)
-// 	assert.NoError(t, err)
+	"github.com/hyperledger/firefly-signer/pkg/abi"
+	"github.com/stretchr/testify/assert"
+)
 
-// 	tc, err := abiElem.TypeComponentTree()
-// 	assert.NoError(t, err)
+func TestSimpleStruct(t *testing.T) {
 
-// 	pt, ts, err := ABItoEIP712TypeSet(context.Background(), tc)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, "Mail", pt)
-// 	assert.Equal(t, TypeSet{
-// 		"Mail": Type{
-// 			{
-// 				Name: "from",
-// 				Type: "address",
-// 			},
-// 			{
-// 				Name: "to",
-// 				Type: "address",
-// 			},
-// 			{
-// 				Name: "contents",
-// 				Type: "string",
-// 			},
-// 		},
-// 	}, ts)
+	// // Extracted from ABI in this solidity:
+	// // solc --combined-json abi eip712_examples.sol > eip712_examples.json
+	// pragma solidity ^0.8.0;
+	// contract EIP712Examples {
+	// 	struct Person {
+	// 	  string name;
+	// 	  address wallet;
+	//  }
+	// 	struct Mail {
+	// 	  Person from;
+	// 	  Person to;
+	// 	  string contents;
+	//  }
+	// 	constructor() {}
+	// 	function mail() public pure returns (Mail memory) {
+	// 	  return Mail(Person("", address(0)), Person("", address(0)), "");
+	// 	}
+	// }
+	mailABI := []byte(`{
+		"components": [
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "wallet",
+						"type": "address"
+					}
+				],
+				"internalType": "struct EIP712Examples.Person",
+				"name": "from",
+				"type": "tuple"
+			},
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "name",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "wallet",
+						"type": "address"
+					}
+				],
+				"internalType": "struct EIP712Examples.Person",
+				"name": "to",
+				"type": "tuple"
+			},
+			{
+				"internalType": "string",
+				"name": "contents",
+				"type": "string"
+			}
+		],
+		"internalType": "struct EIP712Examples.Mail",
+		"name": "",
+		"type": "tuple"
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
 
-// 	cv, err := tc.ParseExternal([]interface{}{
-// 		"0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826",
-// 		"0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
-// 		"Hello, Bob!",
-// 	})
-// 	assert.NoError(t, err)
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
 
-// 	eip712Type, err := EncodeTypeABI(context.Background(), cv.Component)
-// 	assert.NoError(t, err)
+	pt, ts, err := ABItoTypedDataV4(context.Background(), tc)
+	assert.NoError(t, err)
+	assert.Equal(t, "Mail", pt)
+	assert.Equal(t, TypeSet{
+		"Person": Type{
+			{
+				Name: "name",
+				Type: "string",
+			},
+			{
+				Name: "wallet",
+				Type: "address",
+			},
+		},
+		"Mail": Type{
+			{
+				Name: "from",
+				Type: "Person",
+			},
+			{
+				Name: "to",
+				Type: "Person",
+			},
+			{
+				Name: "contents",
+				Type: "string",
+			},
+		},
+	}, ts)
 
-// 	assert.Equal(t, "Mail(address from,address to,string contents)", eip712Type)
+}
 
-// 	encodedData, err := EncodeDataABI(context.Background(), cv)
-// 	assert.NoError(t, err)
+func TestArrays(t *testing.T) {
 
-// 	assert.Equal(t, `0x`+
-// 		`000000000000000000000000cd2a3d9f938e13cd947ec05abc7fe734df8dd826`+ // uint160 address
-// 		`000000000000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`+ // uint160 address
-// 		`48656c6c6f2c20426f6221`, // ASCII: "Hello, Bob!"
-// 		encodedData.String())
+	// // solc --combined-json abi eip712_examples.sol > eip712_examples.json
+	// pragma solidity ^0.8.0;
+	// contract EIP712Examples {
+	//   struct TopLevel {
+	//     string[] strings;
+	//     int32[5] ints;
+	//     bool[][] multidim;
+	//     Nested[] nested;
+	//   }
+	//   struct Nested {
+	//     uint[] unaliased;
+	//     bytes[5] bytestrings;
+	//     bytes1[8] eightbytes;
+	//   }
+	//   constructor() {}
+	//   function mail(TopLevel memory) public pure {}
+	// }
+	mailABI := []byte(`{
+		"components": [
+			{
+				"internalType": "string[]",
+				"name": "strings",
+				"type": "string[]"
+			},
+			{
+				"internalType": "int32[5]",
+				"name": "ints",
+				"type": "int32[5]"
+			},
+			{
+				"internalType": "bool[][]",
+				"name": "multidim",
+				"type": "bool[][]"
+			},
+			{
+				"components": [
+					{
+						"internalType": "uint256[]",
+						"name": "unaliased",
+						"type": "uint256[]"
+					},
+					{
+						"internalType": "bytes[5]",
+						"name": "bytestrings",
+						"type": "bytes[5]"
+					},
+					{
+						"internalType": "bytes1[8]",
+						"name": "eightbytes",
+						"type": "bytes1[8]"
+					}
+				],
+				"internalType": "struct EIP712Examples.Nested[]",
+				"name": "nested",
+				"type": "tuple[]"
+			}
+		],
+		"internalType": "struct EIP712Examples.TopLevel",
+		"name": "",
+		"type": "tuple"
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
 
-// 	hash, err := HashStructABI(context.Background(), cv)
-// 	assert.NoError(t, err)
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
 
-// 	assert.Equal(t, hashString(string(hashString(eip712Type))+string(encodedData)).String(), hash.String())
+	pt, ts, err := ABItoTypedDataV4(context.Background(), tc)
+	assert.NoError(t, err)
+	assert.Equal(t, "TopLevel", pt)
+	assert.Equal(t, TypeSet{
+		"Nested": Type{
+			{
+				Name: "unaliased",
+				Type: "uint256[]",
+			},
+			{
+				Name: "bytestrings",
+				Type: "bytes[5]",
+			},
+			{
+				Name: "eightbytes",
+				Type: "bytes1[8]",
+			},
+		},
+		"TopLevel": Type{
+			{
+				Name: "strings",
+				Type: "string[]",
+			},
+			{
+				Name: "ints",
+				Type: "int32[5]",
+			},
+			{
+				Name: "multidim",
+				Type: "bool[][]",
+			},
+			{
+				Name: "nested",
+				Type: "Nested[]",
+			},
+		},
+	}, ts)
 
-// }
+}

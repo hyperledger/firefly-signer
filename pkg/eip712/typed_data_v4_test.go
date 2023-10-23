@@ -152,3 +152,192 @@ func TestMessage_NilReference(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "0x326faa52849c078e0e04abe863b29fc28d9d2885d2c4b515fcfb7ba1fac30534", ed.String())
 }
+
+func TestMessage_BytesString(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
+			"Mail": [{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "bytes"}]
+		},
+		"primaryType": "Mail",
+		"message": {
+			"from": null,
+			"to": null,
+			"contents": "0x48656C6C6F2C20426F6221"
+		}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	ed, err := EncodeTypedDataV4(ctx, &p)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x3e4282c3bc7b7d6df14ef1c1c90f7bef0516134f4ca08d56eb38b061e5632a6b", ed.String())
+}
+
+func TestMessage_Bytes11(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
+			"Mail": [{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "bytes11"}]
+		},
+		"primaryType": "Mail",
+		"message": {
+			"from": null,
+			"to": null,
+			"contents": "0x48656C6C6F2C20426F6221"
+		}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	ed, err := EncodeTypedDataV4(ctx, &p)
+	assert.NoError(t, err)
+	assert.Equal(t, "0xb13b01acae69dbd0fef3568f1b060a692247aa207609d008f344c8cd7f664220", ed.String())
+}
+
+func TestMessage_StringArray(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
+			"Mail": [{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "string[]"}]
+		},
+		"primaryType": "Mail",
+		"message": {
+			"from": null,
+			"to": null,
+			"contents": ["Hello,", "Bob!"]
+		}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	ed, err := EncodeTypedDataV4(ctx, &p)
+	assert.NoError(t, err)
+	assert.Equal(t, "0xd0ac411802ea14e4e64eeed229227be1bf2909f0a30bda74c79447dfbf2f5431", ed.String())
+}
+
+func TestMessage_StringArrayArray(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
+			"Mail": [{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "string[][]"}]
+		},
+		"primaryType": "Mail",
+		"message": {
+			"from": null,
+			"to": null,
+			"contents": [
+				["Hello,", "Bob!"],
+				["How,", "do"]
+			]
+		}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	ed, err := EncodeTypedDataV4(ctx, &p)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x88454de00616bf6b3697b55281de2e8fb542b3997c397ad70e0c8f8f72d164f0", ed.String())
+}
+
+func TestMessage_FixedStringArray(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
+			"Mail": [{"name": "from","type": "Person"},{"name": "to","type": "Person"},{"name": "contents","type": "string[2]"}]
+		},
+		"primaryType": "Mail",
+		"message": {
+			"from": null,
+			"to": null,
+			"contents": ["Hello,", "Bob!"]
+		}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	ed, err := EncodeTypedDataV4(ctx, &p)
+	assert.NoError(t, err)
+	assert.Equal(t, "0xb1bf2c8635345d6fc3e86e493180f96043548ac761683a4d069725f08a6ea2bf", ed.String())
+}
+
+func TestMessage_StructArray(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"AllTheTypes": [
+				{
+					"name": "i32",
+					"type": "int32"
+				},
+				{
+					"name": "i256",
+					"type": "int256"
+				},
+				{
+					"name": "ui32",
+					"type": "uint32"
+				},
+				{
+					"name": "ui256",
+					"type": "uint256"
+				},
+				{
+					"name": "t",
+					"type": "bool"
+				},
+				{
+					"name": "b16",
+					"type": "bytes16"
+				},
+				{
+					"name": "b32",
+					"type": "bytes32"
+				},
+				{
+					"name": "b",
+					"type": "bytes"
+				},
+				{
+					"name": "s",
+					"type": "string"
+				}
+			]
+		},
+		"primaryType": "AllTheTypes",
+		"message": {
+			"i32": -12345,
+			"i256": "-12345",
+			"ui32": "0x3039",
+			"ui256": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			"t": true,
+			"b16": "0x000102030405060708090a0b0c0f0e0f",
+			"b32": "0x000102030405060708090a0b0c0f0e0f000102030405060708090a0b0c0f0e0f",
+			"b": "0xfeedbeef",
+			"s": "Hello World!"
+		}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	ed, err := EncodeTypedDataV4(ctx, &p)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x651579f58b3a8c79ba668e0f5d83e1c9f6e2715586dc11c62696ec376b595a00", ed.String())
+}

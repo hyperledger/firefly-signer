@@ -26,7 +26,7 @@ import (
 	"github.com/hyperledger/firefly-signer/pkg/abi"
 )
 
-var internalTypeStructExtractor = regexp.MustCompile(`^struct (.*\.)?([^.]+)$`)
+var internalTypeStructExtractor = regexp.MustCompile(`^struct (.*\.)?([^.\[\]]+)(\[\d*\])*$`)
 
 // Convert an ABI tuple definition, into the EIP-712 structure that's embedded into the
 // "eth_signTypedData" signing request payload. It's a much simpler structure that
@@ -54,7 +54,7 @@ func ABItoTypedDataV4(ctx context.Context, tc abi.TypeComponent) (primaryType st
 func mapABIType(ctx context.Context, tc abi.TypeComponent) (string, error) {
 	switch tc.ComponentType() {
 	case abi.TupleComponent:
-		return tc.Parameter().Type, nil
+		return extractSolidityTypeName(ctx, tc.Parameter())
 	case abi.DynamicArrayComponent, abi.FixedArrayComponent:
 		child, err := mapABIType(ctx, tc.ArrayChild())
 		if err != nil {
@@ -76,11 +76,8 @@ func mapElementaryABIType(ctx context.Context, tc abi.TypeComponent) (string, er
 		return "", i18n.NewError(ctx, signermsgs.MsgNotElementary, tc)
 	}
 	switch et.BaseType() {
-	case abi.BaseTypeAddress, abi.BaseTypeBool, abi.BaseTypeString:
+	case abi.BaseTypeAddress, abi.BaseTypeBool, abi.BaseTypeString, abi.BaseTypeInt, abi.BaseTypeUInt:
 		// Types that need no transposition
-		return string(et.BaseType()), nil
-	case abi.BaseTypeInt, abi.BaseTypeUInt:
-		// Types with supported suffixes - note ABI package sorts alias resolution for us
 		return string(et.BaseType()) + tc.ElementarySuffix(), nil
 	case abi.BaseTypeBytes:
 		// Bytes is special

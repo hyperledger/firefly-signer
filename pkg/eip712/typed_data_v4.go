@@ -151,7 +151,7 @@ func idxCrumb(breadcrumbs string, idx int) string {
 	return fmt.Sprintf("%s[%d]", breadcrumbs, idx)
 }
 
-func addNestedTypes(typeName string, allTypes TypeSet, typeSet TypeSet) (Type, error) {
+func addNestedTypes(typeName string, allTypes TypeSet, typeSet TypeSet) error {
 	// We're not interested in array semantics here
 	iBracket := strings.Index(typeName, "[")
 	if iBracket >= 0 {
@@ -160,17 +160,17 @@ func addNestedTypes(typeName string, allTypes TypeSet, typeSet TypeSet) (Type, e
 	// See if it's a defined structure type
 	t, ok := allTypes[typeName]
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	if typeSet[typeName] == nil {
 		typeSet[typeName] = t
 		for _, tm := range t {
-			if _, err := addNestedTypes(tm.Type, allTypes, typeSet); err != nil {
-				return nil, err
+			if err := addNestedTypes(tm.Type, allTypes, typeSet); err != nil {
+				return err
 			}
 		}
 	}
-	return t, nil
+	return nil
 }
 
 func keccak256(b []byte) ethtypes.HexBytes0xPrefix {
@@ -184,8 +184,13 @@ func keccak256(b []byte) ethtypes.HexBytes0xPrefix {
 // > If the struct type references other struct types (and these in turn reference even more struct types),
 // > then the set of referenced struct types is collected, sorted by name and appended to the encoding.
 func encodeType(ctx context.Context, typeName string, allTypes TypeSet) (Type, string, error) {
+	t := allTypes[typeName]
+	if t == nil {
+		return nil, "", i18n.NewError(ctx, signermsgs.MsgEIP712TypeNotFound, typeName)
+	}
+
 	depSet := make(TypeSet)
-	t, err := addNestedTypes(typeName, allTypes, depSet)
+	err := addNestedTypes(typeName, allTypes, depSet)
 	if err != nil {
 		return nil, "", err
 	}
@@ -355,116 +360,5 @@ func hashArray(ctx context.Context, typeName string, allTypes TypeSet, v interfa
 		}
 		buf.Write(b)
 	}
-	return buf.Bytes(), nil
+	return keccak256(buf.Bytes()), nil
 }
-
-// func (t *TypeMember) Encode() string {
-// 	return t.Type + " " + t.Name
-// }
-
-// func (t *Type) Encode() string {
-// 	params := make([]string, len(t.Members))
-// 	for i, member := range t.Members {
-// 		params[i] = member.Encode()
-// 	}
-// 	return t.Name + "(" + strings.Join(params, ",") + ")"
-// }
-
-// func (t *Type) Hash() []byte {
-// 	hash := sha3.NewLegacyKeccak256()
-// 	hash.Write([]byte(t.Encode()))
-// 	return hash.Sum(nil)
-// }
-
-// func encodeData(members []*TypeMember, data map[string]interface{}) ([]byte, error) {
-// 	var result []byte
-// 	for _, member := range members {
-// 		val := data[member.Name]
-// 		encodedVal, err := encodeValue(member, val)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		result = append(result, encodedVal...)
-// 	}
-// 	return result, nil
-// }
-
-// func encodeValue(m *TypeMember, val interface{}) ([]byte, error) {
-// 	switch m.Type {
-// 	case "bool":
-// 		return encodeBool(val.(bool)), nil
-// 	case "address":
-// 		return encodeAddress(val.(string)), nil
-// 	case "uint256":
-// 		return encodeUintString(val.(string)), nil
-// 	case "string":
-// 		return encodeString(val.(string)), nil
-// 	default:
-// 		return nil, fmt.Errorf("unsupported type: %s", m.Type)
-// 	}
-// }
-
-// func encodeBool(val bool) []byte {
-// 	var i *big.Int
-// 	if val {
-// 		i = big.NewInt(1)
-// 	} else {
-// 		i = big.NewInt(0)
-// 	}
-// 	return encodeUint(i)
-// }
-
-// func encodeAddress(val string) []byte {
-// 	i := big.NewInt(0)
-// 	i.SetString(val, 16)
-// 	return encodeUint(i)
-// }
-
-// func encodeUint(val *big.Int) []byte {
-// 	data := make([]byte, 32)
-// 	_ = val.FillBytes(data)
-// 	return data
-// }
-
-// func encodeUintString(val string) []byte {
-// 	i := big.NewInt(0)
-// 	i.SetString(val, 10)
-// 	return encodeUint(i)
-// }
-
-// func encodeString(val string) []byte {
-// 	return encodeDynamicBytes([]byte(val))
-// }
-
-// func encodeDynamicBytes(val []byte) []byte {
-// 	hash := sha3.NewLegacyKeccak256()
-// 	hash.Write(val)
-// 	return hash.Sum(nil)
-// }
-
-// func hashStruct(t *Type, data map[string]interface{}) ([]byte, error) {
-// 	encodedData, err := encodeData(t.Members, data)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	hash := sha3.NewLegacyKeccak256()
-// 	hash.Write(t.Hash())
-// 	hash.Write(encodedData)
-// 	return hash.Sum(nil), nil
-// }
-
-// func EncodeTypedData(domain map[string]interface{}, t *Type, message map[string]interface{}) ([]byte, error) {
-// 	domainSeparator, err := hashStruct(&EIP712DomainType, domain)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	messageHash, err := hashStruct(t, message)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	hash := sha3.NewLegacyKeccak256()
-// 	hash.Write([]byte{0x19, 0x01})
-// 	hash.Write(domainSeparator)
-// 	hash.Write(messageHash)
-// 	return hash.Sum(nil), nil
-// }
