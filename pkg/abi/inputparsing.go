@@ -319,7 +319,7 @@ func getBytesFromInterface(ctx context.Context, desc string, v interface{}) ([]b
 		vt = strings.TrimPrefix(vt, "0x")
 		hb, err := hex.DecodeString(vt)
 		if err != nil {
-			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidHexABIInput, vt, v, desc)
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidHexABIInput, v, desc)
 		}
 		return hb, nil
 	default:
@@ -333,7 +333,7 @@ func getBytesFromInterface(ctx context.Context, desc string, v interface{}) ([]b
 		if vi != nil {
 			return getBytesFromInterface(ctx, desc, vi)
 		}
-		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidHexABIInput, vt, v)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidHexABIInput, v, desc)
 	}
 }
 

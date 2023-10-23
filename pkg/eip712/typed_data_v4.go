@@ -42,7 +42,7 @@ type Type []*TypeMember
 type SignTypedDataPayload struct {
 	Types       TypeSet                `json:"types"`
 	PrimaryType string                 `json:"primaryType"`
-	Domain      Domain                 `json:"domain"`
+	Domain      map[string]interface{} `json:"domain"`
 	Message     map[string]interface{} `json:"message"`
 }
 
@@ -55,12 +55,35 @@ type Domain struct {
 	VerifyingContract ethtypes.Address0xHex `json:"verifyingContract"`
 }
 
+const EIP712Domain = "EIP712Domain"
+
 func EncodeTypedDataV4(ctx context.Context, payload *SignTypedDataPayload) (ethtypes.HexBytes0xPrefix, error) {
-	b, err := hashStruct(ctx, payload.PrimaryType, payload.Message, payload.Types, "")
+	// Add empty EIP712Domain type specification if missing
+	if _, found := payload.Types[EIP712Domain]; !found {
+		payload.Types[EIP712Domain] = Type{}
+	}
+
+	// Start with the EIP-712 prefix
+	buf := new(bytes.Buffer)
+	buf.Write([]byte{0x19, 0x01})
+
+	// Encode EIP712Domain from message
+	domainHash, err := hashStruct(ctx, EIP712Domain, payload.Domain, payload.Types, "domain")
 	if err != nil {
 		return nil, err
 	}
-	return b, err
+	buf.Write(domainHash)
+
+	// If that wasn't the primary type, encode the primary type
+	if payload.PrimaryType != EIP712Domain {
+		// Encode the hash
+		structHash, err := hashStruct(ctx, payload.PrimaryType, payload.Message, payload.Types, "")
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(structHash)
+	}
+	return keccak256(buf.Bytes()), nil
 }
 
 // A map from type names to types is encoded per encodeType:
@@ -172,7 +195,7 @@ func encodeData(ctx context.Context, typeName string, v interface{}, allTypes Ty
 	case nil:
 		// special rule for a nil value - we don't even include the type info, just return a nil bytes array
 		bytes32Enc, _ := abiElementalType(ctx, "bytes32")
-		encoded, _ = abiEncode(ctx, bytes32Enc, []byte{ /* empty */ })
+		encoded, _ = abiEncode(ctx, bytes32Enc, []byte{ /* empty */ }, breadcrumbs)
 	case map[string]interface{}:
 		typeHashed := keccak256([]byte(typeEncoded))
 		buf := bytes.NewBuffer(typeHashed)
@@ -219,11 +242,11 @@ func encodeElement(ctx context.Context, typeName string, v interface{}, allTypes
 	baseType := tc.ElementaryType().BaseType()
 	switch baseType {
 	case abi.BaseTypeAddress, abi.BaseTypeBool, abi.BaseTypeInt, abi.BaseTypeUInt:
-		return abiEncode(ctx, tc, v)
+		return abiEncode(ctx, tc, v, breadcrumbs)
 	case abi.BaseTypeBytes:
 		// Handle fixed bytes1 to bytes32
 		if baseType == abi.BaseTypeBytes && tc.ElementaryFixed() {
-			return abiEncode(ctx, tc, v)
+			return abiEncode(ctx, tc, v, breadcrumbs)
 		}
 		// These dynamic bytes/string arrays are special handling, where we need to use the same
 		// rules as ABI to extract the byte string from the input... but we need to actually
@@ -262,10 +285,10 @@ func abiElementalType(ctx context.Context, typeName string) (abi.TypeComponent, 
 	return tc, nil
 }
 
-func abiEncode(ctx context.Context, tc abi.TypeComponent, v interface{}) (b ethtypes.HexBytes0xPrefix, err error) {
+func abiEncode(ctx context.Context, tc abi.TypeComponent, v interface{}, breadcrumbs string) (b ethtypes.HexBytes0xPrefix, err error) {
 	// Re-use the ABI function to parse the input value for elemental types.
 	// (we weren't able to do this for structs/tuples and arrays, due to EIP-712 specifics)
-	cv, err := tc.ParseExternalCtx(ctx, v)
+	cv, err := tc.ParseExternalDesc(ctx, v, breadcrumbs)
 	if err != nil {
 		return nil, err
 	}
@@ -314,32 +337,6 @@ func hashArray(ctx context.Context, typeName string, allTypes TypeSet, v interfa
 	}
 	return buf.Bytes(), nil
 }
-
-// var EIP712DomainType = Type{
-// 	Name: "EIP712Domain",
-// 	Members: []*TypeMember{
-// 		{
-// 			Name: "name",
-// 			Type: "string",
-// 		},
-// 		{
-// 			Name: "version",
-// 			Type: "string",
-// 		},
-// 		{
-// 			Name: "chainId",
-// 			Type: "uint256",
-// 		},
-// 		{
-// 			Name: "verifyingContract",
-// 			Type: "address",
-// 		},
-// 		{
-// 			Name: "salt",
-// 			Type: "bytes32",
-// 		},
-// 	},
-// }
 
 // func (t *TypeMember) Encode() string {
 // 	return t.Type + " " + t.Name
