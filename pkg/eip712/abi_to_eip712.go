@@ -58,7 +58,7 @@ func HashStructABI(ctx context.Context, v *abi.ComponentValue) (ethtypes.HexByte
 	return hash.Sum(nil), nil
 }
 
-func hashString(s string) []byte {
+func hashString(s string) ethtypes.HexBytes0xPrefix {
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write([]byte(s))
 	return hash.Sum(nil)
@@ -68,11 +68,11 @@ func hashString(s string) []byte {
 //
 // Builds the map of struct names to types
 func EncodeTypeABI(ctx context.Context, tc abi.TypeComponent) (string, error) {
-	typeSet, err := buildTypeSetABI(ctx, tc)
+	primaryName, typeSet, err := ABItoEIP712TypeSet(ctx, tc)
 	if err != nil {
 		return "", err
 	}
-	return typeSet.Encode(tc.Parameter().Name), nil
+	return typeSet.Encode(primaryName), nil
 }
 
 // EIP-712 encodeData() implementation using abi.ComponentValue as an input definition
@@ -99,16 +99,20 @@ func EncodeDataABI(ctx context.Context, v *abi.ComponentValue) (ethtypes.HexByte
 	}
 }
 
-func buildTypeSetABI(ctx context.Context, tc abi.TypeComponent) (TypeSet, error) {
+func ABItoEIP712TypeSet(ctx context.Context, tc abi.TypeComponent) (primaryType string, typeSet TypeSet, err error) {
 	if tc.ComponentType() != abi.TupleComponent {
-		return nil, i18n.NewError(ctx, signermsgs.MsgEIP712PrimaryNotTuple, tc.String())
+		return "", nil, i18n.NewError(ctx, signermsgs.MsgEIP712PrimaryNotTuple, tc.String())
+	}
+	primaryType, err = extractSolidityTypeName(ctx, tc.Parameter())
+	if err != nil {
+		return "", nil, err
 	}
 	// First we need to build the sorted array of types for `encodeType`
-	typeSet := make(TypeSet)
+	typeSet = make(TypeSet)
 	if err := addABITypes(ctx, tc, typeSet); err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	return typeSet, nil
+	return primaryType, typeSet, nil
 }
 
 // Maps a parsed ABI component type to an EIP-712 type string

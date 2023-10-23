@@ -61,6 +61,26 @@ func TestSimpleStruct(t *testing.T) {
 	tc, err := abiElem.TypeComponentTree()
 	assert.NoError(t, err)
 
+	pt, ts, err := ABItoEIP712TypeSet(context.Background(), tc)
+	assert.NoError(t, err)
+	assert.Equal(t, "Mail", pt)
+	assert.Equal(t, TypeSet{
+		"Mail": Type{
+			{
+				Name: "from",
+				Type: "address",
+			},
+			{
+				Name: "to",
+				Type: "address",
+			},
+			{
+				Name: "contents",
+				Type: "string",
+			},
+		},
+	}, ts)
+
 	cv, err := tc.ParseExternal([]interface{}{
 		"0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826",
 		"0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB",
@@ -76,6 +96,15 @@ func TestSimpleStruct(t *testing.T) {
 	encodedData, err := EncodeDataABI(context.Background(), cv)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "0x12345", encodedData.String())
+	assert.Equal(t, `0x`+
+		`000000000000000000000000cd2a3d9f938e13cd947ec05abc7fe734df8dd826`+ // uint160 address
+		`000000000000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`+ // uint160 address
+		`48656c6c6f2c20426f6221`, // ASCII: "Hello, Bob!"
+		encodedData.String())
+
+	hash, err := HashStructABI(context.Background(), cv)
+	assert.NoError(t, err)
+
+	assert.Equal(t, hashString(string(hashString(eip712Type))+string(encodedData)).String(), hash.String())
 
 }
