@@ -71,10 +71,10 @@ func mapABIType(ctx context.Context, tc abi.TypeComponent) (string, error) {
 
 // Maps one of the parsed ABI elementary types to an EIP-712 elementary type
 func mapElementaryABIType(ctx context.Context, tc abi.TypeComponent) (string, error) {
-	et := tc.ElementaryType()
-	if et == nil {
+	if tc.ComponentType() != abi.ElementaryComponent {
 		return "", i18n.NewError(ctx, signermsgs.MsgNotElementary, tc)
 	}
+	et := tc.ElementaryType()
 	switch et.BaseType() {
 	case abi.BaseTypeAddress, abi.BaseTypeBool, abi.BaseTypeString, abi.BaseTypeInt, abi.BaseTypeUInt:
 		// Types that need no transposition

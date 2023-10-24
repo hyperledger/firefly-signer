@@ -341,3 +341,289 @@ func TestMessage_StructArray(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "0x651579f58b3a8c79ba668e0f5d83e1c9f6e2715586dc11c62696ec376b595a00", ed.String())
 }
+
+func TestInvalidVersion(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"primaryType": "EIP712Domain",
+		"domain": {"version": "V2"}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22077", err)
+}
+
+func TestInvalidDomain(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"EIP712Domain": [{"name":"name","type":"string"}]
+		},
+		"primaryType": "EIP712Domain",
+		"domain": {"name": ["not","a","string"]}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22032", err)
+}
+
+func TestInvalidPrimaryType(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"name","type":"string"}]
+		},
+		"primaryType": "MyType",
+		"message": {"name": ["not","a","string"]}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22032", err)
+}
+
+func TestMissingPrimaryType(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType2": [{"name":"name","type":"string"}]
+		},
+		"primaryType": "MyType1",
+		"message": {"name": "Bob"}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22078", err)
+}
+
+func TestSecondaryTypeNotMap(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType1": [{"name":"t2","type":"MyType2"}],
+			"MyType2": [{"name":"name","type":"string"}]
+		},
+		"primaryType": "MyType1",
+		"message": {"t2": "this is not a map"}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22073", err)
+}
+
+func TestTypeInvalid(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"number","type":"int2560"}]
+		},
+		"primaryType": "MyType",
+		"message": {"number": 12345}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22028", err)
+}
+
+func TestIntValueInvalid(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"number","type":"int256"}]
+		},
+		"primaryType": "MyType",
+		"message": {"number": "!!! not a number"}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22030", err)
+}
+
+func TestBytesValueInvalid(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"bite","type":"bytes"}]
+		},
+		"primaryType": "MyType",
+		"message": {"bite": -99}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22034", err)
+}
+
+func TestFixedNotSupported(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"unmovable","type":"fixed256x18"}]
+		},
+		"primaryType": "MyType",
+		"message": {"unmovable": "1.23"}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22069", err)
+}
+
+func TestTupleNotSupported(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"abi_struct","type":"tuple"}]
+		},
+		"primaryType": "MyType",
+		"message": {"abi_struct": {}}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22067", err)
+}
+
+func TestAddressInvalid(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"addr","type":"address"}]
+		},
+		"primaryType": "MyType",
+		"message": {"addr": "not here"}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22034", err)
+}
+
+func TestArrayBadSuffix(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"wonky","type":"int256]"}]
+		},
+		"primaryType": "MyType",
+		"message": {"wonky": 1}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22074", err)
+}
+
+func TestArrayFieldNonArrayValue(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"many","type":"int256[]"}]
+		},
+		"primaryType": "MyType",
+		"message": {"many": 1}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22075", err)
+}
+
+func TestArrayFieldBadSize(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"many","type":"int256[n]"}]
+		},
+		"primaryType": "MyType",
+		"message": {"many": [1]}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22074", err)
+}
+
+func TestArrayFieldSizeMismatch(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"many","type":"int256[2]"}]
+		},
+		"primaryType": "MyType",
+		"message": {"many": [1]}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22076", err)
+}
+
+func TestArrayValueInvalid(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p SignTypedDataPayload
+	err := json.Unmarshal([]byte(`{
+		"types": {
+			"MyType": [{"name":"many","type":"int256[]"}]
+		},
+		"primaryType": "MyType",
+		"message": {"many": ["not a number"]}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	_, err = EncodeTypedDataV4(ctx, &p)
+	assert.Regexp(t, "FF22030", err)
+}

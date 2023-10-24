@@ -87,7 +87,7 @@ var (
 	MsgEIP712UnsupportedStrType    = ffe("FF22068", "Unsupported type: %s")
 	MsgEIP712UnsupportedABIType    = ffe("FF22069", "ABI type not supported by EIP-712 encoding: %s")
 	MsgNotABIElementaryType        = ffe("FF22070", "Not elementary type: %s")
-	MsgEIP712PrimaryNotTuple       = ffe("FF22071", "Type primary type must be a struct: %s")
+	MsgEIP712PrimaryNotTuple       = ffe("FF22071", "Type primary type must be a struct/tuple: %s")
 	MsgEIP712BadInternalType       = ffe("FF22072", "Failed to extract struct name from ABI internalType '%s'")
 	MsgEIP712ValueNotMap           = ffe("FF22073", "Value for struct '%s' not a map (%T)")
 	MsgEIP712InvalidArraySuffix    = ffe("FF22074", "Type '%s' has invalid array suffix")

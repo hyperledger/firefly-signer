@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSimpleStruct(t *testing.T) {
+func TestABISimpleStruct(t *testing.T) {
 
 	// // Extracted from ABI in this solidity:
 	// // solc --combined-json abi eip712_examples.sol > eip712_examples.json
@@ -130,7 +130,7 @@ func TestSimpleStruct(t *testing.T) {
 
 }
 
-func TestArrays(t *testing.T) {
+func TestABIArraysAndTypes(t *testing.T) {
 
 	// // solc --combined-json abi eip712_examples.sol > eip712_examples.json
 	// pragma solidity ^0.8.0;
@@ -237,5 +237,184 @@ func TestArrays(t *testing.T) {
 			},
 		},
 	}, ts)
+
+}
+
+func TestABINotTuple(t *testing.T) {
+
+	mailABI := []byte(`{
+		"name": "",
+		"type": "uint256"
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
+
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
+
+	_, _, err = ABItoTypedDataV4(context.Background(), tc)
+	assert.Regexp(t, "FF22071", err)
+
+}
+
+func TestABINoInternalType(t *testing.T) {
+
+	mailABI := []byte(`{
+		"name": "",
+		"type": "tuple",
+		"components": []
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
+
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
+
+	_, _, err = ABItoTypedDataV4(context.Background(), tc)
+	assert.Regexp(t, "FF22072", err)
+
+}
+
+func TestABINoInternalTypeChild(t *testing.T) {
+
+	mailABI := []byte(`{
+		"name": "",
+		"type": "tuple",
+		"internalType": "struct MyType",
+		"components": [
+			{
+				"name": "noInternal",
+				"type": "tuple",
+				"components": []
+			}
+		]
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
+
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
+
+	_, _, err = ABItoTypedDataV4(context.Background(), tc)
+	assert.Regexp(t, "FF22072", err)
+
+}
+
+func TestMapElementaryABITypeNonElementary(t *testing.T) {
+
+	mailABI := []byte(`{
+		"name": "",
+		"type": "tuple",
+		"internalType": "struct MyType",
+		"components": []
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
+
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
+
+	_, err = mapElementaryABIType(context.Background(), tc)
+	assert.Regexp(t, "FF22067", err)
+
+}
+
+func TestMapABITypeBadArray(t *testing.T) {
+
+	mailABI := []byte(`{
+		"name": "",
+		"type": "tuple[]",
+		"components": []
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
+
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
+
+	_, err = mapABIType(context.Background(), tc)
+	assert.Regexp(t, "FF22072", err)
+
+}
+
+func TestAddABITypesFailToExtractStructName(t *testing.T) {
+
+	mailABI := []byte(`{
+		"name": "",
+		"type": "tuple"
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
+
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
+
+	err = addABITypes(context.Background(), tc, TypeSet{})
+	assert.Regexp(t, "FF22072", err)
+
+}
+
+func TestABIUnsupportedType(t *testing.T) {
+
+	mailABI := []byte(`{
+		"name": "",
+		"type": "tuple",
+		"internalType": "struct MyType",
+		"components": [
+			{
+				"name": "fixed",
+				"type": "fixed256x18"
+			}
+		]
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
+
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
+
+	_, _, err = ABItoTypedDataV4(context.Background(), tc)
+	assert.Regexp(t, "FF22069", err)
+
+}
+
+func TestABINestedError(t *testing.T) {
+
+	mailABI := []byte(`{
+		"name": "",
+		"type": "tuple",
+		"internalType": "struct MyType",
+		"components": [
+			{
+				"name": "nested1",
+				"type": "tuple",
+				"internalType": "struct Nested1",
+				"components": [
+					{
+						"name": "nested1",
+						"type": "tuple",
+						"internalType": "",
+						"components": []
+					}
+				]
+			}
+		]
+	}`)
+	var abiElem abi.Parameter
+	err := json.Unmarshal(mailABI, &abiElem)
+	assert.NoError(t, err)
+
+	tc, err := abiElem.TypeComponentTree()
+	assert.NoError(t, err)
+
+	_, _, err = ABItoTypedDataV4(context.Background(), tc)
+	assert.Regexp(t, "FF22072", err)
 
 }

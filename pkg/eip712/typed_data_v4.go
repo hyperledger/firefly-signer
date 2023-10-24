@@ -59,6 +59,9 @@ const EIP712Domain = "EIP712Domain"
 
 func EncodeTypedDataV4(ctx context.Context, payload *SignTypedDataPayload) (encoded ethtypes.HexBytes0xPrefix, err error) {
 	// Add empty EIP712Domain type specification if missing
+	if payload.Types == nil {
+		payload.Types = TypeSet{}
+	}
 	if _, found := payload.Types[EIP712Domain]; !found {
 		payload.Types[EIP712Domain] = Type{}
 	}
@@ -144,14 +147,17 @@ func (t Type) Encode(name string) string {
 }
 
 func nextCrumb(breadcrumbs string, name string) string {
-	return breadcrumbs + "." + name
+	if len(breadcrumbs) > 0 {
+		return breadcrumbs + "." + name
+	}
+	return name
 }
 
 func idxCrumb(breadcrumbs string, idx int) string {
 	return fmt.Sprintf("%s[%d]", breadcrumbs, idx)
 }
 
-func addNestedTypes(typeName string, allTypes TypeSet, typeSet TypeSet) error {
+func addNestedTypes(typeName string, allTypes TypeSet, typeSet TypeSet) {
 	// We're not interested in array semantics here
 	iBracket := strings.Index(typeName, "[")
 	if iBracket >= 0 {
@@ -159,18 +165,12 @@ func addNestedTypes(typeName string, allTypes TypeSet, typeSet TypeSet) error {
 	}
 	// See if it's a defined structure type
 	t, ok := allTypes[typeName]
-	if !ok {
-		return nil
-	}
-	if typeSet[typeName] == nil {
+	if ok && typeSet[typeName] == nil {
 		typeSet[typeName] = t
 		for _, tm := range t {
-			if err := addNestedTypes(tm.Type, allTypes, typeSet); err != nil {
-				return err
-			}
+			addNestedTypes(tm.Type, allTypes, typeSet)
 		}
 	}
-	return nil
 }
 
 func keccak256(b []byte) ethtypes.HexBytes0xPrefix {
@@ -190,10 +190,7 @@ func encodeType(ctx context.Context, typeName string, allTypes TypeSet) (Type, s
 	}
 
 	depSet := make(TypeSet)
-	err := addNestedTypes(typeName, allTypes, depSet)
-	if err != nil {
-		return nil, "", err
-	}
+	addNestedTypes(typeName, allTypes, depSet)
 	typeEncoded := depSet.Encode(typeName)
 	log.L(ctx).Tracef("encodeType(%s): %s", typeName, typeEncoded)
 	return t, typeEncoded, nil
@@ -241,7 +238,7 @@ func hashStruct(ctx context.Context, typeName string, v interface{}, allTypes Ty
 	}
 	if encoded == nil {
 		// special rule for a nil value - we don't even include the type info, just return a nil bytes array
-		bytes32Enc, _ := abiElementalType(ctx, "bytes32")
+		bytes32Enc, _ := abiElementaryType(ctx, "bytes32")
 		encoded, _ = abiEncode(ctx, bytes32Enc, "0x0000000000000000000000000000000000000000000000000000000000000000", breadcrumbs)
 		result = encoded
 	} else {
@@ -259,8 +256,8 @@ func encodeElement(ctx context.Context, typeName string, v interface{}, allTypes
 		// recurse into the struct
 		return hashStruct(ctx, typeName, v, allTypes, breadcrumbs)
 	}
-	// Need to process based on the elemental type
-	tc, err := abiElementalType(ctx, typeName)
+	// Need to process based on the Elementary type
+	tc, err := abiElementaryType(ctx, typeName)
 	if err != nil {
 		return nil, err
 	}
@@ -295,29 +292,25 @@ func encodeElement(ctx context.Context, typeName string, v interface{}, allTypes
 	}
 }
 
-func abiElementalType(ctx context.Context, typeName string) (abi.TypeComponent, error) {
+func abiElementaryType(ctx context.Context, typeName string) (abi.TypeComponent, error) {
 	p := &abi.Parameter{Type: typeName}
 	tc, err := p.TypeComponentTreeCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	// Check it's one of the EIP-712 supported types
-	et := tc.ElementaryType()
-	if et == nil {
+	if tc.ComponentType() != abi.ElementaryComponent {
 		return nil, i18n.NewError(ctx, signermsgs.MsgNotElementary, tc)
 	}
 	return tc, nil
 }
 
 func abiEncode(ctx context.Context, tc abi.TypeComponent, v interface{}, breadcrumbs string) (b ethtypes.HexBytes0xPrefix, err error) {
-	// Re-use the ABI function to parse the input value for elemental types.
+	// Re-use the ABI function to parse the input value for Elementary types.
 	// (we weren't able to do this for structs/tuples and arrays, due to EIP-712 specifics)
 	cv, err := tc.ParseExternalDesc(ctx, v, breadcrumbs)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		b, err = cv.EncodeABIDataCtx(ctx)
 	}
-	b, err = cv.EncodeABIDataCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
