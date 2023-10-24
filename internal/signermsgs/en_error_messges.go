@@ -82,4 +82,7 @@ var (
 	MsgRequestCanceledContext      = ffe("FF22063", "Request with id %s failed due to canceled context")
 	MsgInvalidSigner               = ffe("FF22064", "Invalid signer")
 	MsgResultParseFailed           = ffe("FF22065", "Failed to parse result (expected=%T): %s")
+	MsgSubscribeResponseInvalid    = ffe("FF22066", "Subscription response invalid")
+	MsgWebSocketReconnected        = ffe("FF22067", "WebSocket reconnected during JSON/RPC call")
+	MsgContextCancelledWSConnect   = ffe("FF22068", "Context canceled while connecting WebSocket")
 )

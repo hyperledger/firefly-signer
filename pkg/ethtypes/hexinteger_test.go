@@ -49,6 +49,8 @@ func TestHexIntegerOk(t *testing.T) {
 	assert.Nil(t, testStruct.I4)
 	assert.Equal(t, int64(0), testStruct.I4.BigInt().Int64()) // BigInt() safe on nils
 	assert.Nil(t, testStruct.I5)
+	assert.Equal(t, int64(12345), testStruct.I3.Int64())
+	assert.Equal(t, uint64(12345), testStruct.I3.Uint64())
 
 	jsonSerialized, err := json.Marshal(&testStruct)
 	assert.JSONEq(t, `{
@@ -121,4 +123,17 @@ func TestHexIntConstructors(t *testing.T) {
 	assert.Equal(t, int64(12345), NewHexInteger(big.NewInt(12345)).BigInt().Int64())
 	assert.Equal(t, "0x0", NewHexInteger(big.NewInt(0)).String())
 	assert.Equal(t, "0x1", NewHexInteger(big.NewInt(1)).String())
+	assert.Equal(t, "0x1", NewHexIntegerU64(1).String())
+}
+
+func TestScan(t *testing.T) {
+	i := &HexInteger{}
+	err := i.Scan(false)
+	err = i.Scan(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x0", i.String())
+	i.Scan(int64(5555))
+	assert.Equal(t, "0x15b3", i.String())
+	i.Scan(uint64(9999))
+	assert.Equal(t, "0x270f", i.String())
 }
