@@ -21,7 +21,7 @@ lint: ${LINT}
 ${MOCKERY}:
 		$(VGO) install github.com/vektra/mockery/cmd/mockery@latest
 ${LINT}:
-		$(VGO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.0
+		$(VGO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.0
 
 
 define makemock
