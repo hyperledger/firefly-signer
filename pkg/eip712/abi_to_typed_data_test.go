@@ -254,7 +254,7 @@ func TestABINotTuple(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, _, err = ABItoTypedDataV4(context.Background(), tc)
-	assert.Regexp(t, "FF22071", err)
+	assert.Regexp(t, "FF22074", err)
 
 }
 
@@ -273,7 +273,7 @@ func TestABINoInternalType(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, _, err = ABItoTypedDataV4(context.Background(), tc)
-	assert.Regexp(t, "FF22072", err)
+	assert.Regexp(t, "FF22075", err)
 
 }
 
@@ -299,7 +299,7 @@ func TestABINoInternalTypeChild(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, _, err = ABItoTypedDataV4(context.Background(), tc)
-	assert.Regexp(t, "FF22072", err)
+	assert.Regexp(t, "FF22075", err)
 
 }
 
@@ -319,7 +319,7 @@ func TestMapElementaryABITypeNonElementary(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = mapElementaryABIType(context.Background(), tc)
-	assert.Regexp(t, "FF22067", err)
+	assert.Regexp(t, "FF22070", err)
 
 }
 
@@ -338,7 +338,7 @@ func TestMapABITypeBadArray(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = mapABIType(context.Background(), tc)
-	assert.Regexp(t, "FF22072", err)
+	assert.Regexp(t, "FF22075", err)
 
 }
 
@@ -356,7 +356,7 @@ func TestAddABITypesFailToExtractStructName(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = addABITypes(context.Background(), tc, TypeSet{})
-	assert.Regexp(t, "FF22072", err)
+	assert.Regexp(t, "FF22075", err)
 
 }
 
@@ -381,7 +381,7 @@ func TestABIUnsupportedType(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, _, err = ABItoTypedDataV4(context.Background(), tc)
-	assert.Regexp(t, "FF22069", err)
+	assert.Regexp(t, "FF22072", err)
 
 }
 
@@ -415,6 +415,6 @@ func TestABINestedError(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, _, err = ABItoTypedDataV4(context.Background(), tc)
-	assert.Regexp(t, "FF22072", err)
+	assert.Regexp(t, "FF22075", err)
 
 }

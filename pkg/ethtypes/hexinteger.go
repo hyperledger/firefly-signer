@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -17,9 +17,12 @@
 package ethtypes
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
+
+	"github.com/hyperledger/firefly-common/pkg/i18n"
 )
 
 // HexInteger is a positive integer - serializes to JSON as an 0x hex string (no leading zeros), and parses flexibly depending on the prefix (so 0x for hex, or base 10 for plain string / float64)
@@ -62,10 +65,37 @@ func (h *HexInteger) BigInt() *big.Int {
 	return (*big.Int)(h)
 }
 
+func (h *HexInteger) Uint64() uint64 {
+	return h.BigInt().Uint64()
+}
+
+func (h *HexInteger) Int64() int64 {
+	return h.BigInt().Int64()
+}
+
+func NewHexIntegerU64(i uint64) *HexInteger {
+	return (*HexInteger)(big.NewInt(0).SetUint64(i))
+}
+
 func NewHexInteger64(i int64) *HexInteger {
 	return (*HexInteger)(big.NewInt(i))
 }
 
 func NewHexInteger(i *big.Int) *HexInteger {
 	return (*HexInteger)(i)
+}
+
+func (h *HexInteger) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case nil:
+		return nil
+	case int64:
+		*h = *NewHexInteger64(src)
+		return nil
+	case uint64:
+		*h = *NewHexIntegerU64(src)
+		return nil
+	default:
+		return i18n.NewError(context.Background(), i18n.MsgTypeRestoreFailed, src, h)
+	}
 }

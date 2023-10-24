@@ -699,7 +699,7 @@ func TestTupleEncodeIndividualFixedParam(t *testing.T) {
 	assert.Equal(t, TupleComponent, cv.Component.ComponentType())
 	assert.Len(t, cv.Children, 1)
 	_, _, err = cv.ElementaryABIData()
-	assert.Regexp(t, "FF22070", err)
+	assert.Regexp(t, "FF22073", err)
 
 	intComp := cv.Children[0]
 	assert.Equal(t, ElementaryComponent, intComp.Component.ComponentType())

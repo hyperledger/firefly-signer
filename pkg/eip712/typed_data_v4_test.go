@@ -354,7 +354,7 @@ func TestInvalidVersion(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22077", err)
+	assert.Regexp(t, "FF22080", err)
 }
 
 func TestInvalidDomain(t *testing.T) {
@@ -408,7 +408,7 @@ func TestMissingPrimaryType(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22078", err)
+	assert.Regexp(t, "FF22081", err)
 }
 
 func TestSecondaryTypeNotMap(t *testing.T) {
@@ -427,7 +427,7 @@ func TestSecondaryTypeNotMap(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22073", err)
+	assert.Regexp(t, "FF22076", err)
 }
 
 func TestTypeInvalid(t *testing.T) {
@@ -499,7 +499,7 @@ func TestFixedNotSupported(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22069", err)
+	assert.Regexp(t, "FF22072", err)
 }
 
 func TestTupleNotSupported(t *testing.T) {
@@ -517,7 +517,7 @@ func TestTupleNotSupported(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22067", err)
+	assert.Regexp(t, "FF22070", err)
 }
 
 func TestAddressInvalid(t *testing.T) {
@@ -553,7 +553,7 @@ func TestArrayBadSuffix(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22074", err)
+	assert.Regexp(t, "FF22077", err)
 }
 
 func TestArrayFieldNonArrayValue(t *testing.T) {
@@ -571,7 +571,7 @@ func TestArrayFieldNonArrayValue(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22075", err)
+	assert.Regexp(t, "FF22078", err)
 }
 
 func TestArrayFieldBadSize(t *testing.T) {
@@ -589,7 +589,7 @@ func TestArrayFieldBadSize(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22074", err)
+	assert.Regexp(t, "FF22077", err)
 }
 
 func TestArrayFieldSizeMismatch(t *testing.T) {
@@ -607,7 +607,7 @@ func TestArrayFieldSizeMismatch(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22076", err)
+	assert.Regexp(t, "FF22079", err)
 }
 
 func TestArrayValueInvalid(t *testing.T) {

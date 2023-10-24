@@ -39,9 +39,13 @@ const (
 	RPCCodeInternalError  RPCCode = -32603
 )
 
+type RPC interface {
+	CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) *RPCError
+}
+
 // Backend performs communication with a backend
 type Backend interface {
-	CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) *RPCError
+	RPC
 	SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error)
 }
 
@@ -90,11 +94,18 @@ func (e *RPCError) Error() error {
 	return fmt.Errorf(e.Message)
 }
 
+func (e *RPCError) String() string {
+	return e.Message
+}
+
 type RPCResponse struct {
 	JSONRpc string           `json:"jsonrpc"`
 	ID      *fftypes.JSONAny `json:"id"`
 	Result  *fftypes.JSONAny `json:"result,omitempty"`
 	Error   *RPCError        `json:"error,omitempty"`
+	// Only for subscription notifications
+	Method string           `json:"method,omitempty"`
+	Params *fftypes.JSONAny `json:"params,omitempty"`
 }
 
 func (r *RPCResponse) Message() string {
@@ -111,19 +122,11 @@ func (rc *RPCClient) allocateRequestID(req *RPCRequest) string {
 }
 
 func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method string, params ...interface{}) *RPCError {
-	req := &RPCRequest{
-		JSONRpc: "2.0",
-		Method:  method,
-		Params:  make([]*fftypes.JSONAny, len(params)),
+	rpcReq, rpcErr := buildRequest(ctx, method, params)
+	if rpcErr != nil {
+		return rpcErr
 	}
-	for i, param := range params {
-		b, err := json.Marshal(param)
-		if err != nil {
-			return &RPCError{Code: int64(RPCCodeInvalidRequest), Message: i18n.NewError(ctx, signermsgs.MsgInvalidParam, i, method, err).Error()}
-		}
-		req.Params[i] = fftypes.JSONAnyPtrBytes(b)
-	}
-	res, err := rc.SyncRequest(ctx, req)
+	res, err := rc.SyncRequest(ctx, rpcReq)
 	if err != nil {
 		if res.Error != nil && res.Error.Code != 0 {
 			return res.Error
@@ -225,4 +228,24 @@ func RPCErrorResponse(err error, id *fftypes.JSONAny, code RPCCode) *RPCResponse
 			Message: err.Error(),
 		},
 	}
+}
+
+func NewRPCError(ctx context.Context, code RPCCode, msg i18n.ErrorMessageKey, inserts ...interface{}) *RPCError {
+	return &RPCError{Code: int64(code), Message: i18n.NewError(ctx, msg, inserts...).Error()}
+}
+
+func buildRequest(ctx context.Context, method string, params []interface{}) (*RPCRequest, *RPCError) {
+	req := &RPCRequest{
+		JSONRpc: "2.0",
+		Method:  method,
+		Params:  make([]*fftypes.JSONAny, len(params)),
+	}
+	for i, param := range params {
+		b, err := json.Marshal(param)
+		if err != nil {
+			return nil, NewRPCError(ctx, RPCCodeInvalidRequest, signermsgs.MsgInvalidParam, i, method, err)
+		}
+		req.Params[i] = fftypes.JSONAnyPtrBytes(b)
+	}
+	return req, nil
 }

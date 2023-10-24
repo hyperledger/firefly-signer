@@ -18,7 +18,10 @@ A set of Ethereum transaction signing utilities designed for use across projects
   - Original
   - EIP-155
   - EIP-1559
+  - EIP-712 (see below)
   - See `pkg/ethsigner` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/ethsigner)
+- EIP-712 Typed Data implementation
+  - See `pkg/eip712` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/eip712)
 - Keystore V3 key file implementation
   - Scrypt - read/write
   - pbkdf2 - read
@@ -30,6 +33,10 @@ A set of Ethereum transaction signing utilities designed for use across projects
   - Files can be Keystore V3 files directly, with accompanying `{{ADDRESS}}.pass` files
   - Detects newly added files automatically
   - See `pkg/fswallet` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/fswallet)
+- JSON/RPC client
+  - HTTP
+  - WebSockets - with `eth_subscribe` support
+  - See `pkg/rpcbackend` [go doc](https://pkg.go.dev/github.com/hyperledger/firefly-signer/pkg/rpcbackend)
 
 ## JSON/RPC proxy server
 
