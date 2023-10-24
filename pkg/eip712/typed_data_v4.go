@@ -32,6 +32,13 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+type TypedData struct {
+	Types       TypeSet                `ffstruct:"TypedData" json:"types"`
+	PrimaryType string                 `ffstruct:"TypedData" json:"primaryType"`
+	Domain      map[string]interface{} `ffstruct:"TypedData" json:"domain"`
+	Message     map[string]interface{} `ffstruct:"TypedData" json:"message"`
+}
+
 type TypeMember struct {
 	Name string
 	Type string
@@ -39,25 +46,11 @@ type TypeMember struct {
 
 type Type []*TypeMember
 
-type SignTypedDataPayload struct {
-	Types       TypeSet                `json:"types"`
-	PrimaryType string                 `json:"primaryType"`
-	Domain      map[string]interface{} `json:"domain"`
-	Message     map[string]interface{} `json:"message"`
-}
-
 type TypeSet map[string]Type
-
-type Domain struct {
-	Name              string                `json:"name"`
-	Version           string                `json:"version"`
-	ChainID           int64                 `json:"chainId"`
-	VerifyingContract ethtypes.Address0xHex `json:"verifyingContract"`
-}
 
 const EIP712Domain = "EIP712Domain"
 
-func EncodeTypedDataV4(ctx context.Context, payload *SignTypedDataPayload) (encoded ethtypes.HexBytes0xPrefix, err error) {
+func EncodeTypedDataV4(ctx context.Context, payload *TypedData) (encoded ethtypes.HexBytes0xPrefix, err error) {
 	// Add empty EIP712Domain type specification if missing
 	if payload.Types == nil {
 		payload.Types = TypeSet{}

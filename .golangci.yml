@@ -32,7 +32,6 @@ linters:
   disable-all: false
   enable:
     - bodyclose
-    - deadcode
     - dogsled
     - errcheck
     - goconst
@@ -50,10 +49,8 @@ linters:
     - nakedret
     - revive
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck

@@ -32,7 +32,7 @@ const MailType = `[{"name": "from","type": "Person"},{"name": "to","type": "Pers
 func TestMessage_ExampleFromEIP712Spec(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"EIP712Domain": [
@@ -86,7 +86,7 @@ func TestMessage_ExampleFromEIP712Spec(t *testing.T) {
 func TestMessage_EmptyMessage(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {},
 		"primaryType": "EIP712Domain"
@@ -102,7 +102,7 @@ func TestMessage_EmptyMessage(t *testing.T) {
 func TestMessage_EmptyDomain(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
@@ -132,7 +132,7 @@ func TestMessage_EmptyDomain(t *testing.T) {
 func TestMessage_NilReference(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
@@ -156,7 +156,7 @@ func TestMessage_NilReference(t *testing.T) {
 func TestMessage_BytesString(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
@@ -180,7 +180,7 @@ func TestMessage_BytesString(t *testing.T) {
 func TestMessage_Bytes11(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
@@ -204,7 +204,7 @@ func TestMessage_Bytes11(t *testing.T) {
 func TestMessage_StringArray(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
@@ -228,7 +228,7 @@ func TestMessage_StringArray(t *testing.T) {
 func TestMessage_StringArrayArray(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
@@ -255,7 +255,7 @@ func TestMessage_StringArrayArray(t *testing.T) {
 func TestMessage_FixedStringArray(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"Person": [{"name": "name","type": "string"},{"name": "wallet","type": "address"}],
@@ -279,7 +279,7 @@ func TestMessage_FixedStringArray(t *testing.T) {
 func TestMessage_StructArray(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"AllTheTypes": [
@@ -345,7 +345,7 @@ func TestMessage_StructArray(t *testing.T) {
 func TestInvalidVersion(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"primaryType": "EIP712Domain",
 		"domain": {"version": "V2"}
@@ -360,7 +360,7 @@ func TestInvalidVersion(t *testing.T) {
 func TestInvalidDomain(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"EIP712Domain": [{"name":"name","type":"string"}]
@@ -378,7 +378,7 @@ func TestInvalidDomain(t *testing.T) {
 func TestInvalidPrimaryType(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"name","type":"string"}]
@@ -396,7 +396,7 @@ func TestInvalidPrimaryType(t *testing.T) {
 func TestMissingPrimaryType(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType2": [{"name":"name","type":"string"}]
@@ -414,7 +414,7 @@ func TestMissingPrimaryType(t *testing.T) {
 func TestSecondaryTypeNotMap(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType1": [{"name":"t2","type":"MyType2"}],
@@ -433,7 +433,7 @@ func TestSecondaryTypeNotMap(t *testing.T) {
 func TestTypeInvalid(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"number","type":"int2560"}]
@@ -451,7 +451,7 @@ func TestTypeInvalid(t *testing.T) {
 func TestIntValueInvalid(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"number","type":"int256"}]
@@ -469,7 +469,7 @@ func TestIntValueInvalid(t *testing.T) {
 func TestBytesValueInvalid(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"bite","type":"bytes"}]
@@ -487,7 +487,7 @@ func TestBytesValueInvalid(t *testing.T) {
 func TestFixedNotSupported(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"unmovable","type":"fixed256x18"}]
@@ -505,7 +505,7 @@ func TestFixedNotSupported(t *testing.T) {
 func TestTupleNotSupported(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"abi_struct","type":"tuple"}]
@@ -523,7 +523,7 @@ func TestTupleNotSupported(t *testing.T) {
 func TestAddressInvalid(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"addr","type":"address"}]
@@ -541,7 +541,7 @@ func TestAddressInvalid(t *testing.T) {
 func TestArrayBadSuffix(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"wonky","type":"int256]"}]
@@ -559,7 +559,7 @@ func TestArrayBadSuffix(t *testing.T) {
 func TestArrayFieldNonArrayValue(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"many","type":"int256[]"}]
@@ -577,7 +577,7 @@ func TestArrayFieldNonArrayValue(t *testing.T) {
 func TestArrayFieldBadSize(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"many","type":"int256[n]"}]
@@ -595,7 +595,7 @@ func TestArrayFieldBadSize(t *testing.T) {
 func TestArrayFieldSizeMismatch(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"many","type":"int256[2]"}]
@@ -613,7 +613,7 @@ func TestArrayFieldSizeMismatch(t *testing.T) {
 func TestArrayValueInvalid(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
-	var p SignTypedDataPayload
+	var p TypedData
 	err := json.Unmarshal([]byte(`{
 		"types": {
 			"MyType": [{"name":"many","type":"int256[]"}]

@@ -1,11 +1,11 @@
-FROM golang:1.19-buster AS builder
+FROM golang:1.20-bullseye AS builder
 ARG BUILD_VERSION
 ENV BUILD_VERSION=${BUILD_VERSION}
 ADD . /ffsigner
 WORKDIR /ffsigner
 RUN make
 
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 WORKDIR /ffsigner
 RUN apt update -y \
  && apt install -y curl jq \

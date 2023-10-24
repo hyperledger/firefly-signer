@@ -20,20 +20,24 @@ import (
 	"context"
 
 	"github.com/hyperledger/firefly-signer/pkg/eip712"
-	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
+	"github.com/hyperledger/firefly-signer/pkg/rlp"
+	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 )
 
-// Wallet is the common interface can be implemented across wallet/signing capabilities
-type Wallet interface {
-	Sign(ctx context.Context, txn *Transaction, chainID int64) ([]byte, error)
-	// SignPrivateTxn(ctx context.Context, addr ethtypes.Address, ptx *Transaction, chainID int64) ([]byte, error)
-	Initialize(ctx context.Context) error
-	GetAccounts(ctx context.Context) ([]*ethtypes.Address0xHex /* no checksum on returned values */, error)
-	Refresh(ctx context.Context) error
-	Close() error
-}
+func SignTypedDataV4(ctx context.Context, signer secp256k1.Signer, payload *eip712.TypedData) ([]byte, error) {
+	encodedData, err := eip712.EncodeTypedDataV4(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := signer.Sign(encodedData)
+	if err != nil {
+		return nil, err
+	}
 
-type WalletTypedData interface {
-	Wallet
-	SignTypedDataV4(ctx context.Context, from ethtypes.Address0xHex, payload *eip712.TypedData) ([]byte, error)
+	rlpList := make(rlp.List, 0, 4)
+	rlpList = append(rlpList, rlp.Data(encodedData))
+	rlpList = append(rlpList, rlp.WrapInt(sig.R))
+	rlpList = append(rlpList, rlp.WrapInt(sig.S))
+	rlpList = append(rlpList, rlp.WrapInt(sig.V))
+	return rlpList.Encode(), nil
 }
