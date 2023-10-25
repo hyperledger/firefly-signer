@@ -35,5 +35,5 @@ type Wallet interface {
 
 type WalletTypedData interface {
 	Wallet
-	SignTypedDataV4(ctx context.Context, from ethtypes.Address0xHex, payload *eip712.TypedData) ([]byte, error)
+	SignTypedDataV4(ctx context.Context, from ethtypes.Address0xHex, payload *eip712.TypedData) (*EIP712Result, error)
 }

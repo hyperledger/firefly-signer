@@ -117,7 +117,7 @@ func (w *fsWallet) Sign(ctx context.Context, txn *ethsigner.Transaction, chainID
 	return txn.Sign(keypair, chainID)
 }
 
-func (w *fsWallet) SignTypedDataV4(ctx context.Context, from ethtypes.Address0xHex, payload *eip712.TypedData) ([]byte, error) {
+func (w *fsWallet) SignTypedDataV4(ctx context.Context, from ethtypes.Address0xHex, payload *eip712.TypedData) (*ethsigner.EIP712Result, error) {
 	keypair, err := w.getSignerForAddr(ctx, from)
 	if err != nil {
 		return nil, err
