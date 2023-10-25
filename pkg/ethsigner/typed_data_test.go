@@ -18,14 +18,15 @@ package ethsigner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/log"
 	"github.com/hyperledger/firefly-signer/mocks/secp256k1mocks"
 	"github.com/hyperledger/firefly-signer/pkg/eip712"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly-signer/pkg/rlp"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -41,21 +42,22 @@ func TestSignTypedDataV4(t *testing.T) {
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	raw, err := SignTypedDataV4(ctx, keypair, payload)
+	sig, err := SignTypedDataV4(ctx, keypair, payload)
 	assert.NoError(t, err)
 
-	rlpList, _, err := rlp.Decode(raw)
+	b, err := json.Marshal(sig)
 	assert.NoError(t, err)
+	log.L(context.Background()).Infof("Signature: %s", b)
+
 	foundSig := &secp256k1.SignatureData{
-		V: new(big.Int),
+		V: sig.V.BigInt(),
 		R: new(big.Int),
 		S: new(big.Int),
 	}
-	foundSig.R.SetBytes([]byte(rlpList.(rlp.List)[1].(rlp.Data)))
-	foundSig.S.SetBytes([]byte(rlpList.(rlp.List)[2].(rlp.Data)))
-	foundSig.V.SetBytes([]byte(rlpList.(rlp.List)[3].(rlp.Data)))
+	foundSig.R.SetBytes(sig.R)
+	foundSig.S.SetBytes(sig.S)
 
-	signaturePayload := ethtypes.HexBytes0xPrefix(rlpList.(rlp.List)[0].(rlp.Data))
+	signaturePayload := ethtypes.HexBytes0xPrefix(sig.Hash)
 	addr, err := foundSig.Recover(signaturePayload, -1 /* chain id is in the domain (not applied EIP-155 style to the V value) */)
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.Address.String(), addr.String())

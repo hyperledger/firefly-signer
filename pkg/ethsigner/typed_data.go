@@ -20,11 +20,18 @@ import (
 	"context"
 
 	"github.com/hyperledger/firefly-signer/pkg/eip712"
-	"github.com/hyperledger/firefly-signer/pkg/rlp"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 )
 
-func SignTypedDataV4(ctx context.Context, signer secp256k1.Signer, payload *eip712.TypedData) ([]byte, error) {
+type EIP712Result struct {
+	Hash ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"hash"`
+	V    ethtypes.HexInteger       `ffstruct:"EIP712Result" json:"v"`
+	R    ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"r"`
+	S    ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"s"`
+}
+
+func SignTypedDataV4(ctx context.Context, signer secp256k1.Signer, payload *eip712.TypedData) (*EIP712Result, error) {
 	encodedData, err := eip712.EncodeTypedDataV4(ctx, payload)
 	if err != nil {
 		return nil, err
@@ -34,10 +41,10 @@ func SignTypedDataV4(ctx context.Context, signer secp256k1.Signer, payload *eip7
 		return nil, err
 	}
 
-	rlpList := make(rlp.List, 0, 4)
-	rlpList = append(rlpList, rlp.Data(encodedData))
-	rlpList = append(rlpList, rlp.WrapInt(sig.R))
-	rlpList = append(rlpList, rlp.WrapInt(sig.S))
-	rlpList = append(rlpList, rlp.WrapInt(sig.V))
-	return rlpList.Encode(), nil
+	return &EIP712Result{
+		Hash: encodedData,
+		V:    ethtypes.HexInteger(*sig.V),
+		R:    sig.R.FillBytes(make([]byte, 32)),
+		S:    sig.S.FillBytes(make([]byte, 32)),
+	}, nil
 }
