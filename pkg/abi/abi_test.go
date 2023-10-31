@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/ffapi"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
 )
@@ -841,4 +842,8 @@ func TestEncodeCallDataValuesHelper(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "113bc475000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000047465737400000000000000000000000000000000000000000000000000000000", hex.EncodeToString(b))
 
+}
+
+func TestABIDocumented(t *testing.T) {
+	ffapi.CheckObjectDocumented(&ABI{})
 }

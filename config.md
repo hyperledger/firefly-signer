@@ -64,6 +64,7 @@ nav_order: 2
 |certFile|The path to the certificate file for TLS on this API|`string`|`<nil>`
 |clientAuth|Enables or disables client auth for TLS on this API|`string`|`<nil>`
 |enabled|Enables or disables TLS on this API|`boolean`|`false`
+|insecureSkipHostVerify|When to true in unit test development environments to disable TLS verification. Use with extreme caution|`boolean`|`<nil>`
 |keyFile|The path to the private key file for TLS on this API|`string`|`<nil>`
 |requiredDNAttributes|A set of required subject DN attributes. Each entry is a regular expression, and the subject certificate must have a matching attribute of the specified type (CN, C, O, OU, ST, L, STREET, POSTALCODE, SERIALNUMBER are valid attributes)|`map[string]string`|`<nil>`
 
@@ -76,6 +77,7 @@ nav_order: 2
 |initialConnectAttempts|The number of attempts FireFly will make to connect to the WebSocket when starting up, before failing|`int`|`5`
 |path|The WebSocket sever URL to which FireFly should connect|WebSocket URL `string`|`<nil>`
 |readBufferSize|The size in bytes of the read buffer for the WebSocket connection|[`BytesSize`](https://pkg.go.dev/github.com/docker/go-units#BytesSize)|`16Kb`
+|url|URL to use for WebSocket - overrides url one level up (in the HTTP config)|`string`|`<nil>`
 |writeBufferSize|The size in bytes of the write buffer for the WebSocket connection|[`BytesSize`](https://pkg.go.dev/github.com/docker/go-units#BytesSize)|`16Kb`
 
 ## cors
@@ -183,5 +185,6 @@ nav_order: 2
 |certFile|The path to the certificate file for TLS on this API|`string`|`<nil>`
 |clientAuth|Enables or disables client auth for TLS on this API|`string`|`<nil>`
 |enabled|Enables or disables TLS on this API|`boolean`|`false`
+|insecureSkipHostVerify|When to true in unit test development environments to disable TLS verification. Use with extreme caution|`boolean`|`<nil>`
 |keyFile|The path to the private key file for TLS on this API|`string`|`<nil>`
 |requiredDNAttributes|A set of required subject DN attributes. Each entry is a regular expression, and the subject certificate must have a matching attribute of the specified type (CN, C, O, OU, ST, L, STREET, POSTALCODE, SERIALNUMBER are valid attributes)|`map[string]string`|`<nil>`
