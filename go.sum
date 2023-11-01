@@ -172,6 +172,8 @@ github.com/hyperledger/firefly-common v1.3.1-0.20231031163145-c7aa519f0b5f h1:Em
 github.com/hyperledger/firefly-common v1.3.1-0.20231031163145-c7aa519f0b5f/go.mod h1:FOV/HcGyaX94U4PcNvrP+lt9F2ROHFMbdX0rnLFrU1U=
 github.com/hyperledger/firefly-common v1.3.1-0.20231101070154-db8f6c63822e h1:5TyGzTZ3Ogv3esgjRm/+UrnQYNTYYg9H6bW6DC2MdsE=
 github.com/hyperledger/firefly-common v1.3.1-0.20231101070154-db8f6c63822e/go.mod h1:FOV/HcGyaX94U4PcNvrP+lt9F2ROHFMbdX0rnLFrU1U=
+github.com/hyperledger/firefly-common v1.3.1-0.20231101070740-00ccb16807bf h1:CQMNZUTCQb0naxY7J14QEJGPBu31YY+qcSYUTC49epM=
+github.com/hyperledger/firefly-common v1.3.1-0.20231101070740-00ccb16807bf/go.mod h1:FOV/HcGyaX94U4PcNvrP+lt9F2ROHFMbdX0rnLFrU1U=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
