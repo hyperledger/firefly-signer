@@ -61,10 +61,9 @@ func EncodeTypedDataV4(ctx context.Context, payload *TypedData) (encoded ethtype
 	if payload.Domain == nil {
 		payload.Domain = make(map[string]interface{})
 	}
-	if v, didSupplyVersion := payload.Domain["version"].(string); didSupplyVersion && v != "V4" {
-		return nil, i18n.NewError(ctx, signermsgs.MsgEIP712Version4Required, v)
+	if payload.PrimaryType == "" {
+		return nil, i18n.NewError(ctx, signermsgs.MsgEIP712PrimaryTypeRequired)
 	}
-	payload.Domain["version"] = "V4"
 
 	// Start with the EIP-712 prefix
 	buf := new(bytes.Buffer)

@@ -96,6 +96,6 @@ var (
 	MsgEIP712InvalidArraySuffix    = ffe("FF22077", "Type '%s' has invalid array suffix")
 	MsgEIP712ValueNotArray         = ffe("FF22078", "Value for '%s' not an array (%T)")
 	MsgEIP712InvalidArrayLen       = ffe("FF22079", "Value for '%s' must have %d entries (found %d)")
-	MsgEIP712Version4Required      = ffe("FF22080", "Domain version must be 'V4': %s")
+	MsgEIP712PrimaryTypeRequired   = ffe("FF22080", "Primary type must be specified")
 	MsgEIP712TypeNotFound          = ffe("FF22081", "Type '%s' not found in type map")
 )

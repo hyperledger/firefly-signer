@@ -342,14 +342,11 @@ func TestMessage_StructArray(t *testing.T) {
 	assert.Equal(t, "0x651579f58b3a8c79ba668e0f5d83e1c9f6e2715586dc11c62696ec376b595a00", ed.String())
 }
 
-func TestInvalidVersion(t *testing.T) {
+func TestMissingPrimaryTypeField(t *testing.T) {
 	logrus.SetLevel(logrus.TraceLevel)
 
 	var p TypedData
-	err := json.Unmarshal([]byte(`{
-		"primaryType": "EIP712Domain",
-		"domain": {"version": "V2"}
-	}`), &p)
+	err := json.Unmarshal([]byte(`{}`), &p)
 	assert.NoError(t, err)
 
 	ctx := context.Background()
