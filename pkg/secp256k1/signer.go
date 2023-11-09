@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -34,6 +34,7 @@ type SignatureData struct {
 // Signer is the low level common interface that can be implemented by any module which provides signature capability
 type Signer interface {
 	Sign(message []byte) (*SignatureData, error)
+	SignDirect(message []byte) (*SignatureData, error)
 }
 
 // getVNormalized returns the original 27/28 parity
@@ -67,10 +68,16 @@ func (s *SignatureData) UpdateEIP2930() {
 	s.V = s.V.Sub(s.V, big.NewInt(27))
 }
 
-// Recover obtains the original signer
+// Recover obtains the original signer from the hash of the message
 func (s *SignatureData) Recover(message []byte, chainID int64) (a *ethtypes.Address0xHex, err error) {
 	msgHash := sha3.NewLegacyKeccak256()
 	msgHash.Write(message)
+	return s.RecoverDirect(msgHash.Sum(nil), chainID)
+}
+
+// Recover obtains the original signer
+func (s *SignatureData) RecoverDirect(message []byte, chainID int64) (a *ethtypes.Address0xHex, err error) {
+
 	signatureBytes := make([]byte, 65)
 	signatureBytes[0], err = s.getVNormalized(chainID)
 	if err != nil {
@@ -78,21 +85,27 @@ func (s *SignatureData) Recover(message []byte, chainID int64) (a *ethtypes.Addr
 	}
 	s.R.FillBytes(signatureBytes[1:33])
 	s.S.FillBytes(signatureBytes[33:65])
-	pubKey, _, err := ecdsa.RecoverCompact(signatureBytes, msgHash.Sum(nil)) // uses S256() by default
+	pubKey, _, err := ecdsa.RecoverCompact(signatureBytes, message) // uses S256() by default
 	if err != nil {
 		return nil, err
 	}
 	return PublicKeyToAddress(pubKey), nil
 }
 
-// Sign performs raw signing - give legacy 27/28 V values
+// Sign hashes the input then signs it
 func (k *KeyPair) Sign(message []byte) (ethSig *SignatureData, err error) {
+	msgHash := sha3.NewLegacyKeccak256()
+	msgHash.Write(message)
+	hashed := msgHash.Sum(nil)
+	return k.SignDirect(hashed)
+}
+
+// SignDirect performs raw signing - give legacy 27/28 V values
+func (k *KeyPair) SignDirect(message []byte) (ethSig *SignatureData, err error) {
 	if k == nil {
 		return nil, fmt.Errorf("nil signer")
 	}
-	msgHash := sha3.NewLegacyKeccak256()
-	msgHash.Write(message)
-	sig, err := ecdsa.SignCompact(k.PrivateKey, msgHash.Sum(nil), false) // uses S256() by default
+	sig, err := ecdsa.SignCompact(k.PrivateKey, message, false) // uses S256() by default
 	if err == nil {
 		// btcec does all the hard work for us. However, the interface of btcec is such
 		// that we need to unpack the result for Ethereum encoding.

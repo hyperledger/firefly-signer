@@ -21,7 +21,6 @@ import (
 
 	"github.com/hyperledger/firefly-signer/pkg/eip712"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly-signer/pkg/rlp"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 )
 
@@ -38,20 +37,20 @@ func SignTypedDataV4(ctx context.Context, signer secp256k1.Signer, payload *eip7
 	if err != nil {
 		return nil, err
 	}
-	sig, err := signer.Sign(encodedData)
+	// Note that signer.Sign performs the hash
+	sig, err := signer.SignDirect(encodedData)
 	if err != nil {
 		return nil, err
 	}
 
-	rlpList := make(rlp.List, 0, 4)
-	rlpList = append(rlpList, rlp.Data(encodedData))
-	rlpList = append(rlpList, rlp.WrapInt(sig.R))
-	rlpList = append(rlpList, rlp.WrapInt(sig.S))
-	rlpList = append(rlpList, rlp.WrapInt(sig.V))
+	signatureBytes := make([]byte, 65)
+	signatureBytes[0] = byte(sig.V.Int64())
+	sig.R.FillBytes(signatureBytes[1:33])
+	sig.S.FillBytes(signatureBytes[33:65])
 
 	return &EIP712Result{
 		Hash:      encodedData,
-		Signature: rlpList.Encode(), // per eth_signTypedData_v4 convention
+		Signature: signatureBytes, // compact ECDSA signature
 		V:         ethtypes.HexInteger(*sig.V),
 		R:         sig.R.FillBytes(make([]byte, 32)),
 		S:         sig.S.FillBytes(make([]byte, 32)),

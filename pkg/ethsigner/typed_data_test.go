@@ -23,11 +23,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/hyperledger/firefly-common/pkg/log"
 	"github.com/hyperledger/firefly-signer/mocks/secp256k1mocks"
 	"github.com/hyperledger/firefly-signer/pkg/eip712"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -58,7 +60,7 @@ func TestSignTypedDataV4(t *testing.T) {
 	foundSig.S.SetBytes(sig.S)
 
 	signaturePayload := ethtypes.HexBytes0xPrefix(sig.Hash)
-	addr, err := foundSig.Recover(signaturePayload, -1 /* chain id is in the domain (not applied EIP-155 style to the V value) */)
+	addr, err := foundSig.RecoverDirect(signaturePayload, -1 /* chain id is in the domain (not applied EIP-155 style to the V value) */)
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.Address.String(), addr.String())
 
@@ -91,9 +93,77 @@ func TestSignTypedDataV4SignFail(t *testing.T) {
 	}
 
 	msn := &secp256k1mocks.Signer{}
-	msn.On("Sign", mock.Anything).Return(nil, fmt.Errorf("pop"))
+	msn.On("SignDirect", mock.Anything).Return(nil, fmt.Errorf("pop"))
 
 	ctx := context.Background()
 	_, err := SignTypedDataV4(ctx, msn, payload)
 	assert.Regexp(t, "pop", err)
+}
+
+func TestMessage_2(t *testing.T) {
+	logrus.SetLevel(logrus.TraceLevel)
+
+	var p eip712.TypedData
+	err := json.Unmarshal([]byte(`{
+		"domain": {
+			"name": "test-app",
+			"version": "1",
+			"chainId": 31337,
+			"verifyingContract": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"
+		},
+		"types": {
+			"Issuance": [
+				{
+					"name": "amount",
+					"type": "uint256"
+				},
+				{
+					"name": "to",
+					"type": "address"
+				}
+			],
+			"EIP712Domain": [
+				{
+					"name": "name",
+					"type": "string"
+				},
+				{
+					"name": "version",
+					"type": "string"
+				},
+				{
+					"name": "chainId",
+					"type": "uint256"
+				},
+				{
+					"name": "verifyingContract",
+					"type": "address"
+				}
+			]
+		},
+		"primaryType": "Issuance",
+		"message": {
+			"amount": "1000",
+			"to": "0xce3a47d24140cca16f8839357ca5fada44a1baef"
+		}
+	}`), &p)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	ed, err := eip712.EncodeTypedDataV4(ctx, &p)
+	assert.NoError(t, err)
+	assert.Equal(t, "0xb0132202fa81cafac0e405917f86705728ba02912d185065697cc4ba4e61aec3", ed.String())
+
+	keys, err := secp256k1.NewSecp256k1KeyPair([]byte(`8d01666832be7eb2dbd57cd3d4410d0231a91533f895de76d0930c689618aefd`))
+	assert.NoError(t, err)
+	assert.Equal(t, "0xbcef501facf72ddacdb055acc2716786ff038728", keys.Address.String())
+
+	signed, err := SignTypedDataV4(ctx, keys, &p)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "0xb0132202fa81cafac0e405917f86705728ba02912d185065697cc4ba4e61aec3", signed.Hash.String())
+
+	pubKey, _, err := ecdsa.RecoverCompact(signed.Signature, signed.Hash)
+	assert.NoError(t, err)
+	assert.Equal(t, "0xbcef501facf72ddacdb055acc2716786ff038728", secp256k1.PublicKeyToAddress(pubKey).String())
 }
