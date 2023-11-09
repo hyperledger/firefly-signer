@@ -92,7 +92,7 @@ func TestSignTypedDataV4SignFail(t *testing.T) {
 		PrimaryType: eip712.EIP712Domain,
 	}
 
-	msn := &secp256k1mocks.Signer{}
+	msn := &secp256k1mocks.SignerDirect{}
 	msn.On("SignDirect", mock.Anything).Return(nil, fmt.Errorf("pop"))
 
 	ctx := context.Background()

@@ -32,7 +32,7 @@ type EIP712Result struct {
 	S         ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"s"`
 }
 
-func SignTypedDataV4(ctx context.Context, signer secp256k1.Signer, payload *eip712.TypedData) (*EIP712Result, error) {
+func SignTypedDataV4(ctx context.Context, signer secp256k1.SignerDirect, payload *eip712.TypedData) (*EIP712Result, error) {
 	encodedData, err := eip712.EncodeTypedDataV4(ctx, payload)
 	if err != nil {
 		return nil, err
