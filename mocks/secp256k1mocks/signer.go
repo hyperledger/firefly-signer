@@ -12,17 +12,17 @@ type Signer struct {
 	mock.Mock
 }
 
-// Sign provides a mock function with given fields: message
-func (_m *Signer) Sign(message []byte) (*secp256k1.SignatureData, error) {
-	ret := _m.Called(message)
+// Sign provides a mock function with given fields: msgToHashAndSign
+func (_m *Signer) Sign(msgToHashAndSign []byte) (*secp256k1.SignatureData, error) {
+	ret := _m.Called(msgToHashAndSign)
 
 	var r0 *secp256k1.SignatureData
 	var r1 error
 	if rf, ok := ret.Get(0).(func([]byte) (*secp256k1.SignatureData, error)); ok {
-		return rf(message)
+		return rf(msgToHashAndSign)
 	}
 	if rf, ok := ret.Get(0).(func([]byte) *secp256k1.SignatureData); ok {
-		r0 = rf(message)
+		r0 = rf(msgToHashAndSign)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*secp256k1.SignatureData)
@@ -30,7 +30,7 @@ func (_m *Signer) Sign(message []byte) (*secp256k1.SignatureData, error) {
 	}
 
 	if rf, ok := ret.Get(1).(func([]byte) error); ok {
-		r1 = rf(message)
+		r1 = rf(msgToHashAndSign)
 	} else {
 		r1 = ret.Error(1)
 	}

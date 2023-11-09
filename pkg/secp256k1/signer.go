@@ -33,10 +33,11 @@ type SignatureData struct {
 
 // Signer is the low level common interface that can be implemented by any module which provides signature capability
 type Signer interface {
-	Sign(message []byte) (*SignatureData, error)
+	Sign(msgToHashAndSign []byte) (*SignatureData, error)
 }
 
 type SignerDirect interface {
+	Signer
 	SignDirect(message []byte) (*SignatureData, error)
 }
 
