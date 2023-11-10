@@ -163,7 +163,16 @@ func TestMessage_2(t *testing.T) {
 
 	assert.Equal(t, "0xb0132202fa81cafac0e405917f86705728ba02912d185065697cc4ba4e61aec3", signed.Hash.String())
 
-	pubKey, _, err := ecdsa.RecoverCompact(signed.Signature, signed.Hash)
+	// The golang convention is V, R, S for the compact signature (differing from Ethereum's convention of R, S, V)
+	golangCompactSignature := make([]byte, 65)
+	golangCompactSignature[0] = signed.SignatureRSV[64]
+	copy(golangCompactSignature[1:33], signed.SignatureRSV[0:32])
+	copy(golangCompactSignature[33:65], signed.SignatureRSV[32:64])
+
+	fmt.Printf("%s\n", ethtypes.HexBytes0xPrefix(golangCompactSignature))
+	fmt.Printf("%s\n", ethtypes.HexBytes0xPrefix(signed.SignatureRSV))
+
+	pubKey, _, err := ecdsa.RecoverCompact(golangCompactSignature, signed.Hash)
 	assert.NoError(t, err)
 	assert.Equal(t, "0xbcef501facf72ddacdb055acc2716786ff038728", secp256k1.PublicKeyToAddress(pubKey).String())
 }

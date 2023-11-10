@@ -25,11 +25,11 @@ import (
 )
 
 type EIP712Result struct {
-	Hash      ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"hash"`
-	Signature ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"signature"`
-	V         ethtypes.HexInteger       `ffstruct:"EIP712Result" json:"v"`
-	R         ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"r"`
-	S         ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"s"`
+	Hash         ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"hash"`
+	SignatureRSV ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"signatureRSV"`
+	V            ethtypes.HexInteger       `ffstruct:"EIP712Result" json:"v"`
+	R            ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"r"`
+	S            ethtypes.HexBytes0xPrefix `ffstruct:"EIP712Result" json:"s"`
 }
 
 func SignTypedDataV4(ctx context.Context, signer secp256k1.SignerDirect, payload *eip712.TypedData) (*EIP712Result, error) {
@@ -44,15 +44,19 @@ func SignTypedDataV4(ctx context.Context, signer secp256k1.SignerDirect, payload
 	}
 
 	signatureBytes := make([]byte, 65)
-	signatureBytes[0] = byte(sig.V.Int64())
-	sig.R.FillBytes(signatureBytes[1:33])
-	sig.S.FillBytes(signatureBytes[33:65])
+	sig.R.FillBytes(signatureBytes[0:32])
+	sig.S.FillBytes(signatureBytes[32:64])
+	signatureBytes[64] = byte(sig.V.Int64())
 
 	return &EIP712Result{
-		Hash:      encodedData,
-		Signature: signatureBytes, // compact ECDSA signature
-		V:         ethtypes.HexInteger(*sig.V),
-		R:         sig.R.FillBytes(make([]byte, 32)),
-		S:         sig.S.FillBytes(make([]byte, 32)),
+		Hash: encodedData,
+		// Include the clearly distinguished V, R & S values of the signature
+		V: ethtypes.HexInteger(*sig.V),
+		R: sig.R.FillBytes(make([]byte, 32)),
+		S: sig.S.FillBytes(make([]byte, 32)),
+		// the Ethereum convention (which is different to the Golang convention) is to encode compact signatures as
+		// 65 bytes - R (32B), S (32B), V (1B)
+		// See: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/7294d34c17ca215c201b3772ff67036fa4b1ef12/contracts/utils/cryptography/ECDSA.sol#L56-L73
+		SignatureRSV: signatureBytes,
 	}, nil
 }
