@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/ffapi"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -623,4 +624,8 @@ func TestArrayValueInvalid(t *testing.T) {
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
 	assert.Regexp(t, "FF22030", err)
+}
+
+func TestTypedDataDocumented(t *testing.T) {
+	ffapi.CheckObjectDocumented(&TypedData{})
 }

@@ -47,4 +47,9 @@ var (
 	EIP712ResultV            = ffm("EIP712Result.v", "The V value of the ECDSA signature as a hex encoded integer")
 	EIP712ResultR            = ffm("EIP712Result.r", "The R value of the ECDSA signature as a 32byte hex encoded array")
 	EIP712ResultS            = ffm("EIP712Result.s", "The S value of the ECDSA signature as a 32byte hex encoded array")
+
+	TypedDataDomain      = ffm("TypedData.domain", "The data to encode into the EIP712Domain as part fo signing the transaction")
+	TypedDataMessage     = ffm("TypedData.message", "The data to encode into primaryType structure, with nested values for any sub-structures")
+	TypedDataTypes       = ffm("TypedData.types", "Array of types to use when encoding, which must include the primaryType and the EIP712Domain (noting the primary type can be EIP712Domain if the message is empty)")
+	TypedDataPrimaryType = ffm("TypedData.primaryType", "The primary type to begin encoding the EIP-712 hash from in the list of types, using the input message (unless set directly to EIP712Domain, in which case the message can be omitted)")
 )
