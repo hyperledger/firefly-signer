@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
+	"github.com/hyperledger/firefly-common/pkg/ffapi"
 	"github.com/hyperledger/firefly-common/pkg/log"
 	"github.com/hyperledger/firefly-signer/mocks/secp256k1mocks"
 	"github.com/hyperledger/firefly-signer/pkg/eip712"
@@ -175,4 +176,8 @@ func TestMessage_2(t *testing.T) {
 	pubKey, _, err := ecdsa.RecoverCompact(golangCompactSignature, signed.Hash)
 	assert.NoError(t, err)
 	assert.Equal(t, "0xbcef501facf72ddacdb055acc2716786ff038728", secp256k1.PublicKeyToAddress(pubKey).String())
+}
+
+func TestEIP712ResultDocumented(t *testing.T) {
+	ffapi.CheckObjectDocumented(&EIP712Result{})
 }

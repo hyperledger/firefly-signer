@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/ffapi"
 	"github.com/hyperledger/firefly-signer/mocks/secp256k1mocks"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/rlp"
@@ -264,4 +265,8 @@ func TestSignEIP1559Error(t *testing.T) {
 	msn.On("Sign", mock.Anything).Return(nil, fmt.Errorf("pop"))
 	_, err := txn.SignEIP1559(msn, 12345)
 	assert.Regexp(t, "pop", err)
+}
+
+func TestEthTXDocumented(t *testing.T) {
+	ffapi.CheckObjectDocumented(&Transaction{})
 }
