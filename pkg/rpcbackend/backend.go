@@ -128,7 +128,7 @@ func (rc *RPCClient) CallRPC(ctx context.Context, result interface{}, method str
 	}
 	res, err := rc.SyncRequest(ctx, rpcReq)
 	if err != nil {
-		if res.Error != nil && res.Error.Code != 0 {
+		if res != nil && res.Error != nil && res.Error.Code != 0 {
 			return res.Error
 		}
 		return &RPCError{Code: int64(RPCCodeInternalError), Message: err.Error()}
