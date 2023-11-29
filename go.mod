@@ -5,9 +5,9 @@ go 1.20
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/go-resty/resty/v2 v2.10.0
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gorilla/mux v1.8.0
-	github.com/hyperledger/firefly-common v1.3.1-0.20231101070740-00ccb16807bf
+	github.com/hyperledger/firefly-common v1.4.0
 	github.com/karlseguin/ccache v2.0.3+incompatible
 	github.com/pelletier/go-toml v1.9.5
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
