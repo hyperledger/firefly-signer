@@ -457,7 +457,9 @@ func (rc *wsRPCClient) handleSubscriptionConfirm(ctx context.Context, inflightSu
 	log.L(ctx).Infof("Subscribed %s with server subscription ID '%s'", inflightSub.localID, subscriptionID)
 	rc.addActiveSub(inflightSub, subscriptionID)
 	// all was good, if someone is waiting to be told, notify them
-	resChl <- nil
+	if resChl != nil {
+		resChl <- nil
+	}
 }
 
 func (rc *wsRPCClient) deliverCallResponse(ctx context.Context, inflightCall chan *RPCResponse, rpcRes *RPCResponse) {
