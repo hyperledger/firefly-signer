@@ -220,7 +220,7 @@ func (rc *wsRPCClient) addConfiguredSub(ctx context.Context, params []interface{
 		rc:             rc,
 		localID:        fftypes.NewUUID(),
 		params:         params,
-		newSubResponse: make(chan *RPCError),
+		newSubResponse: make(chan *RPCError, 1),
 		notifications:  make(chan *RPCSubscriptionNotification), // blocking channel for these, but Unsubscribe will unblock by cancelling ctx
 	}
 	s.ctx, s.cancelCtx = context.WithCancel(ctx)
