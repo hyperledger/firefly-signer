@@ -57,7 +57,7 @@ func (cv *ComponentValue) ElementaryABIDataCtx(ctx context.Context) (data []byte
 	c := cv.Component
 	et := cv.Component.ElementaryType().(*elementaryTypeInfo)
 	if et == nil {
-		return nil, false, i18n.NewError(ctx, signermsgs.MsgNotABIElementaryType, c.String())
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgNotElementary, c.String())
 	}
 	return et.encodeABIData(ctx, c.String(), c.(*typeComponent), cv.Value)
 }

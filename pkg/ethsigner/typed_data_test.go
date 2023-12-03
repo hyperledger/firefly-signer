@@ -84,7 +84,7 @@ func TestSignTypedDataV4BadPayload(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = SignTypedDataV4(ctx, keypair, payload)
-	assert.Regexp(t, "FF22081", err)
+	assert.Regexp(t, "FF22073", err)
 }
 
 func TestSignTypedDataV4SignFail(t *testing.T) {

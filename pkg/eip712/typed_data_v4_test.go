@@ -406,7 +406,7 @@ func TestMissingPrimaryType(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22081", err)
+	assert.Regexp(t, "FF22073", err)
 }
 
 func TestSecondaryTypeNotMap(t *testing.T) {
@@ -515,7 +515,7 @@ func TestTupleNotSupported(t *testing.T) {
 
 	ctx := context.Background()
 	_, err = EncodeTypedDataV4(ctx, &p)
-	assert.Regexp(t, "FF22070", err)
+	assert.Regexp(t, "FF22069", err)
 }
 
 func TestAddressInvalid(t *testing.T) {

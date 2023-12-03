@@ -319,7 +319,7 @@ func TestMapElementaryABITypeNonElementary(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = mapElementaryABIType(context.Background(), tc)
-	assert.Regexp(t, "FF22070", err)
+	assert.Regexp(t, "FF22069", err)
 
 }
 
