@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -672,4 +673,39 @@ func TestTuplesMissingName(t *testing.T) {
 	values = `{ "a": {"b":12345} }`
 	_, err = inputs.ParseJSON([]byte(values))
 	assert.Regexp(t, "FF22039", err)
+}
+
+func TestTupleEncodeIndividualFixedParam(t *testing.T) {
+	const sample = `[
+		{
+		"name": "foo",
+		"type": "function",
+		"inputs": [
+			{
+				"name": "a",
+				"type": "int"
+			}
+		],
+		"outputs": []
+		}
+	]`
+
+	inputs := testABI(t, sample)[0].Inputs
+
+	// Fine if you use the array syntax
+	values := `{ "a": 12345 }`
+	cv, err := inputs.ParseJSON([]byte(values))
+	assert.NoError(t, err)
+	assert.Equal(t, TupleComponent, cv.Component.ComponentType())
+	assert.Len(t, cv.Children, 1)
+	_, _, err = cv.ElementaryABIData()
+	assert.Regexp(t, "FF22069", err)
+
+	intComp := cv.Children[0]
+	assert.Equal(t, ElementaryComponent, intComp.Component.ComponentType())
+	b, dynamic, err := intComp.ElementaryABIData()
+	assert.NoError(t, err)
+	assert.False(t, dynamic)
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000003039", ethtypes.HexBytes0xPrefix(b).String())
+
 }

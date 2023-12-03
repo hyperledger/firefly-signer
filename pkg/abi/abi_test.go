@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/ffapi"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
 )
@@ -296,11 +297,16 @@ func TestABIGetTupleTypeTree(t *testing.T) {
 	assert.Equal(t, TupleComponent, tc.ComponentType())
 	assert.Len(t, tc.TupleChildren(), 3)
 	assert.Equal(t, "(uint256,string[2],bytes)", tc.String())
+	assert.False(t, tc.ElementaryFixed()) // not fixed, as not elementary
 
 	assert.Equal(t, ElementaryComponent, tc.TupleChildren()[0].ComponentType())
 	assert.Equal(t, ElementaryTypeUint, tc.TupleChildren()[0].ElementaryType())
+	assert.Equal(t, "256", tc.TupleChildren()[0].ElementarySuffix()) // alias resolved
+	assert.True(t, tc.TupleChildren()[0].ElementaryFixed())
 
 	assert.Equal(t, FixedArrayComponent, tc.TupleChildren()[1].ComponentType())
+	assert.Equal(t, 2, tc.TupleChildren()[1].FixedArrayLen())
+	assert.Equal(t, BaseTypeString, tc.TupleChildren()[1].ArrayChild().ElementaryType().BaseType())
 	assert.Equal(t, ElementaryComponent, tc.TupleChildren()[1].ArrayChild().ComponentType())
 	assert.Equal(t, ElementaryTypeString, tc.TupleChildren()[1].ArrayChild().ElementaryType())
 
@@ -836,4 +842,8 @@ func TestEncodeCallDataValuesHelper(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "113bc475000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000047465737400000000000000000000000000000000000000000000000000000000", hex.EncodeToString(b))
 
+}
+
+func TestABIDocumented(t *testing.T) {
+	ffapi.CheckObjectDocumented(&ABI{})
 }

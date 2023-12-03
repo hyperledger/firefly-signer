@@ -199,8 +199,16 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 	}
 	// JSON/RPC allows errors to be returned with a 200 status code, as well as other status codes
 	if res.IsError() || rpcRes.Error != nil && rpcRes.Error.Code != 0 {
-		log.L(ctx).Errorf("RPC[%s] <-- [%d]: %s", rpcTraceID, res.StatusCode(), rpcRes.Message())
-		err := fmt.Errorf(rpcRes.Message())
+		rpcMsg := rpcRes.Message()
+		errLog := rpcMsg
+		if rpcMsg == "" {
+			// Log the raw result in the case of JSON parse error etc. (note that Resty no longer
+			// returns this as an error - rather the body comes back raw)
+			errLog = string(res.Body())
+			rpcMsg = i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed, res.Status()).Error()
+		}
+		log.L(ctx).Errorf("RPC[%s] <-- [%d]: %s", rpcTraceID, res.StatusCode(), errLog)
+		err := fmt.Errorf(rpcMsg)
 		return rpcRes, err
 	}
 	log.L(ctx).Infof("RPC[%s] <-- %s [%d] OK (%.2fms)", rpcTraceID, rpcReq.Method, res.StatusCode(), float64(time.Since(rpcStartTime))/float64(time.Millisecond))

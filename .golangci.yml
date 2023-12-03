@@ -42,7 +42,6 @@ linters:
     - structcheck
   enable:
     - bodyclose
-    - deadcode
     - dogsled
     - errcheck
     - goconst

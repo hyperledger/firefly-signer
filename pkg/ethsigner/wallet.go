@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -19,6 +19,7 @@ package ethsigner
 import (
 	"context"
 
+	"github.com/hyperledger/firefly-signer/pkg/eip712"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 )
 
@@ -30,4 +31,9 @@ type Wallet interface {
 	GetAccounts(ctx context.Context) ([]*ethtypes.Address0xHex /* no checksum on returned values */, error)
 	Refresh(ctx context.Context) error
 	Close() error
+}
+
+type WalletTypedData interface {
+	Wallet
+	SignTypedDataV4(ctx context.Context, from ethtypes.Address0xHex, payload *eip712.TypedData) (*EIP712Result, error)
 }

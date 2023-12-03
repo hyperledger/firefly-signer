@@ -52,15 +52,15 @@ const (
 )
 
 type Transaction struct {
-	From                 json.RawMessage           `json:"from,omitempty"` // only here as a possible input to signing key selection (eth_sendTransaction)
-	Nonce                *ethtypes.HexInteger      `json:"nonce,omitempty"`
-	GasPrice             *ethtypes.HexInteger      `json:"gasPrice,omitempty"`
-	MaxPriorityFeePerGas *ethtypes.HexInteger      `json:"maxPriorityFeePerGas,omitempty"`
-	MaxFeePerGas         *ethtypes.HexInteger      `json:"maxFeePerGas,omitempty"`
-	GasLimit             *ethtypes.HexInteger      `json:"gas,omitempty"` // note this is required for some methods (eth_estimateGas)
-	To                   *ethtypes.Address0xHex    `json:"to,omitempty"`
-	Value                *ethtypes.HexInteger      `json:"value,omitempty"`
-	Data                 ethtypes.HexBytes0xPrefix `json:"data"`
+	From                 json.RawMessage           `ffstruct:"EthTransaction" json:"from,omitempty"` // only here as a possible input to signing key selection (eth_sendTransaction)
+	Nonce                *ethtypes.HexInteger      `ffstruct:"EthTransaction" json:"nonce,omitempty"`
+	GasPrice             *ethtypes.HexInteger      `ffstruct:"EthTransaction" json:"gasPrice,omitempty"`
+	MaxPriorityFeePerGas *ethtypes.HexInteger      `ffstruct:"EthTransaction" json:"maxPriorityFeePerGas,omitempty"`
+	MaxFeePerGas         *ethtypes.HexInteger      `ffstruct:"EthTransaction" json:"maxFeePerGas,omitempty"`
+	GasLimit             *ethtypes.HexInteger      `ffstruct:"EthTransaction" json:"gas,omitempty"` // note this is required for some methods (eth_estimateGas)
+	To                   *ethtypes.Address0xHex    `ffstruct:"EthTransaction" json:"to,omitempty"`
+	Value                *ethtypes.HexInteger      `ffstruct:"EthTransaction" json:"value,omitempty"`
+	Data                 ethtypes.HexBytes0xPrefix `ffstruct:"EthTransaction" json:"data"`
 }
 
 func (t *Transaction) BuildLegacy() rlp.List {

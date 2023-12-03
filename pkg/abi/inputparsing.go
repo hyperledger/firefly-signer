@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -47,6 +47,19 @@ type ComponentValue struct {
 // (YAML, TOML etc.).
 func (cv *ComponentValue) JSON() ([]byte, error) {
 	return NewSerializer().SerializeJSON(cv)
+}
+
+func (cv *ComponentValue) ElementaryABIData() ([]byte, bool, error) {
+	return cv.ElementaryABIDataCtx(context.Background())
+}
+
+func (cv *ComponentValue) ElementaryABIDataCtx(ctx context.Context) (data []byte, dynamic bool, err error) {
+	c := cv.Component
+	et := cv.Component.ElementaryType().(*elementaryTypeInfo)
+	if et == nil {
+		return nil, false, i18n.NewError(ctx, signermsgs.MsgNotElementary, c.String())
+	}
+	return et.encodeABIData(ctx, c.String(), c.(*typeComponent), cv.Value)
 }
 
 // getPtrValOrRawTypeNil sees if v is a pointer, with a non-nil value. If so returns that value, else nil
@@ -306,7 +319,7 @@ func getBytesFromInterface(ctx context.Context, desc string, v interface{}) ([]b
 		vt = strings.TrimPrefix(vt, "0x")
 		hb, err := hex.DecodeString(vt)
 		if err != nil {
-			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidHexABIInput, vt, v, desc)
+			return nil, i18n.WrapError(ctx, err, signermsgs.MsgInvalidHexABIInput, v, desc)
 		}
 		return hb, nil
 	default:
@@ -320,7 +333,7 @@ func getBytesFromInterface(ctx context.Context, desc string, v interface{}) ([]b
 		if vi != nil {
 			return getBytesFromInterface(ctx, desc, vi)
 		}
-		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidHexABIInput, vt, v)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidHexABIInput, v, desc)
 	}
 }
 
@@ -366,17 +379,21 @@ func getStringInterfaceMap(ctx context.Context, breadcrumbs string, input interf
 	return iMap, nil
 }
 
+func (tc *typeComponent) readElementaryType(ctx context.Context, breadcrumbs string, input interface{}) (cv *ComponentValue, err error) {
+	value, err := tc.elementaryType.readExternalData(ctx, breadcrumbs, input)
+	if err != nil {
+		return nil, err
+	}
+	return &ComponentValue{
+		Component: tc,
+		Value:     value,
+	}, nil
+}
+
 func walkInput(ctx context.Context, breadcrumbs string, input interface{}, component *typeComponent) (cv *ComponentValue, err error) {
 	switch component.cType {
 	case ElementaryComponent:
-		value, err := component.elementaryType.readExternalData(ctx, breadcrumbs, input)
-		if err != nil {
-			return nil, err
-		}
-		return &ComponentValue{
-			Component: component,
-			Value:     value,
-		}, nil
+		return component.readElementaryType(ctx, breadcrumbs, input)
 	case FixedArrayComponent, DynamicArrayComponent:
 		return walkArrayInput(ctx, breadcrumbs, input, component)
 	case TupleComponent:

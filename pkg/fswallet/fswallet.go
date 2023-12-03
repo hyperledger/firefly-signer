@@ -32,6 +32,7 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-common/pkg/log"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
+	"github.com/hyperledger/firefly-signer/pkg/eip712"
 	"github.com/hyperledger/firefly-signer/pkg/ethsigner"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/keystorev3"
@@ -45,7 +46,7 @@ import (
 // to the ethsigner.Wallet interface and providing notifications when new
 // keys are added to the wallet (via FS listener).
 type Wallet interface {
-	ethsigner.Wallet
+	ethsigner.WalletTypedData
 	GetWalletFile(ctx context.Context, addr ethtypes.Address0xHex) (keystorev3.WalletFile, error)
 	AddListener(listener chan<- ethtypes.Address0xHex)
 }
@@ -109,11 +110,19 @@ type fsWallet struct {
 }
 
 func (w *fsWallet) Sign(ctx context.Context, txn *ethsigner.Transaction, chainID int64) ([]byte, error) {
-	keypair, err := w.getSignerForAccount(ctx, txn.From)
+	keypair, err := w.getSignerForJSONAccount(ctx, txn.From)
 	if err != nil {
 		return nil, err
 	}
 	return txn.Sign(keypair, chainID)
+}
+
+func (w *fsWallet) SignTypedDataV4(ctx context.Context, from ethtypes.Address0xHex, payload *eip712.TypedData) (*ethsigner.EIP712Result, error) {
+	keypair, err := w.getSignerForAddr(ctx, from)
+	if err != nil {
+		return nil, err
+	}
+	return ethsigner.SignTypedDataV4(ctx, keypair, payload)
 }
 
 func (w *fsWallet) Initialize(ctx context.Context) error {
@@ -233,7 +242,7 @@ func (w *fsWallet) Close() error {
 	return nil
 }
 
-func (w *fsWallet) getSignerForAccount(ctx context.Context, rawAddrJSON json.RawMessage) (*secp256k1.KeyPair, error) {
+func (w *fsWallet) getSignerForJSONAccount(ctx context.Context, rawAddrJSON json.RawMessage) (*secp256k1.KeyPair, error) {
 
 	// We require an ethereum address in the "from" field
 	var from ethtypes.Address0xHex
@@ -241,6 +250,10 @@ func (w *fsWallet) getSignerForAccount(ctx context.Context, rawAddrJSON json.Raw
 	if err != nil {
 		return nil, err
 	}
+	return w.getSignerForAddr(ctx, from)
+}
+
+func (w *fsWallet) getSignerForAddr(ctx context.Context, from ethtypes.Address0xHex) (*secp256k1.KeyPair, error) {
 
 	wf, err := w.GetWalletFile(ctx, from)
 	if err != nil {
