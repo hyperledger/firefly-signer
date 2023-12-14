@@ -27,7 +27,7 @@ import (
 type TXReceiptJSONRPC struct {
 	BlockHash         ethtypes.HexBytes0xPrefix     `json:"blockHash"`
 	BlockNumber       *ethtypes.HexInteger          `json:"blockNumber"`
-	ContractAddress   *ethtypes.AddressWithChecksum `json:"contractAddress"`
+	ContractAddress   *ethtypes.Address0xHex        `json:"contractAddress"`
 	CumulativeGasUsed *ethtypes.HexInteger          `json:"cumulativeGasUsed"`
 	From              *ethtypes.AddressWithChecksum `json:"from"`
 	GasUsed           *ethtypes.HexInteger          `json:"gasUsed"`
@@ -54,22 +54,22 @@ type ReceiptExtraInfo struct {
 
 // txInfoJSONRPC is the transaction info obtained over JSON/RPC from the ethereum client, with input data
 type TXInfoJSONRPC struct {
-	BlockHash        ethtypes.HexBytes0xPrefix     `json:"blockHash"`   // null if pending
-	BlockNumber      *ethtypes.HexInteger          `json:"blockNumber"` // null if pending
-	From             *ethtypes.AddressWithChecksum `json:"from"`
-	ChainID          *ethtypes.HexInteger          `json:"chainID"`
-	Gas              *ethtypes.HexInteger          `json:"gas"`
-	GasPrice         *ethtypes.HexInteger          `json:"gasPrice"`
-	Hash             ethtypes.HexBytes0xPrefix     `json:"hash"`
-	Input            ethtypes.HexBytes0xPrefix     `json:"input"`
-	Nonce            *ethtypes.HexInteger          `json:"nonce"`
-	R                *ethtypes.HexInteger          `json:"r"`
-	S                *ethtypes.HexInteger          `json:"s"`
-	To               *ethtypes.AddressWithChecksum `json:"to"`
-	TransactionIndex *ethtypes.HexInteger          `json:"transactionIndex"` // null if pending
-	Type             *ethtypes.HexInteger          `json:"type"`
-	V                *ethtypes.HexInteger          `json:"v"`
-	Value            *ethtypes.HexInteger          `json:"value"`
+	BlockHash        ethtypes.HexBytes0xPrefix `json:"blockHash"`   // null if pending
+	BlockNumber      *ethtypes.HexInteger      `json:"blockNumber"` // null if pending
+	From             *ethtypes.Address0xHex    `json:"from"`
+	ChainID          *ethtypes.HexInteger      `json:"chainID"`
+	Gas              *ethtypes.HexInteger      `json:"gas"`
+	GasPrice         *ethtypes.HexInteger      `json:"gasPrice"`
+	Hash             ethtypes.HexBytes0xPrefix `json:"hash"`
+	Input            ethtypes.HexBytes0xPrefix `json:"input"`
+	Nonce            *ethtypes.HexInteger      `json:"nonce"`
+	R                *ethtypes.HexInteger      `json:"r"`
+	S                *ethtypes.HexInteger      `json:"s"`
+	To               *ethtypes.Address0xHex    `json:"to"`
+	TransactionIndex *ethtypes.HexInteger      `json:"transactionIndex"` // null if pending
+	Type             *ethtypes.HexInteger      `json:"type"`
+	V                *ethtypes.HexInteger      `json:"v"`
+	Value            *ethtypes.HexInteger      `json:"value"`
 }
 
 func (t *TXInfoJSONRPC) Cost() *big.Int {
