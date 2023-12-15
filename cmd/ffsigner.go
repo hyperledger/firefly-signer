@@ -51,6 +51,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file")
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(configCommand())
+	rootCmd.AddCommand(sendTransactionCommand())
 }
 
 func Execute() error {
@@ -62,7 +63,7 @@ func initConfig() {
 	signerconfig.Reset()
 }
 
-func run() error {
+func initServer() (rpcserver.Server, error) {
 
 	initConfig()
 	err := config.ReadConfig("ffsigner", cfgFile)
@@ -78,7 +79,7 @@ func run() error {
 	// Deferred error return from reading config
 	if err != nil {
 		cancelCtx()
-		return i18n.WrapError(ctx, err, i18n.MsgConfigFailed)
+		return nil, i18n.WrapError(ctx, err, i18n.MsgConfigFailed)
 	}
 
 	// Setup signal handling to cancel the context, which shuts down the API Server
@@ -90,14 +91,18 @@ func run() error {
 	}()
 
 	if !config.GetBool(signerconfig.FileWalletEnabled) {
-		return i18n.NewError(ctx, signermsgs.MsgNoWalletEnabled)
+		return nil, i18n.NewError(ctx, signermsgs.MsgNoWalletEnabled)
 	}
 	fileWallet, err := fswallet.NewFilesystemWallet(ctx, fswallet.ReadConfig(signerconfig.FileWalletConfig))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	server, err := rpcserver.NewServer(ctx, fileWallet)
+	return rpcserver.NewServer(ctx, fileWallet)
+}
+
+func run() error {
+	server, err := initServer()
 	if err != nil {
 		return err
 	}

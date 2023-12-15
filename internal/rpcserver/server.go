@@ -36,6 +36,7 @@ type Server interface {
 	Start() error
 	Stop()
 	WaitStop() error
+	SignTransactionFromFile(ctx context.Context, filename string) error
 }
 
 func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err error) {

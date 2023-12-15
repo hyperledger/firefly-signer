@@ -97,4 +97,6 @@ var (
 	MsgEIP712ValueNotArray         = ffe("FF22078", "Value for '%s' not an array (%T)")
 	MsgEIP712InvalidArrayLen       = ffe("FF22079", "Value for '%s' must have %d entries (found %d)")
 	MsgEIP712PrimaryTypeRequired   = ffe("FF22080", "Primary type must be specified")
+	MsgOfflineSignMethodCount      = ffe("FF22081", "Must be exactly one function when method not supplied (count=%d)")
+	MsgOfflineSignMethodNotFound   = ffe("FF22082", "Function with signature or name '%s' not found in ABI")
 )
