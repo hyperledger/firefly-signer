@@ -59,7 +59,9 @@ func TestSignAndSendTransactionWithNonce(t *testing.T) {
 		Result:  fftypes.JSONAnyPtr(`"0x61ca9c99c1d752fb3bda568b8566edf33ba93585c64a970566e6dfb540a5cbc1"`),
 	}, nil)
 
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	res, err := http.Post(url, "application/json", bytes.NewReader([]byte(`{
@@ -124,7 +126,9 @@ func TestSignAndSendTransactionWithoutNonce(t *testing.T) {
 		Result:  fftypes.JSONAnyPtr(`"0x61ca9c99c1d752fb3bda568b8566edf33ba93585c64a970566e6dfb540a5cbc1"`),
 	}, nil)
 
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	res, err := http.Post(url, "application/json", bytes.NewReader([]byte(`{
@@ -175,7 +179,9 @@ func TestServeJSONRPCFail(t *testing.T) {
 		},
 	}, fmt.Errorf("pop"))
 
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	res, err := http.Post(url, "application/json", bytes.NewReader([]byte(`
@@ -237,7 +243,9 @@ func TestServeJSONRPCBatchOK(t *testing.T) {
 		Result:  fftypes.JSONAnyPtr(`"result 3"`),
 	}, nil)
 
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	res, err := http.Post(url, "application/json", bytes.NewReader([]byte(`[
@@ -312,7 +320,9 @@ func TestServeJSONRPCBatchOneFailed(t *testing.T) {
 		},
 	}, fmt.Errorf("pop"))
 
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	res, err := http.Post(url, "application/json", bytes.NewReader([]byte(`[
@@ -361,7 +371,9 @@ func TestServeJSONRPCBatchBadArray(t *testing.T) {
 	w := s.wallet.(*ethsignermocks.Wallet)
 	w.On("Initialize", mock.Anything).Return(nil)
 
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	res, err := http.Post(url, "application/json", bytes.NewReader([]byte(`[`)))
@@ -392,7 +404,9 @@ func TestServeJSONRPCBatchEmptyData(t *testing.T) {
 	w := s.wallet.(*ethsignermocks.Wallet)
 	w.On("Initialize", mock.Anything).Return(nil)
 
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	res, err := http.Post(url, "application/json", bytes.NewReader([]byte(``)))
@@ -423,7 +437,9 @@ func TestServeJSONRPCBatchBadJSON(t *testing.T) {
 	w := s.wallet.(*ethsignermocks.Wallet)
 	w.On("Initialize", mock.Anything).Return(nil)
 
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	res, err := http.Post(url, "application/json", bytes.NewReader([]byte(``)))

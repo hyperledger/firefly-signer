@@ -36,6 +36,7 @@ type Server interface {
 	Start() error
 	Stop()
 	WaitStop() error
+	Init() error
 	SignTransactionFromFile(ctx context.Context, filename string) error
 }
 
@@ -84,7 +85,7 @@ func (s *rpcServer) runAPIServer() {
 	s.apiServer.ServeHTTP(s.ctx)
 }
 
-func (s *rpcServer) Start() error {
+func (s *rpcServer) Init() error {
 	if s.chainID < 0 {
 		var chainID ethtypes.HexInteger
 		rpcErr := s.backend.CallRPC(s.ctx, &chainID, "net_version")
@@ -94,10 +95,10 @@ func (s *rpcServer) Start() error {
 		s.chainID = chainID.BigInt().Int64()
 	}
 
-	err := s.wallet.Initialize(s.ctx)
-	if err != nil {
-		return err
-	}
+	return s.wallet.Initialize(s.ctx)
+}
+
+func (s *rpcServer) Start() error {
 	go s.runAPIServer()
 	s.started = true
 	return nil

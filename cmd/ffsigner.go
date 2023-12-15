@@ -98,7 +98,11 @@ func initServer() (rpcserver.Server, error) {
 		return nil, err
 	}
 
-	return rpcserver.NewServer(ctx, fileWallet)
+	server, err := rpcserver.NewServer(ctx, fileWallet)
+	if err == nil {
+		err = server.Init()
+	}
+	return server, err
 }
 
 func run() error {

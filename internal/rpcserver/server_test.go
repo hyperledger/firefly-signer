@@ -87,7 +87,9 @@ func TestStartStop(t *testing.T) {
 
 	w := s.wallet.(*ethsignermocks.Wallet)
 	w.On("Initialize", mock.Anything).Return(nil)
-	err := s.Start()
+	err := s.Init()
+	assert.NoError(t, err)
+	err = s.Start()
 	assert.NoError(t, err)
 
 	assert.Equal(t, int64(12345), s.chainID)
@@ -105,7 +107,7 @@ func TestStartFailChainID(t *testing.T) {
 		hi.BigInt().SetInt64(12345)
 	}).Return(&rpcbackend.RPCError{Message: "pop"})
 
-	err := s.Start()
+	err := s.Init()
 	assert.Regexp(t, "pop", err)
 
 }
@@ -123,7 +125,7 @@ func TestStartFailInitialize(t *testing.T) {
 
 	w := s.wallet.(*ethsignermocks.Wallet)
 	w.On("Initialize", mock.Anything).Return(fmt.Errorf("pop"))
-	err := s.Start()
+	err := s.Init()
 	assert.Regexp(t, "pop", err)
 
 }
