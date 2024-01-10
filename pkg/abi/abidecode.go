@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -128,6 +128,16 @@ func decodeABIUnsignedInt(ctx context.Context, desc string, block []byte, _, hea
 		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, desc)
 	}
 	cv.Value = new(big.Int).SetBytes(block[headPosition : headPosition+32])
+	return cv, err
+}
+
+func decodeABIAddress(ctx context.Context, desc string, block []byte, _, headPosition int, component *typeComponent) (cv *ComponentValue, err error) {
+	// Addresses are 20 bytes, but are represented as a 32 bit unsigned integer so we remove the proceeding 12 bytes and then read the rest as the address
+	cv = &ComponentValue{Component: component}
+	if headPosition+32 > len(block) {
+		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, desc)
+	}
+	cv.Value = new(big.Int).SetBytes(block[headPosition+12 : headPosition+32])
 	return cv, err
 }
 

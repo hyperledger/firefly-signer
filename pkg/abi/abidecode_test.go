@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -1026,4 +1026,27 @@ func TestDecodeABIElementInsufficientDataTuple(t *testing.T) {
 
 	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, tc.(*typeComponent).tupleChildren[0])
 	assert.Regexp(t, "FF22045", err)
+}
+
+func TestDecodeAddressWithNonZeroPadding(t *testing.T) {
+
+	f := &Entry{
+		Name: "approve",
+		Inputs: ParameterArray{
+			{Type: "address"},
+			{Type: "uint256"},
+		},
+	}
+
+	d, err := hex.DecodeString("095ea7b3" +
+		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025" + // Valid address padded with non-zero bytes
+		"0000000000000000000000000000000000000000000000000000000000000064")  // 100
+	assert.NoError(t, err)
+
+	cv, err := f.DecodeCallData(d)
+	assert.NoError(t, err)
+
+	address, _ := cv.Children[0].JSON()
+	assert.Equal(t, "\"ab0974bbed8afc5212e951c8498873319d02d025\"", string(address))
+	assert.Equal(t, "100", cv.Children[1].Value.(*big.Int).String())
 }
