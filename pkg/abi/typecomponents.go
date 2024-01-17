@@ -227,7 +227,7 @@ var (
 		},
 		jsonEncodingType: JSONEncodingTypeBytes,
 		encodeABIData:    encodeABIUnsignedInteger,
-		decodeABIData:    decodeABIAddress,
+		decodeABIData:    decodeABIUnsignedInt,
 	})
 	ElementaryTypeBool = registerElementaryType(elementaryTypeInfo{
 		name:       BaseTypeBool,
