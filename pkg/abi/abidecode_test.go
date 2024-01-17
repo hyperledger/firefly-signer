@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -1026,4 +1026,44 @@ func TestDecodeABIElementInsufficientDataTuple(t *testing.T) {
 
 	_, _, err = decodeABIElement(context.Background(), "", block, 0, 0, tc.(*typeComponent).tupleChildren[0])
 	assert.Regexp(t, "FF22045", err)
+}
+
+func TestDecodeAddressWithNonZeroPadding(t *testing.T) {
+
+	f := &Entry{
+		Name: "approve",
+		Inputs: ParameterArray{
+			{Type: "address"},
+			{Type: "uint256"},
+			{Type: "uint160"},
+			{Type: "uint64"},
+			{Type: "uint8"},
+		},
+	}
+
+	d, err := hex.DecodeString("9028b841" +
+		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025" + // (address) 0xab0974bbed8afc5212e951c8498873319d02d025
+		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025" + // (uint256) 0xffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025
+		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025" + // (uint160) 0xab0974bbed8afc5212e951c8498873319d02d025
+		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025" + // ( uint64) 0x498873319d02d025
+		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025")  // (  uint8) 0x25  
+	assert.NoError(t, err)
+
+	cv, err := f.DecodeCallData(d)
+	assert.NoError(t, err)
+
+	address, _ := cv.Children[0].JSON()
+	assert.Equal(t, "\"ab0974bbed8afc5212e951c8498873319d02d025\"", string(address))
+
+	value, _ := cv.Children[1].JSON()
+	assert.Equal(t, "\"115792089237316195423570985008202854513430464469730409417913252338120266010661\"", string(value))
+
+	value, _ = cv.Children[2].JSON()
+	assert.Equal(t, "\"976448297491382722293530211171951349863068913701\"", string(value))
+
+	value, _ = cv.Children[3].JSON()
+	assert.Equal(t, "\"5298611618526187557\"", string(value))
+
+	value, _ = cv.Children[4].JSON()
+	assert.Equal(t, "\"37\"", string(value))
 }

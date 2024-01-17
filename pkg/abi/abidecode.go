@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -127,7 +127,9 @@ func decodeABIUnsignedInt(ctx context.Context, desc string, block []byte, _, hea
 	if headPosition+32 > len(block) {
 		return nil, i18n.NewError(ctx, signermsgs.MsgNotEnoughBytesABIValue, component, desc)
 	}
-	cv.Value = new(big.Int).SetBytes(block[headPosition : headPosition+32])
+
+	// When we're reading bytes, need to make sure we're reading the correct size number of bytes for the uint size
+	cv.Value = new(big.Int).SetBytes(block[headPosition+(32-(int(component.m/8))) : headPosition+32])
 	return cv, err
 }
 
