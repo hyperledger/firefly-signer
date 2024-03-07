@@ -90,3 +90,41 @@ func TestHexByteConstructors(t *testing.T) {
 		MustNewHexBytes0xPrefix("!wrong")
 	})
 }
+
+func TestHexBytesTruncation(t *testing.T) {
+	testStruct := struct {
+		H1 HexBytes0xPrefix `json:"h1"`
+		H2 HexBytes0xPrefix `json:"h2"`
+		H3 HexBytes0xPrefix `json:"h3"`
+		H4 HexBytes0xPrefix `json:"h4"`
+	}{}
+
+	testData := `{
+		"h1": "0x34d2e4fef9de99a2688148de11174741d1399992f261dcd6ff019211a91eda748dcef26338e992f4df60b8dee3fdd28a",
+		"h2": "0x34d2e4fef9de99a2688148de11174741d1399992f261dcd6ff019211a91eda74",
+		"h3": "0x34d2e4fef9",
+		"h4": "0x34d2e4fef9de99a2688148de11174741d1399992f261dcd6ff019211a91eda748dcef26338e992"
+	}`
+
+	err := json.Unmarshal([]byte(testData), &testStruct)
+	assert.NoError(t, err)
+
+	result, err := testStruct.H1.Truncate(32)
+	assert.NoError(t, err)
+	testStruct.H1 = result
+
+	result, err = testStruct.H2.Truncate(32)
+	assert.NoError(t, err)
+	testStruct.H2 = result
+
+	result, err = testStruct.H3.Truncate(32)
+	assert.Error(t, err)
+
+	result, err = testStruct.H4.Truncate(32)
+	assert.NoError(t, err)
+	testStruct.H4 = result
+
+	assert.Equal(t, "0x34d2e4fef9de99a2688148de11174741d1399992f261dcd6ff019211a91eda74", testStruct.H1.String())
+	assert.Equal(t, "0x34d2e4fef9de99a2688148de11174741d1399992f261dcd6ff019211a91eda74", testStruct.H2.String())
+	assert.Equal(t, "0x34d2e4fef9de99a2688148de11174741d1399992f261dcd6ff019211a91eda74", testStruct.H4.String())
+}
