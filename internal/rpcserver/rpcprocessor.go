@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2023 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -72,6 +72,11 @@ func (s *rpcServer) processEthSendTransaction(ctx context.Context, rpcReq *rpcba
 		return rpcbackend.RPCErrorResponse(err, rpcReq.ID, rpcbackend.RPCCodeParseError), err
 	}
 
+	return s.processEthTransaction(ctx, rpcReq, &txn)
+}
+
+func (s *rpcServer) processEthTransaction(ctx context.Context, rpcReq *rpcbackend.RPCRequest, txn *ethsigner.Transaction) (*rpcbackend.RPCResponse, error) {
+
 	if txn.From == nil {
 		err := i18n.NewError(ctx, signermsgs.MsgMissingFrom)
 		return rpcbackend.RPCErrorResponse(err, rpcReq.ID, rpcbackend.RPCCodeInvalidRequest), err
@@ -94,7 +99,7 @@ func (s *rpcServer) processEthSendTransaction(ctx context.Context, rpcReq *rpcba
 
 	// Sign the transaction
 	var hexData ethtypes.HexBytes0xPrefix
-	hexData, err = s.wallet.Sign(ctx, &txn, s.chainID)
+	hexData, err := s.wallet.Sign(ctx, txn, s.chainID)
 	if err != nil {
 		return rpcbackend.RPCErrorResponse(err, rpcReq.ID, rpcbackend.RPCCodeInternalError), err
 	}

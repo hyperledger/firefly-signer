@@ -1,0 +1,11 @@
+fileWallet:
+  path: "./test/keystore_toml"
+  disableListener: true
+  filenames:
+    with0xPrefix: false
+    primaryExt: '.key.json'
+    passwordExt: '.pwd'
+backend:
+  url: http://localhost:5100
+log:
+  level: debug
