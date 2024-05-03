@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -23,6 +23,7 @@ import (
 	"math/big"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/hyperledger/firefly-common/pkg/log"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/rlp"
@@ -74,12 +75,16 @@ func (t *Transaction) BuildLegacy() rlp.List {
 	return rlpList
 }
 
-func (t *Transaction) AddEIP155HashValues(rlpList rlp.List, chainID int64) rlp.List {
+func AddEIP155HashValuesToRLPList(rlpList rlp.List, chainID int64) rlp.List {
 	// These values go into the hash of the transaction
 	rlpList = append(rlpList, rlp.WrapInt(big.NewInt(chainID)))
 	rlpList = append(rlpList, rlp.WrapInt(big.NewInt(0)))
 	rlpList = append(rlpList, rlp.WrapInt(big.NewInt(0)))
 	return rlpList
+}
+
+func (t *Transaction) AddEIP155HashValues(rlpList rlp.List, chainID int64) rlp.List {
+	return AddEIP155HashValuesToRLPList(rlpList, chainID)
 }
 
 func (t *Transaction) Build1559(chainID int64) rlp.List {
@@ -209,6 +214,138 @@ func (t *Transaction) SignEIP1559(signer secp256k1.Signer, chainID int64) ([]byt
 	// 0x02 || rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, destination, amount, data, access_list, signature_y_parity, signature_r, signature_s])
 	rlpList := t.addSignature(signaturePayload.rlpList, sig)
 	return append([]byte{TransactionType1559}, rlpList.Encode()...), nil
+}
+
+func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+
+	decoded, _, err := rlp.Decode(rawTx)
+	if err != nil {
+		log.L(ctx).Errorf("Invalid legacy transaction data '%s': %s", rawTx, err)
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidLegacyTransaction, err)
+	}
+
+	if decoded == nil || len(decoded.(rlp.List)) < 9 {
+		log.L(ctx).Errorf("Invalid legacy transaction data '%s': EOF", rawTx)
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidLegacyTransaction, "EOF")
+	}
+	rlpList := decoded.(rlp.List)
+
+	tx := &Transaction{
+		Nonce:    (*ethtypes.HexInteger)(rlpList[0].ToData().Int()),
+		GasPrice: (*ethtypes.HexInteger)(rlpList[1].ToData().Int()),
+		GasLimit: (*ethtypes.HexInteger)(rlpList[2].ToData().Int()),
+		To:       rlpList[3].ToData().Address(),
+		Value:    (*ethtypes.HexInteger)(rlpList[4].ToData().Int()),
+		Data:     ethtypes.HexBytes0xPrefix(rlpList[5].ToData()),
+	}
+
+	foundSig := &secp256k1.SignatureData{
+		V: new(big.Int),
+		R: new(big.Int),
+		S: new(big.Int),
+	}
+	vValue := rlpList[6].ToData().Int().Int64()
+	foundSig.R.SetBytes(rlpList[7].ToData().BytesNotNil())
+	foundSig.S.SetBytes(rlpList[8].ToData().BytesNotNil())
+
+	var message []byte
+	if vValue > 28 {
+		// Legacy with EIP155 extensions
+		newV := vValue - (chainID * 2) - 8
+		if newV != 27 && newV != 28 {
+			return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP155TransactionV, chainID, foundSig.V.Int64())
+		}
+		foundSig.V.SetInt64(newV)
+
+		signedRLPList := make(rlp.List, 6, 9)
+		copy(signedRLPList, rlpList[0:6])
+		signedRLPList = AddEIP155HashValuesToRLPList(signedRLPList, chainID)
+		message = signedRLPList.Encode()
+	} else {
+		// Legacy original transaction
+		foundSig.V.SetInt64(vValue)
+		message = (rlpList[0:6]).Encode()
+	}
+
+	signer, err := foundSig.Recover(message, chainID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return signer, tx, nil
+}
+
+func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+
+	if len(rawTx) == 0 || rawTx[0] != TransactionType1559 {
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, "TransactionType")
+	}
+
+	rawTx = rawTx[1:]
+	decoded, _, err := rlp.Decode(rawTx)
+	if err != nil {
+		log.L(ctx).Errorf("Invalid EIP-1559 transaction data '%s': %s", rawTx, err)
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, err)
+	}
+
+	if decoded == nil || len(decoded.(rlp.List)) < 12 {
+		log.L(ctx).Errorf("Invalid EIP-1559 transaction data '%s': EOF", rawTx)
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, "EOF")
+	}
+	rlpList := decoded.(rlp.List)
+
+	encodedChainID := rlpList[0].ToData().IntOrZero().Int64()
+	if encodedChainID != chainID {
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidChainID, chainID, encodedChainID)
+	}
+	tx := &Transaction{
+		Nonce:                (*ethtypes.HexInteger)(rlpList[1].ToData().Int()),
+		MaxPriorityFeePerGas: (*ethtypes.HexInteger)(rlpList[2].ToData().Int()),
+		MaxFeePerGas:         (*ethtypes.HexInteger)(rlpList[3].ToData().Int()),
+		GasLimit:             (*ethtypes.HexInteger)(rlpList[4].ToData().Int()),
+		To:                   rlpList[5].ToData().Address(),
+		Value:                (*ethtypes.HexInteger)(rlpList[6].ToData().Int()),
+		Data:                 ethtypes.HexBytes0xPrefix(rlpList[7].ToData()),
+		// No access list support
+	}
+
+	foundSig := &secp256k1.SignatureData{
+		V: new(big.Int),
+		R: new(big.Int),
+		S: new(big.Int),
+	}
+	foundSig.V.SetInt64(rlpList[9].ToData().Int().Int64())
+	foundSig.R.SetBytes(rlpList[10].ToData().BytesNotNil())
+	foundSig.S.SetBytes(rlpList[11].ToData().BytesNotNil())
+
+	message := append([]byte{TransactionType1559}, (rlpList[0:9]).Encode()...)
+	fmt.Println((ethtypes.HexBytes0xPrefix)(message).String())
+
+	signer, err := foundSig.Recover(message, chainID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return signer, tx, nil
+}
+
+func RecoverRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+
+	// The first byte of the payload (per EIP-2718) is either `>= 0xc0` for legacy transactions,
+	// or a transaction type selector (up to `0x7f`).
+	if len(rawTx) == 0 {
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgEmptyTransactionBytes)
+	}
+	txTypeByte := rawTx[0]
+	switch {
+	case txTypeByte >= 0xc7:
+		return RecoverLegacyRawTransaction(ctx, rawTx, chainID)
+	case txTypeByte == TransactionType1559:
+		return RecoverEIP1559Transaction(ctx, rawTx, chainID)
+	default:
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgUnsupportedTransactionType, txTypeByte)
+	}
+
 }
 
 func (t *Transaction) addSignature(rlpList rlp.List, sig *secp256k1.SignatureData) rlp.List {

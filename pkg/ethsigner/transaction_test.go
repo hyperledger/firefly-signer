@@ -17,7 +17,9 @@
 package ethsigner
 
 import (
+	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"testing"
@@ -100,7 +102,7 @@ func TestEncodeExistingEIP1559(t *testing.T) {
 
 }
 
-func TestSignAutoEIP155(t *testing.T) {
+func TestSignLegacyEIP155(t *testing.T) {
 
 	inputData, err := hex.DecodeString(
 		"3674e15c00000000000000000000000000000000000000000000000000000000000000a03f04a4e93ded4d2aaa1a41d617e55c59ac5f1b28a47047e2a526e76d45eb9681d19642e9120d63a9b7f5f537565a430d8ad321ef1bc76689a4b3edc861c640fc00000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000000966665f73797374656d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002e516d58747653456758626265506855684165364167426f3465796a7053434b437834515a4c50793548646a6177730000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001a1f7502c8f8797999c0c6b9c2da653ea736598ed0daa856c47ae71411aa8fea2")
@@ -117,26 +119,17 @@ func TestSignAutoEIP155(t *testing.T) {
 	keypair, err := secp256k1.GenerateSecp256k1KeyPair()
 	assert.NoError(t, err)
 
-	raw, err := txn.Sign(keypair, 1001)
+	raw, err := txn.SignLegacyEIP155(keypair, 1001)
 	assert.NoError(t, err)
 
-	rlpList, _, err := rlp.Decode(raw)
+	signer, txr, err := RecoverRawTransaction(context.Background(), raw, 1001)
 	assert.NoError(t, err)
-	foundSig := &secp256k1.SignatureData{
-		V: new(big.Int),
-		R: new(big.Int),
-		S: new(big.Int),
-	}
-	foundSig.V.SetBytes([]byte(rlpList.(rlp.List)[6].(rlp.Data)))
-	foundSig.R.SetBytes([]byte(rlpList.(rlp.List)[7].(rlp.Data)))
-	foundSig.S.SetBytes([]byte(rlpList.(rlp.List)[8].(rlp.Data)))
+	assert.Equal(t, keypair.Address.String(), signer.String())
+	jsonCompare(t, txn, *txr)
 
-	signaturePayload := txn.SignaturePayload(1001)
-	addr, err := foundSig.Recover(signaturePayload.Bytes(), 1001)
-	assert.NoError(t, err)
-	assert.Equal(t, keypair.Address.String(), addr.String())
+	_, _, err = RecoverRawTransaction(context.Background(), raw, 1002)
+	assert.Regexp(t, "FF22085", err)
 
-	assert.Equal(t, "0x4524b8ac39ace2a3a2c061b73125c19c76daf0d25d44a4d88799f3c2ba686fe6", signaturePayload.Hash().String())
 }
 
 func TestSignAutoEIP1559(t *testing.T) {
@@ -160,22 +153,10 @@ func TestSignAutoEIP1559(t *testing.T) {
 	raw, err := txn.Sign(keypair, 1001)
 	assert.NoError(t, err)
 
-	assert.Equal(t, TransactionType1559, raw[0])
-	rlpList, _, err := rlp.Decode(raw[1:])
+	signer, txr, err := RecoverRawTransaction(context.Background(), raw, 1001)
 	assert.NoError(t, err)
-	foundSig := &secp256k1.SignatureData{
-		V: new(big.Int),
-		R: new(big.Int),
-		S: new(big.Int),
-	}
-	foundSig.V.SetBytes([]byte(rlpList.(rlp.List)[9].(rlp.Data)))
-	foundSig.R.SetBytes([]byte(rlpList.(rlp.List)[10].(rlp.Data)))
-	foundSig.S.SetBytes([]byte(rlpList.(rlp.List)[11].(rlp.Data)))
-
-	signaturePayload := txn.SignaturePayload(1001)
-	addr, err := foundSig.Recover(signaturePayload.Bytes(), 1001)
-	assert.NoError(t, err)
-	assert.Equal(t, keypair.Address.String(), addr.String())
+	assert.Equal(t, keypair.Address.String(), signer.String())
+	jsonCompare(t, txn, *txr)
 
 }
 
@@ -199,21 +180,10 @@ func TestSignLegacyOriginal(t *testing.T) {
 	raw, err := txn.SignLegacyOriginal(keypair)
 	assert.NoError(t, err)
 
-	rlpList, _, err := rlp.Decode(raw)
+	signer, txr, err := RecoverRawTransaction(context.Background(), raw, 1001)
 	assert.NoError(t, err)
-	foundSig := &secp256k1.SignatureData{
-		V: new(big.Int),
-		R: new(big.Int),
-		S: new(big.Int),
-	}
-	foundSig.V.SetBytes([]byte(rlpList.(rlp.List)[6].(rlp.Data)))
-	foundSig.R.SetBytes([]byte(rlpList.(rlp.List)[7].(rlp.Data)))
-	foundSig.S.SetBytes([]byte(rlpList.(rlp.List)[8].(rlp.Data)))
-
-	signaturePayload := txn.SignaturePayloadLegacyOriginal()
-	addr, err := foundSig.Recover(signaturePayload.Bytes(), 0)
-	assert.NoError(t, err)
-	assert.Equal(t, keypair.Address.String(), addr.String())
+	assert.Equal(t, keypair.Address.String(), signer.String())
+	jsonCompare(t, txn, *txr)
 
 }
 
@@ -269,4 +239,108 @@ func TestSignEIP1559Error(t *testing.T) {
 
 func TestEthTXDocumented(t *testing.T) {
 	ffapi.CheckObjectDocumented(&Transaction{})
+}
+
+func jsonCompare(t *testing.T, expected, actual interface{}) {
+	expectedJSON, err := json.Marshal(expected)
+	assert.NoError(t, err)
+	actualJSON, err := json.Marshal(actual)
+	assert.NoError(t, err)
+	assert.JSONEq(t, (string)(expectedJSON), (string)(actualJSON))
+
+}
+
+func TestRecoverRawTransactionEmpty(t *testing.T) {
+	_, _, err := RecoverRawTransaction(context.Background(), []byte{}, 1001)
+	assert.Regexp(t, "FF22081", err)
+}
+
+func TestRecoverRawTransactionInvalidType(t *testing.T) {
+	_, _, err := RecoverRawTransaction(context.Background(), []byte{0x03}, 1001)
+	assert.Regexp(t, "FF22082.*0x03", err)
+}
+
+func TestRecoverLegacyTransactionEmpty(t *testing.T) {
+	_, _, err := RecoverLegacyRawTransaction(context.Background(), []byte{}, 1001)
+	assert.Regexp(t, "FF22083", err)
+}
+
+func TestRecoverLegacyBadData(t *testing.T) {
+	_, _, err := RecoverLegacyRawTransaction(context.Background(), []byte{0xff}, 1001)
+	assert.Regexp(t, "FF22083", err)
+}
+
+func TestRecoverLegacyBadStructure(t *testing.T) {
+	_, _, err := RecoverLegacyRawTransaction(context.Background(), (rlp.List{
+		rlp.WrapInt(big.NewInt(12345)),
+	}).Encode(), 1001)
+	assert.Regexp(t, "FF22083.*EOF", err)
+}
+
+func TestRecoverLegacyBadSignature(t *testing.T) {
+	_, _, err := RecoverLegacyRawTransaction(context.Background(), (rlp.List{
+		rlp.WrapInt(big.NewInt(111)),
+		rlp.WrapInt(big.NewInt(222)),
+		rlp.WrapInt(big.NewInt(333)),
+		rlp.WrapInt(big.NewInt(444)),
+		rlp.WrapInt(big.NewInt(555)),
+		rlp.WrapInt(big.NewInt(666)),
+		rlp.WrapInt(big.NewInt(26 /* bad V */)),
+		rlp.WrapInt(big.NewInt(888)),
+		rlp.WrapInt(big.NewInt(999)),
+	}).Encode(), 1001)
+	assert.Regexp(t, "invalid", err)
+}
+
+func TestRecoverEIP1559TransactionEmpty(t *testing.T) {
+	_, _, err := RecoverEIP1559Transaction(context.Background(), []byte{}, 1001)
+	assert.Regexp(t, "FF22084.*TransactionType", err)
+}
+
+func TestRecoverEIP1559BadData(t *testing.T) {
+	_, _, err := RecoverEIP1559Transaction(context.Background(), []byte{TransactionType1559, 0xff}, 1001)
+	assert.Regexp(t, "FF22084", err)
+}
+
+func TestRecoverEIP1559BadStructure(t *testing.T) {
+	_, _, err := RecoverEIP1559Transaction(context.Background(), append([]byte{TransactionType1559}, (rlp.List{
+		rlp.WrapInt(big.NewInt(12345)),
+	}).Encode()...), 1001)
+	assert.Regexp(t, "FF22084.*EOF", err)
+}
+
+func TestRecoverEIP1559BadChainID(t *testing.T) {
+	_, _, err := RecoverEIP1559Transaction(context.Background(), append([]byte{TransactionType1559}, (rlp.List{
+		rlp.WrapInt(big.NewInt(111)),
+		rlp.WrapInt(big.NewInt(222)),
+		rlp.WrapInt(big.NewInt(333)),
+		rlp.WrapInt(big.NewInt(444)),
+		rlp.WrapInt(big.NewInt(555)),
+		rlp.WrapInt(big.NewInt(666)),
+		rlp.WrapInt(big.NewInt(777)),
+		rlp.WrapInt(big.NewInt(888)),
+		rlp.WrapInt(big.NewInt(999)),
+		rlp.WrapInt(big.NewInt(111)),
+		rlp.WrapInt(big.NewInt(223)),
+		rlp.WrapInt(big.NewInt(333)),
+	}).Encode()...), 1001)
+	assert.Regexp(t, "FF22086.*1,001.*111", err)
+}
+
+func TestRecoverEIP1559Signature(t *testing.T) {
+	_, _, err := RecoverEIP1559Transaction(context.Background(), append([]byte{TransactionType1559}, (rlp.List{
+		rlp.WrapInt(big.NewInt(1001)),
+		rlp.WrapInt(big.NewInt(222)),
+		rlp.WrapInt(big.NewInt(333)),
+		rlp.WrapInt(big.NewInt(444)),
+		rlp.WrapInt(big.NewInt(555)),
+		rlp.WrapInt(big.NewInt(666)),
+		rlp.WrapInt(big.NewInt(777)),
+		rlp.WrapInt(big.NewInt(888)),
+		rlp.WrapInt(big.NewInt(999)),
+		rlp.WrapInt(big.NewInt(111)),
+		rlp.WrapInt(big.NewInt(223)),
+		rlp.WrapInt(big.NewInt(333)),
+	}).Encode()...), 1001)
+	assert.Regexp(t, "invalid", err)
 }

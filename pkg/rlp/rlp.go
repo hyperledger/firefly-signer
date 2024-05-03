@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -36,6 +36,8 @@ type Element interface {
 	IsList() bool
 	// Encode converts the element to a byte array
 	Encode() []byte
+	// Safe function that will give an entry as data, to use the nil-safe functions on it to get the value (will be treated as nil data for list)
+	ToData() Data
 }
 
 // WrapString converts a plain string to an RLP Data element for encoding
@@ -83,6 +85,28 @@ func (r Data) Int() *big.Int {
 	return i.SetBytes(r)
 }
 
+func (r Data) IntOrZero() *big.Int {
+	if r == nil {
+		return big.NewInt(0)
+	}
+	i := new(big.Int)
+	return i.SetBytes(r)
+}
+
+func (r Data) BytesNotNil() []byte {
+	if r == nil {
+		return []byte{}
+	}
+	return r
+}
+
+func (r Data) Address() *ethtypes.Address0xHex {
+	if r == nil || len(r) != 20 {
+		return nil
+	}
+	return (*ethtypes.Address0xHex)(r)
+}
+
 // Encode encodes this individual RLP Data element
 func (r Data) Encode() []byte {
 	return encodeBytes(r, false)
@@ -91,6 +115,10 @@ func (r Data) Encode() []byte {
 // IsList is false for individual RLP Data elements
 func (r Data) IsList() bool {
 	return false
+}
+
+func (r Data) ToData() Data {
+	return r
 }
 
 // Encode encodes the RLP List to a byte array, including recursing into child arrays
@@ -109,4 +137,9 @@ func (l List) Encode() []byte {
 // IsList returns true for list elements
 func (l List) IsList() bool {
 	return true
+}
+
+func (l List) ToData() Data {
+	// This allows code to not worry about lots of type checking - a list is treated as nil data
+	return nil
 }
