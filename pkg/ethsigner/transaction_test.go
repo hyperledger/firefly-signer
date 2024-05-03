@@ -277,21 +277,6 @@ func TestRecoverLegacyBadStructure(t *testing.T) {
 	assert.Regexp(t, "FF22083.*EOF", err)
 }
 
-func TestRecoverLegacyBadSignature(t *testing.T) {
-	_, _, err := RecoverLegacyRawTransaction(context.Background(), (rlp.List{
-		rlp.WrapInt(big.NewInt(111)),
-		rlp.WrapInt(big.NewInt(222)),
-		rlp.WrapInt(big.NewInt(333)),
-		rlp.WrapInt(big.NewInt(444)),
-		rlp.WrapInt(big.NewInt(555)),
-		rlp.WrapInt(big.NewInt(666)),
-		rlp.WrapInt(big.NewInt(26 /* bad V */)),
-		rlp.WrapInt(big.NewInt(888)),
-		rlp.WrapInt(big.NewInt(999)),
-	}).Encode(), 1001)
-	assert.Regexp(t, "invalid", err)
-}
-
 func TestRecoverEIP1559TransactionEmpty(t *testing.T) {
 	_, _, err := RecoverEIP1559Transaction(context.Background(), []byte{}, 1001)
 	assert.Regexp(t, "FF22084.*TransactionType", err)

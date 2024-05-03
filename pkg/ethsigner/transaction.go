@@ -239,23 +239,17 @@ func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xP
 		Data:     ethtypes.HexBytes0xPrefix(rlpList[5].ToData()),
 	}
 
-	foundSig := &secp256k1.SignatureData{
-		V: new(big.Int),
-		R: new(big.Int),
-		S: new(big.Int),
-	}
 	vValue := rlpList[6].ToData().Int().Int64()
-	foundSig.R.SetBytes(rlpList[7].ToData().BytesNotNil())
-	foundSig.S.SetBytes(rlpList[8].ToData().BytesNotNil())
+	rValue := rlpList[7].ToData().BytesNotNil()
+	sValue := rlpList[8].ToData().BytesNotNil()
 
 	var message []byte
-	if vValue > 28 {
+	if vValue != 27 && vValue != 28 {
 		// Legacy with EIP155 extensions
-		newV := vValue - (chainID * 2) - 8
-		if newV != 27 && newV != 28 {
-			return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP155TransactionV, chainID, foundSig.V.Int64())
+		vValue = vValue - (chainID * 2) - 8
+		if vValue != 27 && vValue != 28 {
+			return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP155TransactionV, chainID)
 		}
-		foundSig.V.SetInt64(newV)
 
 		signedRLPList := make(rlp.List, 6, 9)
 		copy(signedRLPList, rlpList[0:6])
@@ -263,9 +257,22 @@ func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xP
 		message = signedRLPList.Encode()
 	} else {
 		// Legacy original transaction
-		foundSig.V.SetInt64(vValue)
 		message = (rlpList[0:6]).Encode()
 	}
+
+	return recoverCommon(tx, message, chainID, vValue, rValue, sValue)
+
+}
+
+func recoverCommon(tx *Transaction, message []byte, chainID int64, v int64, r, s []byte) (*ethtypes.Address0xHex, *Transaction, error) {
+	foundSig := &secp256k1.SignatureData{
+		V: new(big.Int),
+		R: new(big.Int),
+		S: new(big.Int),
+	}
+	foundSig.V.SetInt64(v)
+	foundSig.R.SetBytes(r)
+	foundSig.S.SetBytes(s)
 
 	signer, err := foundSig.Recover(message, chainID)
 	if err != nil {
@@ -309,24 +316,13 @@ func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPre
 		// No access list support
 	}
 
-	foundSig := &secp256k1.SignatureData{
-		V: new(big.Int),
-		R: new(big.Int),
-		S: new(big.Int),
-	}
-	foundSig.V.SetInt64(rlpList[9].ToData().Int().Int64())
-	foundSig.R.SetBytes(rlpList[10].ToData().BytesNotNil())
-	foundSig.S.SetBytes(rlpList[11].ToData().BytesNotNil())
-
-	message := append([]byte{TransactionType1559}, (rlpList[0:9]).Encode()...)
-	fmt.Println((ethtypes.HexBytes0xPrefix)(message).String())
-
-	signer, err := foundSig.Recover(message, chainID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return signer, tx, nil
+	return recoverCommon(tx,
+		append([]byte{TransactionType1559}, (rlpList[0:9]).Encode()...),
+		chainID,
+		rlpList[9].ToData().Int().Int64(),
+		rlpList[10].ToData().BytesNotNil(),
+		rlpList[11].ToData().BytesNotNil(),
+	)
 }
 
 func RecoverRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
