@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -97,4 +97,10 @@ var (
 	MsgEIP712ValueNotArray         = ffe("FF22078", "Value for '%s' not an array (%T)")
 	MsgEIP712InvalidArrayLen       = ffe("FF22079", "Value for '%s' must have %d entries (found %d)")
 	MsgEIP712PrimaryTypeRequired   = ffe("FF22080", "Primary type must be specified")
+	MsgEmptyTransactionBytes       = ffe("FF22081", "Transaction payload is empty")
+	MsgUnsupportedTransactionType  = ffe("FF22082", "Unsupported transaction type 0x%02x")
+	MsgInvalidLegacyTransaction    = ffe("FF22083", "Transaction payload invalid (legacy): %v")
+	MsgInvalidEIP1559Transaction   = ffe("FF22084", "Transaction payload invalid (EIP-1559): %v")
+	MsgInvalidEIP155TransactionV   = ffe("FF22085", "Invalid V value from EIP-155 transaction (chainId=%d)")
+	MsgInvalidChainID              = ffe("FF22086", "Invalid chainId expected=%d actual=%d")
 )
