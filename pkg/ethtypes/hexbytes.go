@@ -62,12 +62,12 @@ func (h HexBytes0xPrefix) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, h.String())), nil
 }
 
-func (h HexBytes0xPrefix) Truncate(length int) (HexBytes0xPrefix, error) {
+func (h HexBytes0xPrefix) Truncate(length int) (HexBytes0xPrefix) {
 	if length > len(h) {
-		return nil, fmt.Errorf("truncation length %d larger than length of hex bytes", length)
+		return h
 	}
-
-	return h[:length], nil
+	
+	return h[:length]
 }
 
 func NewHexBytes0xPrefix(s string) (HexBytes0xPrefix, error) {
