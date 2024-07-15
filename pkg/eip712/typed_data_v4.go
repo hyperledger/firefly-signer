@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -221,6 +221,11 @@ func encodeData(ctx context.Context, typeName string, v interface{}, allTypes Ty
 	encoded = buf.Bytes()
 	log.L(ctx).Tracef("encodeData(%s, %T): %s", typeName, v, encoded)
 	return encoded, nil
+}
+
+// HashStruct allows hashing of an individual structure, without the EIP-712 domain
+func HashStruct(ctx context.Context, typeName string, v interface{}, allTypes TypeSet) (result ethtypes.HexBytes0xPrefix, err error) {
+	return hashStruct(ctx, typeName, v, allTypes, "")
 }
 
 func hashStruct(ctx context.Context, typeName string, v interface{}, allTypes TypeSet, breadcrumbs string) (result ethtypes.HexBytes0xPrefix, err error) {
