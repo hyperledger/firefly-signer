@@ -90,3 +90,15 @@ func TestHexByteConstructors(t *testing.T) {
 		MustNewHexBytes0xPrefix("!wrong")
 	})
 }
+
+func TestHexByteEqual(t *testing.T) {
+	assert.True(t, HexBytesPlain(nil).Equal(nil))
+	assert.False(t, HexBytesPlain(nil).Equal(HexBytesPlain{0x00}))
+	assert.False(t, (HexBytesPlain{0x00}).Equal(nil))
+	assert.True(t, (HexBytesPlain{0x00}).Equal(HexBytesPlain{0x00}))
+
+	assert.True(t, HexBytes0xPrefix(nil).Equal(nil))
+	assert.False(t, HexBytes0xPrefix(nil).Equal(HexBytes0xPrefix{0x00}))
+	assert.False(t, (HexBytes0xPrefix{0x00}).Equal(nil))
+	assert.True(t, (HexBytes0xPrefix{0x00}).Equal(HexBytes0xPrefix{0x00}))
+}
