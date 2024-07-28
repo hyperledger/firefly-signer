@@ -92,13 +92,13 @@ func TestHexByteConstructors(t *testing.T) {
 }
 
 func TestHexByteEqual(t *testing.T) {
-	assert.True(t, HexBytesPlain(nil).Equal(nil))
-	assert.False(t, HexBytesPlain(nil).Equal(HexBytesPlain{0x00}))
-	assert.False(t, (HexBytesPlain{0x00}).Equal(nil))
-	assert.True(t, (HexBytesPlain{0x00}).Equal(HexBytesPlain{0x00}))
+	assert.True(t, HexBytesPlain(nil).Equals(nil))
+	assert.False(t, HexBytesPlain(nil).Equals(HexBytesPlain{0x00}))
+	assert.False(t, (HexBytesPlain{0x00}).Equals(nil))
+	assert.True(t, (HexBytesPlain{0x00}).Equals(HexBytesPlain{0x00}))
 
-	assert.True(t, HexBytes0xPrefix(nil).Equal(nil))
-	assert.False(t, HexBytes0xPrefix(nil).Equal(HexBytes0xPrefix{0x00}))
-	assert.False(t, (HexBytes0xPrefix{0x00}).Equal(nil))
-	assert.True(t, (HexBytes0xPrefix{0x00}).Equal(HexBytes0xPrefix{0x00}))
+	assert.True(t, HexBytes0xPrefix(nil).Equals(nil))
+	assert.False(t, HexBytes0xPrefix(nil).Equals(HexBytes0xPrefix{0x00}))
+	assert.False(t, (HexBytes0xPrefix{0x00}).Equals(nil))
+	assert.True(t, (HexBytes0xPrefix{0x00}).Equals(HexBytes0xPrefix{0x00}))
 }

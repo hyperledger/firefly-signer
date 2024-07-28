@@ -30,7 +30,7 @@ type HexBytesPlain []byte
 // HexBytes0xPrefix are serialized to JSON as hex with an `0x` prefix
 type HexBytes0xPrefix []byte
 
-func (h HexBytesPlain) Equal(h2 HexBytesPlain) bool {
+func (h HexBytesPlain) Equals(h2 HexBytesPlain) bool {
 	return bytes.Equal(h, h2)
 }
 
@@ -59,7 +59,7 @@ func (h *HexBytes0xPrefix) UnmarshalJSON(b []byte) error {
 	return ((*HexBytesPlain)(h)).UnmarshalJSON(b)
 }
 
-func (h HexBytes0xPrefix) Equal(h2 HexBytes0xPrefix) bool {
+func (h HexBytes0xPrefix) Equals(h2 HexBytes0xPrefix) bool {
 	return bytes.Equal(h, h2)
 }
 
