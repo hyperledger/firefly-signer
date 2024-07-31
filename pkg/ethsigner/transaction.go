@@ -64,6 +64,11 @@ type Transaction struct {
 	Data                 ethtypes.HexBytes0xPrefix `ffstruct:"EthTransaction" json:"data"`
 }
 
+type TransactionWithOriginalPayload struct {
+	*Transaction
+	Payload []byte `json:"-"`
+}
+
 func (t *Transaction) BuildLegacy() rlp.List {
 	rlpList := make(rlp.List, 0, 6)
 	rlpList = append(rlpList, rlp.WrapInt(t.Nonce.BigInt()))
@@ -216,7 +221,7 @@ func (t *Transaction) SignEIP1559(signer secp256k1.Signer, chainID int64) ([]byt
 	return append([]byte{TransactionType1559}, rlpList.Encode()...), nil
 }
 
-func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
 
 	decoded, _, err := rlp.Decode(rawTx)
 	if err != nil {
@@ -264,7 +269,7 @@ func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xP
 
 }
 
-func recoverCommon(tx *Transaction, message []byte, chainID int64, v int64, r, s []byte) (*ethtypes.Address0xHex, *Transaction, error) {
+func recoverCommon(tx *Transaction, message []byte, chainID int64, v int64, r, s []byte) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
 	foundSig := &secp256k1.SignatureData{
 		V: new(big.Int),
 		R: new(big.Int),
@@ -279,10 +284,13 @@ func recoverCommon(tx *Transaction, message []byte, chainID int64, v int64, r, s
 		return nil, nil, err
 	}
 
-	return signer, tx, nil
+	return signer, &TransactionWithOriginalPayload{
+		Transaction: tx,
+		Payload:     message,
+	}, nil
 }
 
-func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
 
 	if len(rawTx) == 0 || rawTx[0] != TransactionType1559 {
 		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, "TransactionType")
@@ -325,7 +333,7 @@ func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPre
 	)
 }
 
-func RecoverRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+func RecoverRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
 
 	// The first byte of the payload (per EIP-2718) is either `>= 0xc0` for legacy transactions,
 	// or a transaction type selector (up to `0x7f`).
