@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -44,9 +44,9 @@ func (w *walletFilePbkdf2) decrypt(password []byte) (err error) {
 
 	derivedKey := pbkdf2.Key(password, w.Crypto.KDFParams.Salt, w.Crypto.KDFParams.C, w.Crypto.KDFParams.DKLen, sha256.New)
 
-	privateKey, err := w.Crypto.decryptCommon(derivedKey)
+	w.privateKey, err = w.Crypto.decryptCommon(derivedKey)
 	if err == nil {
-		w.keypair, err = secp256k1.NewSecp256k1KeyPair(privateKey)
+		w.keypair, err = secp256k1.NewSecp256k1KeyPair(w.privateKey)
 	}
 	return err
 

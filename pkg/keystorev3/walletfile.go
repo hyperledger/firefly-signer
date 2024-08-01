@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -34,6 +34,7 @@ const (
 )
 
 type WalletFile interface {
+	PrivateKey() []byte
 	KeyPair() *secp256k1.KeyPair
 	JSON() []byte
 }
@@ -80,7 +81,8 @@ type walletFileBase struct {
 	ID      *fftypes.UUID            `json:"id"`
 	Version int                      `json:"version"`
 
-	keypair *secp256k1.KeyPair
+	privateKey []byte
+	keypair    *secp256k1.KeyPair
 }
 
 type walletFileCommon struct {
@@ -100,6 +102,10 @@ type walletFileScrypt struct {
 
 func (w *walletFileBase) KeyPair() *secp256k1.KeyPair {
 	return w.keypair
+}
+
+func (w *walletFileBase) PrivateKey() []byte {
+	return w.privateKey
 }
 
 func (w *walletFilePbkdf2) JSON() []byte {

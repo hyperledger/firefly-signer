@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -98,9 +98,9 @@ func (w *walletFileScrypt) decrypt(password []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid scrypt keystore: %s", err)
 	}
-	privateKey, err := w.Crypto.decryptCommon(derivedKey)
+	w.privateKey, err = w.Crypto.decryptCommon(derivedKey)
 	if err == nil {
-		w.keypair, err = secp256k1.NewSecp256k1KeyPair(privateKey)
+		w.keypair, err = secp256k1.NewSecp256k1KeyPair(w.privateKey)
 	}
 	return err
 }
