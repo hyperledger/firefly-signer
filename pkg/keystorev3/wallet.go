@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"golang.org/x/crypto/sha3"
 )
@@ -39,12 +40,20 @@ func NewWalletFileStandard(password string, keypair *secp256k1.KeyPair) WalletFi
 	return newScryptWalletFile(password, keypair, nStandard, pDefault)
 }
 
+func addressFirst32(privateKey []byte) ethtypes.AddressPlainHex {
+	if len(privateKey) > 32 {
+		privateKey = privateKey[0:32]
+	}
+	kp, _ := secp256k1.NewSecp256k1KeyPair(privateKey)
+	return ethtypes.AddressPlainHex(kp.Address)
+}
+
 func NewWalletFileCustomBytesLight(password string, privateKey []byte) WalletFile {
-	return newScryptWalletFileBytes(password, privateKey, nStandard, pDefault)
+	return newScryptWalletFileBytes(password, privateKey, addressFirst32(privateKey), nStandard, pDefault)
 }
 
 func NewWalletFileCustomBytesStandard(password string, privateKey []byte) WalletFile {
-	return newScryptWalletFileBytes(password, privateKey, nStandard, pDefault)
+	return newScryptWalletFileBytes(password, privateKey, addressFirst32(privateKey), nStandard, pDefault)
 }
 
 func ReadWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {

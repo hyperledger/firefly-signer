@@ -47,14 +47,13 @@ func mustGenerateDerivedScryptKey(password string, salt []byte, n, p int) []byte
 
 // creates an ethereum address wallet file
 func newScryptWalletFile(password string, keypair *secp256k1.KeyPair, n int, p int) WalletFile {
-	wf := newScryptWalletFileBytes(password, keypair.PrivateKeyBytes(), n, p)
-	wf.Address = ethtypes.AddressPlainHex(keypair.Address)
+	wf := newScryptWalletFileBytes(password, keypair.PrivateKeyBytes(), ethtypes.AddressPlainHex(keypair.Address), n, p)
 	wf.keypair = keypair
 	return wf
 }
 
 // this allows creation of any size/type of key in the store
-func newScryptWalletFileBytes(password string, privateKey []byte, n int, p int) *walletFileScrypt {
+func newScryptWalletFileBytes(password string, privateKey []byte, addr ethtypes.AddressPlainHex, n int, p int) *walletFileScrypt {
 
 	// Generate a sale for the scrypt
 	salt := mustReadBytes(32, rand.Reader)
@@ -77,6 +76,7 @@ func newScryptWalletFileBytes(password string, privateKey []byte, n int, p int) 
 	return &walletFileScrypt{
 		walletFileBase: walletFileBase{
 			ID:         fftypes.NewUUID(),
+			Address:    addr,
 			Version:    version3,
 			privateKey: privateKey,
 		},
