@@ -39,6 +39,14 @@ func NewWalletFileStandard(password string, keypair *secp256k1.KeyPair) WalletFi
 	return newScryptWalletFile(password, keypair, nStandard, pDefault)
 }
 
+func NewWalletFileCustomBytesLight(password string, privateKey []byte) WalletFile {
+	return newScryptWalletFileBytes(password, privateKey, nStandard, pDefault)
+}
+
+func NewWalletFileCustomBytesStandard(password string, privateKey []byte) WalletFile {
+	return newScryptWalletFileBytes(password, privateKey, nStandard, pDefault)
+}
+
 func ReadWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
 	var w walletFileCommon
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {

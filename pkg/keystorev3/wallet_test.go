@@ -123,3 +123,33 @@ func TestWalletFilePbkdf2JSON(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, w, w2)
 }
+
+func TestWalletFileCustomBytes(t *testing.T) {
+	customBytes := ([]byte)("planet refuse wheel robot position venue predict bring solid paper salmon bind")
+
+	w := NewWalletFileCustomBytesStandard("correcthorsebatterystaple", customBytes)
+
+	w, err := ReadWalletFile(w.JSON(), []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	j := w.JSON()
+	w2, err := ReadWalletFile(j, []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	assert.Equal(t, w, w2)
+
+	assert.Equal(t, customBytes, w.PrivateKey())
+}
+
+func TestWalletFileCustomBytesLight(t *testing.T) {
+	customBytes := ([]byte)("planet refuse wheel robot position venue predict bring solid paper salmon bind")
+
+	w := NewWalletFileCustomBytesLight("correcthorsebatterystaple", customBytes)
+
+	w, err := ReadWalletFile(w.JSON(), []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	j := w.JSON()
+	w2, err := ReadWalletFile(j, []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	assert.Equal(t, w, w2)
+
+	assert.Equal(t, customBytes, w.PrivateKey())
+}
