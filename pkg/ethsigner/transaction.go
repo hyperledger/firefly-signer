@@ -211,7 +211,10 @@ func (t *Transaction) SignEIP1559(signer secp256k1.Signer, chainID int64) ([]byt
 	if err != nil {
 		return nil, err
 	}
+	return t.FinalizeEIP1559WithSignature(signaturePayload, sig)
+}
 
+func (t *Transaction) FinalizeEIP1559WithSignature(signaturePayload *TransactionSignaturePayload, sig *secp256k1.SignatureData) ([]byte, error) {
 	// Use the direct 0/1 Y-parity value
 	sig.UpdateEIP2930()
 
