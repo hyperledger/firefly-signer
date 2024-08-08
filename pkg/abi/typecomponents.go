@@ -47,6 +47,8 @@ type TypeComponent interface {
 	String() string                     // gives the signature for this type level of the type component hierarchy
 	ComponentType() ComponentType       // classification of the component type (tuple, array or elemental)
 	ElementaryType() ElementaryTypeInfo // only non-nil for elementary components
+	ElementaryM() uint16                // only for N dimensioned elementary types
+	ElementaryN() uint16                // only for M dimensioned elementary types
 	ElementarySuffix() string           // only on elementary types with a suffix - expands "aliases" (so "uint" would have "256")
 	ElementaryFixed() bool              // whether the elementary type if fixed
 	ArrayChild() TypeComponent          // only non-nil for array components
@@ -378,6 +380,16 @@ func (tc *typeComponent) ElementaryFixed() bool {
 		return !tc.elementaryType.dynamic(tc)
 	}
 	return false
+}
+
+// M dimension of elementary type (if applicable)
+func (tc *typeComponent) ElementaryM() uint16 {
+	return tc.m
+}
+
+// N dimension of elementary type (if applicable)
+func (tc *typeComponent) ElementaryN() uint16 {
+	return tc.n
 }
 
 func (tc *typeComponent) KeyName() string {

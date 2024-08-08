@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -45,7 +45,15 @@ func mustGenerateDerivedScryptKey(password string, salt []byte, n, p int) []byte
 	return b
 }
 
+// creates an ethereum address wallet file
 func newScryptWalletFile(password string, keypair *secp256k1.KeyPair, n int, p int) WalletFile {
+	wf := newScryptWalletFileBytes(password, keypair.PrivateKeyBytes(), ethtypes.AddressPlainHex(keypair.Address), n, p)
+	wf.keypair = keypair
+	return wf
+}
+
+// this allows creation of any size/type of key in the store
+func newScryptWalletFileBytes(password string, privateKey []byte, addr ethtypes.AddressPlainHex, n int, p int) *walletFileScrypt {
 
 	// Generate a sale for the scrypt
 	salt := mustReadBytes(32, rand.Reader)
@@ -60,17 +68,17 @@ func newScryptWalletFile(password string, keypair *secp256k1.KeyPair, n int, p i
 	encryptKey := derivedKey[0:16]
 
 	// Encrypt the private key with the encryption key
-	cipherText := mustAES128CtrEncrypt(encryptKey, iv, keypair.PrivateKeyBytes())
+	cipherText := mustAES128CtrEncrypt(encryptKey, iv, privateKey)
 
 	// Last 16 bytes of derived key are used for the MAC
 	mac := generateMac(derivedKey[16:32], cipherText)
 
 	return &walletFileScrypt{
 		walletFileBase: walletFileBase{
-			Address: ethtypes.AddressPlainHex(keypair.Address),
-			ID:      fftypes.NewUUID(),
-			Version: version3,
-			keypair: keypair,
+			ID:         fftypes.NewUUID(),
+			Address:    addr,
+			Version:    version3,
+			privateKey: privateKey,
 		},
 		Crypto: cryptoScrypt{
 			cryptoCommon: cryptoCommon{
@@ -98,9 +106,9 @@ func (w *walletFileScrypt) decrypt(password []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid scrypt keystore: %s", err)
 	}
-	privateKey, err := w.Crypto.decryptCommon(derivedKey)
+	w.privateKey, err = w.Crypto.decryptCommon(derivedKey)
 	if err == nil {
-		w.keypair, err = secp256k1.NewSecp256k1KeyPair(privateKey)
+		w.keypair, err = secp256k1.NewSecp256k1KeyPair(w.privateKey)
 	}
 	return err
 }

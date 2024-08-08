@@ -64,6 +64,11 @@ type Transaction struct {
 	Data                 ethtypes.HexBytes0xPrefix `ffstruct:"EthTransaction" json:"data"`
 }
 
+type TransactionWithOriginalPayload struct {
+	*Transaction
+	Payload []byte `json:"-"`
+}
+
 func (t *Transaction) BuildLegacy() rlp.List {
 	rlpList := make(rlp.List, 0, 6)
 	rlpList = append(rlpList, rlp.WrapInt(t.Nonce.BigInt()))
@@ -140,13 +145,16 @@ func (t *Transaction) SignLegacyOriginal(signer secp256k1.Signer) ([]byte, error
 	if signer == nil {
 		return nil, i18n.NewError(context.Background(), signermsgs.MsgInvalidSigner)
 	}
-	signatureData := t.SignaturePayloadLegacyOriginal()
-	sig, err := signer.Sign(signatureData.data)
+	signaturePayload := t.SignaturePayloadLegacyOriginal()
+	sig, err := signer.Sign(signaturePayload.data)
 	if err != nil {
 		return nil, err
 	}
+	return t.FinalizeLegacyOriginalWithSignature(signaturePayload, sig)
+}
 
-	rlpList := t.addSignature(signatureData.rlpList, sig)
+func (t *Transaction) FinalizeLegacyOriginalWithSignature(signaturePayload *TransactionSignaturePayload, sig *secp256k1.SignatureData) ([]byte, error) {
+	rlpList := t.addSignature(signaturePayload.rlpList, sig)
 	return rlpList.Encode(), nil
 }
 
@@ -174,7 +182,10 @@ func (t *Transaction) SignLegacyEIP155(signer secp256k1.Signer, chainID int64) (
 	if err != nil {
 		return nil, err
 	}
+	return t.FinalizeLegacyEIP155WithSignature(signaturePayload, sig, chainID)
+}
 
+func (t *Transaction) FinalizeLegacyEIP155WithSignature(signaturePayload *TransactionSignaturePayload, sig *secp256k1.SignatureData, chainID int64) ([]byte, error) {
 	// Use the EIP-155 V value, of (2*ChainID + 35 + Y-parity)
 	sig.UpdateEIP155(chainID)
 
@@ -206,7 +217,10 @@ func (t *Transaction) SignEIP1559(signer secp256k1.Signer, chainID int64) ([]byt
 	if err != nil {
 		return nil, err
 	}
+	return t.FinalizeEIP1559WithSignature(signaturePayload, sig)
+}
 
+func (t *Transaction) FinalizeEIP1559WithSignature(signaturePayload *TransactionSignaturePayload, sig *secp256k1.SignatureData) ([]byte, error) {
 	// Use the direct 0/1 Y-parity value
 	sig.UpdateEIP2930()
 
@@ -216,7 +230,7 @@ func (t *Transaction) SignEIP1559(signer secp256k1.Signer, chainID int64) ([]byt
 	return append([]byte{TransactionType1559}, rlpList.Encode()...), nil
 }
 
-func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
 
 	decoded, _, err := rlp.Decode(rawTx)
 	if err != nil {
@@ -264,7 +278,7 @@ func RecoverLegacyRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xP
 
 }
 
-func recoverCommon(tx *Transaction, message []byte, chainID int64, v int64, r, s []byte) (*ethtypes.Address0xHex, *Transaction, error) {
+func recoverCommon(tx *Transaction, message []byte, chainID int64, v int64, r, s []byte) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
 	foundSig := &secp256k1.SignatureData{
 		V: new(big.Int),
 		R: new(big.Int),
@@ -279,10 +293,13 @@ func recoverCommon(tx *Transaction, message []byte, chainID int64, v int64, r, s
 		return nil, nil, err
 	}
 
-	return signer, tx, nil
+	return signer, &TransactionWithOriginalPayload{
+		Transaction: tx,
+		Payload:     message,
+	}, nil
 }
 
-func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
 
 	if len(rawTx) == 0 || rawTx[0] != TransactionType1559 {
 		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, "TransactionType")
@@ -325,7 +342,7 @@ func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPre
 	)
 }
 
-func RecoverRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *Transaction, error) {
+func RecoverRawTransaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
 
 	// The first byte of the payload (per EIP-2718) is either `>= 0xc0` for legacy transactions,
 	// or a transaction type selector (up to `0x7f`).

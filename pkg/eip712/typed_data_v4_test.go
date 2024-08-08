@@ -82,6 +82,10 @@ func TestMessage_ExampleFromEIP712Spec(t *testing.T) {
 	ed, err := EncodeTypedDataV4(ctx, &p)
 	assert.NoError(t, err)
 	assert.Equal(t, "0xde26f53b35dd5ffdc13f8297e5cc7bbcb1a04bf33803bd2bf4a45eb251360cb8", ed.String())
+
+	hs, err := HashStruct(ctx, p.PrimaryType, p.Message, p.Types)
+	assert.NoError(t, err)
+	assert.Equal(t, "0xc52c0ee5d84264471806290a3f2c4cecfc5490626bf912d01f240d7a274b371e", hs.String())
 }
 
 func TestMessage_EmptyMessage(t *testing.T) {

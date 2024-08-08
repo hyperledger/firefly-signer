@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -69,7 +69,10 @@ func (s *SignatureData) UpdateEIP155(chainID int64) {
 
 // EIP-2930 (/ EIP-1559) rules - 0 or 1 V value for raw Y-parity value (chainID goes into the payload)
 func (s *SignatureData) UpdateEIP2930() {
-	s.V = s.V.Sub(s.V, big.NewInt(27))
+	vi64 := s.V.Int64()
+	if vi64 == 27 || vi64 == 28 {
+		s.V = s.V.Sub(s.V, big.NewInt(27))
+	}
 }
 
 // Recover obtains the original signer from the hash of the message

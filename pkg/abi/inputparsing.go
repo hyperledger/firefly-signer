@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -460,7 +460,7 @@ func walkTupleInput(ctx context.Context, breadcrumbs string, input interface{}, 
 	}
 	cv = &ComponentValue{
 		Component: component,
-		Children:  make([]*ComponentValue, len(iMap)),
+		Children:  make([]*ComponentValue, len(component.tupleChildren)),
 	}
 	for i, tupleChild := range component.tupleChildren {
 		if tupleChild.keyName == "" {

@@ -22,6 +22,7 @@ import (
 	"testing"
 	"testing/iotest"
 
+	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -122,4 +123,44 @@ func TestWalletFilePbkdf2JSON(t *testing.T) {
 	w2, err := ReadWalletFile(j, []byte("myPrecious"))
 	assert.NoError(t, err)
 	assert.Equal(t, w, w2)
+}
+
+func TestWalletFileCustomBytes(t *testing.T) {
+	customBytes := ([]byte)("planet refuse wheel robot position venue predict bring solid paper salmon bind")
+
+	w := NewWalletFileCustomBytesStandard("correcthorsebatterystaple", customBytes)
+
+	w, err := ReadWalletFile(w.JSON(), []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	j := w.JSON()
+	w2, err := ReadWalletFile(j, []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	assert.Equal(t, w, w2)
+
+	assert.Equal(t, customBytes, w.PrivateKey())
+
+	first32 := ([]byte)("planet refuse wheel robot positi")
+	kp, _ := secp256k1.NewSecp256k1KeyPair(first32)
+	assert.NoError(t, err)
+	assert.Equal(t, kp.Address, w2.KeyPair().Address)
+}
+
+func TestWalletFileCustomBytesLight(t *testing.T) {
+	customBytes := ([]byte)("less than 32 bytes")
+
+	w := NewWalletFileCustomBytesLight("correcthorsebatterystaple", customBytes)
+
+	w, err := ReadWalletFile(w.JSON(), []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	j := w.JSON()
+	w2, err := ReadWalletFile(j, []byte("correcthorsebatterystaple"))
+	assert.NoError(t, err)
+	assert.Equal(t, w, w2)
+
+	assert.Equal(t, customBytes, w.PrivateKey())
+
+	zeroToTheRight := ([]byte)("less than 32 bytes")
+	kp, _ := secp256k1.NewSecp256k1KeyPair(zeroToTheRight)
+	assert.NoError(t, err)
+	assert.Equal(t, kp.Address, w2.KeyPair().Address)
 }

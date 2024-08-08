@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -343,12 +343,14 @@ func (rc *wsRPCClient) Subscriptions() []Subscription {
 }
 
 func (rc *wsRPCClient) sendRPC(ctx context.Context, reqID string, rpcReq *RPCRequest) *RPCError {
-	jsonInput, _ := json.Marshal(rpcReq)
-	log.L(ctx).Debugf("RPC[%s] --> %s", reqID, rpcReq.Method)
-	if logrus.IsLevelEnabled(logrus.TraceLevel) {
-		log.L(ctx).Tracef("RPC[%s] INPUT: %s", reqID, jsonInput)
+	jsonInput, err := json.Marshal(rpcReq)
+	if err == nil {
+		log.L(ctx).Debugf("RPC[%s] --> %s", reqID, rpcReq.Method)
+		if logrus.IsLevelEnabled(logrus.TraceLevel) {
+			log.L(ctx).Tracef("RPC[%s] INPUT: %s", reqID, jsonInput)
+		}
+		err = rc.client.Send(ctx, jsonInput)
 	}
-	err := rc.client.Send(ctx, jsonInput)
 	if err != nil {
 		rpcErr := NewRPCError(ctx, RPCCodeInternalError, signermsgs.MsgRPCRequestFailed, err)
 		log.L(ctx).Errorf("RPC[%s] <-- ERROR: %s", reqID, err)

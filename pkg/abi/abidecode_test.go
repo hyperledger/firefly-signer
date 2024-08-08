@@ -611,6 +611,7 @@ func TestDecodeABISignedIntOk(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, ElementaryTypeInt, cv.Children[0].Component.ElementaryType())
+	assert.Equal(t, uint16(256), cv.Children[0].Component.ElementaryM())
 	assert.Equal(t, int64(-0x12345), cv.Children[0].Value.(*big.Int).Int64())
 
 }
@@ -667,6 +668,8 @@ func TestDecodeABIFixedOk(t *testing.T) {
 	cv, err := p.DecodeABIData(d, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, ElementaryTypeFixed, cv.Children[0].Component.ElementaryType())
+	assert.Equal(t, uint16(64), cv.Children[0].Component.ElementaryM())
+	assert.Equal(t, uint16(4), cv.Children[0].Component.ElementaryN())
 	assert.Equal(t, "-7.4565", cv.Children[0].Value.(*big.Float).String())
 
 }
@@ -1046,7 +1049,7 @@ func TestDecodeAddressWithNonZeroPadding(t *testing.T) {
 		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025" + // (uint256) 0xffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025
 		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025" + // (uint160) 0xab0974bbed8afc5212e951c8498873319d02d025
 		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025" + // ( uint64) 0x498873319d02d025
-		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025")  // (  uint8) 0x25  
+		"ffffffffffffffffffffffffab0974bbed8afc5212e951c8498873319d02d025") // (  uint8) 0x25
 	assert.NoError(t, err)
 
 	cv, err := f.DecodeCallData(d)
