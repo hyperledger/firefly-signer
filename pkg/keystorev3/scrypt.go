@@ -22,8 +22,6 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
-	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -46,14 +44,13 @@ func mustGenerateDerivedScryptKey(password string, salt []byte, n, p int) []byte
 }
 
 // creates an ethereum address wallet file
-func newScryptWalletFile(password string, keypair *secp256k1.KeyPair, n int, p int) WalletFile {
-	wf := newScryptWalletFileBytes(password, keypair.PrivateKeyBytes(), ethtypes.AddressPlainHex(keypair.Address), n, p)
-	wf.keypair = keypair
+func newScryptWalletFile(password string, privateKeyBytes []byte, addr string, n int, p int) WalletFile {
+	wf := newScryptWalletFileBytes(password, privateKeyBytes, addr, n, p)
 	return wf
 }
 
 // this allows creation of any size/type of key in the store
-func newScryptWalletFileBytes(password string, privateKey []byte, addr ethtypes.AddressPlainHex, n int, p int) *walletFileScrypt {
+func newScryptWalletFileBytes(password string, privateKey []byte, addr string, n int, p int) *walletFileScrypt {
 
 	// Generate a sale for the scrypt
 	salt := mustReadBytes(32, rand.Reader)
@@ -107,8 +104,5 @@ func (w *walletFileScrypt) decrypt(password []byte) error {
 		return fmt.Errorf("invalid scrypt keystore: %s", err)
 	}
 	w.privateKey, err = w.Crypto.decryptCommon(derivedKey)
-	if err == nil {
-		w.keypair, err = secp256k1.NewSecp256k1KeyPair(w.privateKey)
-	}
 	return err
 }

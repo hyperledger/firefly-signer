@@ -259,7 +259,7 @@ func (w *fsWallet) getSignerForAddr(ctx context.Context, from ethtypes.Address0x
 	if err != nil {
 		return nil, err
 	}
-	return wf.KeyPair(), nil
+	return secp256k1.NewSecp256k1KeyPair(wf.PrivateKey())
 
 }
 
@@ -284,7 +284,10 @@ func (w *fsWallet) GetWalletFile(ctx context.Context, addr ethtypes.Address0xHex
 		return nil, err
 	}
 
-	keypair := kv3.KeyPair()
+	keypair, err := secp256k1.NewSecp256k1KeyPair(kv3.PrivateKey())
+	if err != nil {
+		return nil, i18n.NewError(ctx, signermsgs.MsgWalletFailed, addr)
+	}
 	if keypair.Address != addr {
 		return nil, i18n.NewError(ctx, signermsgs.MsgAddressMismatch, keypair.Address, addr)
 	}

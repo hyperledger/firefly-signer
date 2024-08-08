@@ -21,22 +21,23 @@ import (
 	"testing"
 
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestScryptWalletRoundTripLight(t *testing.T) {
+func TestScryptWalletRoundTripLightForSecp256k1(t *testing.T) {
 	keypair, err := secp256k1.GenerateSecp256k1KeyPair()
 	assert.NoError(t, err)
 
-	w1 := NewWalletFileLight("waltsentme", keypair)
-	assert.Equal(t, keypair.PrivateKeyBytes(), w1.KeyPair().PrivateKeyBytes())
+	w1 := NewWalletFileLight("waltsentme", keypair.PrivateKeyBytes(), keypair.Address.String())
+	assert.Equal(t, keypair.PrivateKeyBytes(), w1.PrivateKey())
 
 	w1b, err := json.Marshal(&w1)
 	assert.NoError(t, err)
 
 	w2, err := ReadWalletFile(w1b, []byte("waltsentme"))
 	assert.NoError(t, err)
-	assert.Equal(t, keypair.PrivateKeyBytes(), w2.KeyPair().PrivateKeyBytes())
+	assert.Equal(t, keypair.PrivateKeyBytes(), w2.PrivateKey())
 
 }
 
@@ -44,15 +45,33 @@ func TestScryptWalletRoundTripStandard(t *testing.T) {
 	keypair, err := secp256k1.GenerateSecp256k1KeyPair()
 	assert.NoError(t, err)
 
-	w1 := NewWalletFileStandard("TrustNo1", keypair)
-	assert.Equal(t, keypair.PrivateKeyBytes(), w1.KeyPair().PrivateKeyBytes())
+	w1 := NewWalletFileStandard("TrustNo1", keypair.PrivateKeyBytes(), keypair.Address.String())
+	assert.Equal(t, keypair.PrivateKeyBytes(), w1.PrivateKey())
 
 	w1b, err := json.Marshal(&w1)
 	assert.NoError(t, err)
 
 	w2, err := ReadWalletFile(w1b, []byte("TrustNo1"))
 	assert.NoError(t, err)
-	assert.Equal(t, keypair.PrivateKeyBytes(), w2.KeyPair().PrivateKeyBytes())
+	assert.Equal(t, keypair.PrivateKeyBytes(), w2.PrivateKey())
+
+}
+
+func TestScryptWalletRoundTripLightForBabyjubjub(t *testing.T) {
+	privKey := babyjub.NewRandPrivKey()
+	pubKey := privKey.Public()
+
+	w1 := NewWalletFileLight("waltsentme", privKey[:], pubKey.Compress().String())
+	assert.Equal(t, privKey[:], w1.PrivateKey())
+
+	w1b, err := json.Marshal(&w1)
+	assert.NoError(t, err)
+
+	w2, err := ReadWalletFile(w1b, []byte("waltsentme"))
+	assert.NoError(t, err)
+	var recoveredPrivKey babyjub.PrivateKey
+	copy(recoveredPrivKey[:], w2.PrivateKey())
+	assert.Equal(t, recoveredPrivKey.Public().Compress(), pubKey.Compress())
 
 }
 

@@ -75,7 +75,8 @@ func TestLoadSampleWallet(t *testing.T) {
 	w, err := ReadWalletFile([]byte(sampleWallet), []byte("correcthorsebatterystaple"))
 	assert.NoError(t, err)
 
-	keypair := w.KeyPair()
+	keypair, err := secp256k1.NewSecp256k1KeyPair(w.PrivateKey())
+	assert.NoError(t, err)
 	assert.Equal(t, samplePrivateKey, hex.EncodeToString(keypair.PrivateKeyBytes()))
 }
 
@@ -136,13 +137,14 @@ func TestWalletFileCustomBytes(t *testing.T) {
 	w2, err := ReadWalletFile(j, []byte("correcthorsebatterystaple"))
 	assert.NoError(t, err)
 	assert.Equal(t, w, w2)
+	keypair, err := secp256k1.NewSecp256k1KeyPair(w.PrivateKey())
 
 	assert.Equal(t, customBytes, w.PrivateKey())
 
 	first32 := ([]byte)("planet refuse wheel robot positi")
 	kp, _ := secp256k1.NewSecp256k1KeyPair(first32)
 	assert.NoError(t, err)
-	assert.Equal(t, kp.Address, w2.KeyPair().Address)
+	assert.Equal(t, kp.Address, keypair.Address)
 }
 
 func TestWalletFileCustomBytesLight(t *testing.T) {
@@ -156,11 +158,12 @@ func TestWalletFileCustomBytesLight(t *testing.T) {
 	w2, err := ReadWalletFile(j, []byte("correcthorsebatterystaple"))
 	assert.NoError(t, err)
 	assert.Equal(t, w, w2)
+	keypair, err := secp256k1.NewSecp256k1KeyPair(w.PrivateKey())
 
 	assert.Equal(t, customBytes, w.PrivateKey())
 
 	zeroToTheRight := ([]byte)("less than 32 bytes")
 	kp, _ := secp256k1.NewSecp256k1KeyPair(zeroToTheRight)
 	assert.NoError(t, err)
-	assert.Equal(t, kp.Address, w2.KeyPair().Address)
+	assert.Equal(t, kp.Address, keypair.Address)
 }

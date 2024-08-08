@@ -23,7 +23,6 @@ import (
 
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
-	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 )
 
 const (
@@ -33,9 +32,13 @@ const (
 	kdfTypePbkdf2   = "pbkdf2"
 )
 
+// WalletFile is the interface for a general-purpose wallet file
+// that can be used to store a private key with encryption. It is
+// agnostic of the public key algorithm used to derive the public
+// key from the private key. This can be used with, for instance,
+// various Elliptic Curve algorithms such as secp256k1, Baby Jubjub.
 type WalletFile interface {
 	PrivateKey() []byte
-	KeyPair() *secp256k1.KeyPair
 	JSON() []byte
 }
 
@@ -77,12 +80,11 @@ type cryptoPbkdf2 struct {
 }
 
 type walletFileBase struct {
-	Address ethtypes.AddressPlainHex `json:"address"`
-	ID      *fftypes.UUID            `json:"id"`
-	Version int                      `json:"version"`
+	Address string        `json:"address"`
+	ID      *fftypes.UUID `json:"id"`
+	Version int           `json:"version"`
 
 	privateKey []byte
-	keypair    *secp256k1.KeyPair
 }
 
 type walletFileCommon struct {
@@ -98,10 +100,6 @@ type walletFilePbkdf2 struct {
 type walletFileScrypt struct {
 	walletFileBase
 	Crypto cryptoScrypt `json:"crypto"`
-}
-
-func (w *walletFileBase) KeyPair() *secp256k1.KeyPair {
-	return w.keypair
 }
 
 func (w *walletFileBase) PrivateKey() []byte {

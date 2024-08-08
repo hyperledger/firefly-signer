@@ -28,6 +28,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/hyperledger/firefly-common/pkg/config"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
+	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -85,7 +86,9 @@ func TestFileListener(t *testing.T) {
 	addr := *ethtypes.MustNewAddress(`1f185718734552d08278aa70f804580bab5fd2b4`)
 	wf, err := f.GetWalletFile(ctx, addr)
 	assert.NoError(t, err)
-	assert.Equal(t, wf.KeyPair().Address, addr)
+	keypair, err := secp256k1.NewSecp256k1KeyPair(wf.PrivateKey())
+	assert.NoError(t, err)
+	assert.Equal(t, keypair.Address, addr)
 
 }
 

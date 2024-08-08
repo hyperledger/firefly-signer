@@ -20,6 +20,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/dchest/blake512 v1.0.0 // indirect
+
 require (
 	github.com/aidarkhanov/nanoid v1.0.8 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -34,6 +36,7 @@ require (
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/iden3/go-iden3-crypto v0.0.16
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/yaml v0.2.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect

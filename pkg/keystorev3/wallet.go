@@ -32,12 +32,12 @@ const (
 	pDefault  int = 1
 )
 
-func NewWalletFileLight(password string, keypair *secp256k1.KeyPair) WalletFile {
-	return newScryptWalletFile(password, keypair, nLight, pDefault)
+func NewWalletFileLight(password string, privateKey []byte, addr string) WalletFile {
+	return newScryptWalletFile(password, privateKey, addr, nLight, pDefault)
 }
 
-func NewWalletFileStandard(password string, keypair *secp256k1.KeyPair) WalletFile {
-	return newScryptWalletFile(password, keypair, nStandard, pDefault)
+func NewWalletFileStandard(password string, privateKey []byte, addr string) WalletFile {
+	return newScryptWalletFile(password, privateKey, addr, nStandard, pDefault)
 }
 
 func addressFirst32(privateKey []byte) ethtypes.AddressPlainHex {
@@ -49,11 +49,11 @@ func addressFirst32(privateKey []byte) ethtypes.AddressPlainHex {
 }
 
 func NewWalletFileCustomBytesLight(password string, privateKey []byte) WalletFile {
-	return newScryptWalletFileBytes(password, privateKey, addressFirst32(privateKey), nStandard, pDefault)
+	return newScryptWalletFileBytes(password, privateKey, addressFirst32(privateKey).String(), nStandard, pDefault)
 }
 
 func NewWalletFileCustomBytesStandard(password string, privateKey []byte) WalletFile {
-	return newScryptWalletFileBytes(password, privateKey, addressFirst32(privateKey), nStandard, pDefault)
+	return newScryptWalletFileBytes(password, privateKey, addressFirst32(privateKey).String(), nStandard, pDefault)
 }
 
 func ReadWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {

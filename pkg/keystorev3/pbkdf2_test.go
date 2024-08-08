@@ -23,13 +23,13 @@ import (
 	"testing"
 
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
-	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func TestPbkdf2Wallet(t *testing.T) {
+func TestPbkdf2WalletForSecp256k1(t *testing.T) {
 	keypair, err := secp256k1.GenerateSecp256k1KeyPair()
 	assert.NoError(t, err)
 
@@ -42,10 +42,9 @@ func TestPbkdf2Wallet(t *testing.T) {
 
 	w1 := &walletFilePbkdf2{
 		walletFileBase: walletFileBase{
-			Address: ethtypes.AddressPlainHex(keypair.Address),
+			Address: keypair.Address.String(),
 			ID:      fftypes.NewUUID(),
 			Version: version3,
-			keypair: keypair,
 		},
 		Crypto: cryptoPbkdf2{
 			cryptoCommon: cryptoCommon{
@@ -72,7 +71,56 @@ func TestPbkdf2Wallet(t *testing.T) {
 	w2, err := ReadWalletFile(wb1, []byte("myPrecious"))
 	assert.NoError(t, err)
 
-	assert.Equal(t, keypair.PrivateKeyBytes(), w2.KeyPair().PrivateKeyBytes())
+	assert.Equal(t, keypair.PrivateKeyBytes(), w2.PrivateKey())
+
+}
+
+func TestPbkdf2WalletForBabyjubjub(t *testing.T) {
+	privKey := babyjub.NewRandPrivKey()
+	pubKey := privKey.Public()
+
+	salt := mustReadBytes(32, rand.Reader)
+	derivedKey := pbkdf2.Key([]byte("myPrecious"), salt, 4096, 32, sha256.New)
+	iv := mustReadBytes(16 /* 128bit */, rand.Reader)
+	encryptKey := derivedKey[0:16]
+	cipherText := mustAES128CtrEncrypt(encryptKey, iv, privKey[:])
+	mac := generateMac(derivedKey[16:32], cipherText)
+
+	w1 := &walletFilePbkdf2{
+		walletFileBase: walletFileBase{
+			Address: pubKey.Compress().String(),
+			ID:      fftypes.NewUUID(),
+			Version: version3,
+		},
+		Crypto: cryptoPbkdf2{
+			cryptoCommon: cryptoCommon{
+				Cipher:     cipherAES128ctr,
+				CipherText: cipherText,
+				CipherParams: cipherParams{
+					IV: iv,
+				},
+				KDF: kdfTypePbkdf2,
+				MAC: mac,
+			},
+			KDFParams: kdfParamsPbkdf2{
+				PRF:   prfHmacSHA256,
+				DKLen: 32,
+				C:     4096,
+				Salt:  salt,
+			},
+		},
+	}
+
+	wb1, err := json.Marshal(&w1)
+	assert.NoError(t, err)
+
+	w2, err := ReadWalletFile(wb1, []byte("myPrecious"))
+	assert.NoError(t, err)
+
+	var recoveredPrivKey babyjub.PrivateKey
+	copy(recoveredPrivKey[:], w2.PrivateKey())
+
+	assert.Equal(t, recoveredPrivKey.Public().Compress(), pubKey.Compress())
 
 }
 
