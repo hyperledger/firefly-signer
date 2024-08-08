@@ -92,8 +92,6 @@ type walletFileCoreFields struct {
 }
 
 type walletFileMetadata struct {
-	// address is not technically part of keystorev3 syntax, and note this can be overridden/removed by callers of the package
-	Address ethtypes.AddressPlainHex `json:"address"`
 	// arbitrary additional fields that can be stored in the JSON, including overriding/removing the "address" field (other core fields cannot be overridden)
 	metadata map[string]interface{}
 }
@@ -102,7 +100,6 @@ type walletFileBase struct {
 	walletFileCoreFields
 	walletFileMetadata
 	privateKey []byte
-	keypair    *secp256k1.KeyPair
 }
 
 type walletFileCommon struct {
@@ -146,12 +143,8 @@ func marshalWalletJSON(wc *walletFileBase, crypto interface{}) ([]byte, error) {
 		return nil, err
 	}
 	jsonMap := map[string]interface{}{}
-	// note address can be set to "nil" to remove it entirely
-	jsonMap["address"] = wc.Address
 	for k, v := range wc.metadata {
-		if v == nil {
-			delete(jsonMap, k)
-		} else {
+		if v != nil {
 			jsonMap[k] = v
 		}
 	}
@@ -163,7 +156,7 @@ func marshalWalletJSON(wc *walletFileBase, crypto interface{}) ([]byte, error) {
 }
 
 func (w *walletFileBase) KeyPair() *secp256k1.KeyPair {
-	return w.keypair
+	return secp256k1.KeyPairFromBytes(w.privateKey)
 }
 
 func (w *walletFileBase) PrivateKey() []byte {

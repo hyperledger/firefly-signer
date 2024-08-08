@@ -47,9 +47,10 @@ func TestPbkdf2Wallet(t *testing.T) {
 				Version: version3,
 			},
 			walletFileMetadata: walletFileMetadata{
-				Address: ethtypes.AddressPlainHex(keypair.Address),
+				metadata: map[string]interface{}{
+					"address": ethtypes.AddressPlainHex(keypair.Address).String(),
+				},
 			},
-			keypair: keypair,
 		},
 		Crypto: cryptoPbkdf2{
 			cryptoCommon: cryptoCommon{

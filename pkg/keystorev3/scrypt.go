@@ -47,14 +47,14 @@ func mustGenerateDerivedScryptKey(password string, salt []byte, n, p int) []byte
 }
 
 // creates an ethereum address wallet file
-func newScryptWalletFile(password string, keypair *secp256k1.KeyPair, n int, p int) WalletFile {
-	wf := newScryptWalletFileBytes(password, keypair.PrivateKeyBytes(), ethtypes.AddressPlainHex(keypair.Address), n, p)
-	wf.keypair = keypair
+func newScryptWalletFileSecp256k1(password string, keypair *secp256k1.KeyPair, n int, p int) WalletFile {
+	wf := newScryptWalletFileBytes(password, keypair.PrivateKeyBytes(), n, p)
+	wf.Metadata()["address"] = ethtypes.AddressPlainHex(keypair.Address).String()
 	return wf
 }
 
 // this allows creation of any size/type of key in the store
-func newScryptWalletFileBytes(password string, privateKey []byte, addr ethtypes.AddressPlainHex, n int, p int) *walletFileScrypt {
+func newScryptWalletFileBytes(password string, privateKey []byte, n int, p int) *walletFileScrypt {
 
 	// Generate a sale for the scrypt
 	salt := mustReadBytes(32, rand.Reader)
@@ -81,7 +81,6 @@ func newScryptWalletFileBytes(password string, privateKey []byte, addr ethtypes.
 				Version: version3,
 			},
 			walletFileMetadata: walletFileMetadata{
-				Address:  addr,
 				metadata: map[string]interface{}{},
 			},
 			privateKey: privateKey,
@@ -113,8 +112,5 @@ func (w *walletFileScrypt) decrypt(password []byte) error {
 		return fmt.Errorf("invalid scrypt keystore: %s", err)
 	}
 	w.privateKey, err = w.Crypto.decryptCommon(derivedKey)
-	if err == nil {
-		w.keypair, err = secp256k1.NewSecp256k1KeyPair(w.privateKey)
-	}
 	return err
 }
