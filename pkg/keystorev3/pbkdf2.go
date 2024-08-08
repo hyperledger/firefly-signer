@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -29,11 +28,12 @@ const (
 	prfHmacSHA256 = "hmac-sha256"
 )
 
-func readPbkdf2WalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
+func readPbkdf2WalletFile(jsonWallet []byte, password []byte, metadata map[string]interface{}) (WalletFile, error) {
 	var w *walletFilePbkdf2
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {
 		return nil, fmt.Errorf("invalid pbkdf2 keystore: %s", err)
 	}
+	w.metadata = metadata
 	return w, w.decrypt(password)
 }
 
@@ -45,9 +45,6 @@ func (w *walletFilePbkdf2) decrypt(password []byte) (err error) {
 	derivedKey := pbkdf2.Key(password, w.Crypto.KDFParams.Salt, w.Crypto.KDFParams.C, w.Crypto.KDFParams.DKLen, sha256.New)
 
 	w.privateKey, err = w.Crypto.decryptCommon(derivedKey)
-	if err == nil {
-		w.keypair, err = secp256k1.NewSecp256k1KeyPair(w.privateKey)
-	}
 	return err
 
 }

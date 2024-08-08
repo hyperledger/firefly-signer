@@ -58,7 +58,7 @@ func TestScryptWalletRoundTripStandard(t *testing.T) {
 
 func TestScryptReadInvalidFile(t *testing.T) {
 
-	_, err := readScryptWalletFile([]byte(`!bad JSON`), []byte(""))
+	_, err := readScryptWalletFile([]byte(`!bad JSON`), []byte(""), nil)
 	assert.Error(t, err)
 
 }

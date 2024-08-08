@@ -42,10 +42,15 @@ func TestPbkdf2Wallet(t *testing.T) {
 
 	w1 := &walletFilePbkdf2{
 		walletFileBase: walletFileBase{
-			Address: ethtypes.AddressPlainHex(keypair.Address),
-			ID:      fftypes.NewUUID(),
-			Version: version3,
-			keypair: keypair,
+			walletFileCoreFields: walletFileCoreFields{
+				ID:      fftypes.NewUUID(),
+				Version: version3,
+			},
+			walletFileMetadata: walletFileMetadata{
+				metadata: map[string]interface{}{
+					"address": ethtypes.AddressPlainHex(keypair.Address).String(),
+				},
+			},
 		},
 		Crypto: cryptoPbkdf2{
 			cryptoCommon: cryptoCommon{
@@ -78,14 +83,14 @@ func TestPbkdf2Wallet(t *testing.T) {
 
 func TestPbkdf2WalletFileDecryptInvalid(t *testing.T) {
 
-	_, err := readPbkdf2WalletFile([]byte(`!! not json`), []byte(""))
+	_, err := readPbkdf2WalletFile([]byte(`!! not json`), []byte(""), nil)
 	assert.Regexp(t, "invalid pbkdf2 keystore", err)
 
 }
 
 func TestPbkdf2WalletFileUnsupportedPRF(t *testing.T) {
 
-	_, err := readPbkdf2WalletFile([]byte(`{}`), []byte(""))
+	_, err := readPbkdf2WalletFile([]byte(`{}`), []byte(""), nil)
 	assert.Regexp(t, "invalid pbkdf2 wallet file: unsupported prf", err)
 
 }
