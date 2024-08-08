@@ -29,11 +29,12 @@ import (
 
 const defaultR = 8
 
-func readScryptWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
+func readScryptWalletFile(jsonWallet []byte, password []byte, metadata map[string]interface{}) (WalletFile, error) {
 	var w *walletFileScrypt
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {
 		return nil, fmt.Errorf("invalid scrypt wallet file: %s", err)
 	}
+	w.metadata = metadata
 	return w, w.decrypt(password)
 }
 
@@ -75,9 +76,14 @@ func newScryptWalletFileBytes(password string, privateKey []byte, addr ethtypes.
 
 	return &walletFileScrypt{
 		walletFileBase: walletFileBase{
-			ID:         fftypes.NewUUID(),
-			Address:    addr,
-			Version:    version3,
+			walletFileCoreFields: walletFileCoreFields{
+				ID:      fftypes.NewUUID(),
+				Version: version3,
+			},
+			walletFileMetadata: walletFileMetadata{
+				Address:  addr,
+				metadata: map[string]interface{}{},
+			},
 			privateKey: privateKey,
 		},
 		Crypto: cryptoScrypt{

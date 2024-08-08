@@ -37,6 +37,16 @@ type WalletFile interface {
 	PrivateKey() []byte
 	KeyPair() *secp256k1.KeyPair
 	JSON() []byte
+	GetID() *fftypes.UUID
+	GetVersion() int
+
+	// Any fields set into this that do not conflict with the base fields (id/version/crypto) will
+	// be serialized into the JSON when it is marshalled.
+	// This includes setting the "address" field (which is not a core part of the V3 standard) to
+	// an arbitrary string, adding new fields for different key identifiers (like "bjj" or "btc" for
+	// different public key compression algos).
+	// If you want to remove the address field completely, simple set "address": nil in the map.
+	Metadata() map[string]interface{}
 }
 
 type kdfParamsScrypt struct {
@@ -76,11 +86,21 @@ type cryptoPbkdf2 struct {
 	KDFParams kdfParamsPbkdf2 `json:"kdfparams"`
 }
 
-type walletFileBase struct {
-	Address ethtypes.AddressPlainHex `json:"address"`
-	ID      *fftypes.UUID            `json:"id"`
-	Version int                      `json:"version"`
+type walletFileCoreFields struct {
+	ID      *fftypes.UUID `json:"id"`
+	Version int           `json:"version"`
+}
 
+type walletFileMetadata struct {
+	// address is not technically part of keystorev3 syntax, and note this can be overridden/removed by callers of the package
+	Address ethtypes.AddressPlainHex `json:"address"`
+	// arbitrary additional fields that can be stored in the JSON, including overriding/removing the "address" field (other core fields cannot be overridden)
+	metadata map[string]interface{}
+}
+
+type walletFileBase struct {
+	walletFileCoreFields
+	walletFileMetadata
 	privateKey []byte
 	keypair    *secp256k1.KeyPair
 }
@@ -95,9 +115,51 @@ type walletFilePbkdf2 struct {
 	Crypto cryptoPbkdf2 `json:"crypto"`
 }
 
+func (w *walletFilePbkdf2) MarshalJSON() ([]byte, error) {
+	return marshalWalletJSON(&w.walletFileBase, w.Crypto)
+}
+
 type walletFileScrypt struct {
 	walletFileBase
 	Crypto cryptoScrypt `json:"crypto"`
+}
+
+func (w *walletFileScrypt) MarshalJSON() ([]byte, error) {
+	return marshalWalletJSON(&w.walletFileBase, w.Crypto)
+}
+
+func (w *walletFileBase) GetVersion() int {
+	return w.Version
+}
+
+func (w *walletFileBase) GetID() *fftypes.UUID {
+	return w.ID
+}
+
+func (w *walletFileBase) Metadata() map[string]interface{} {
+	return w.metadata
+}
+
+func marshalWalletJSON(wc *walletFileBase, crypto interface{}) ([]byte, error) {
+	cryptoJSON, err := json.Marshal(crypto)
+	if err != nil {
+		return nil, err
+	}
+	jsonMap := map[string]interface{}{}
+	// note address can be set to "nil" to remove it entirely
+	jsonMap["address"] = wc.Address
+	for k, v := range wc.metadata {
+		if v == nil {
+			delete(jsonMap, k)
+		} else {
+			jsonMap[k] = v
+		}
+	}
+	// cannot override these fields
+	jsonMap["id"] = wc.ID
+	jsonMap["version"] = wc.Version
+	jsonMap["crypto"] = json.RawMessage(cryptoJSON)
+	return json.Marshal(jsonMap)
 }
 
 func (w *walletFileBase) KeyPair() *secp256k1.KeyPair {

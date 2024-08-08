@@ -58,7 +58,11 @@ func NewWalletFileCustomBytesStandard(password string, privateKey []byte) Wallet
 
 func ReadWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
 	var w walletFileCommon
-	if err := json.Unmarshal(jsonWallet, &w); err != nil {
+	err := json.Unmarshal(jsonWallet, &w)
+	if err == nil {
+		err = json.Unmarshal(jsonWallet, &w.metadata)
+	}
+	if err != nil {
 		return nil, fmt.Errorf("invalid wallet file: %s", err)
 	}
 	if w.ID == nil {
@@ -69,9 +73,9 @@ func ReadWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
 	}
 	switch w.Crypto.KDF {
 	case kdfTypeScrypt:
-		return readScryptWalletFile(jsonWallet, password)
+		return readScryptWalletFile(jsonWallet, password, w.metadata)
 	case kdfTypePbkdf2:
-		return readPbkdf2WalletFile(jsonWallet, password)
+		return readPbkdf2WalletFile(jsonWallet, password, w.metadata)
 	default:
 		return nil, fmt.Errorf("unsupported kdf: %s", w.Crypto.KDF)
 	}
