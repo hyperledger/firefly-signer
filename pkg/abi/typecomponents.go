@@ -19,12 +19,15 @@ package abi
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
+
+var internalTypeStructExtractor = regexp.MustCompile(`^struct (.*\.)?([^.\[\]]+)(\[\d*\])*$`)
 
 // TypeComponent is a modelled representation of a component of an ABI type.
 // We don't just go to the tuple level, we go down all the way through the arrays too.
@@ -61,6 +64,10 @@ type TypeComponent interface {
 	ParseExternalDesc(ctx context.Context, v interface{}, desc string) (*ComponentValue, error)
 	DecodeABIData(d []byte, offset int) (*ComponentValue, error)
 	DecodeABIDataCtx(ctx context.Context, d []byte, offest int) (*ComponentValue, error)
+
+	SolidityParamDef(inFunction bool) (solDef string, structDefs []string) // gives a string that can be used to define this param in solidity
+	SolidityTypeDef() (isRef bool, typeDef string, childStructs []string)
+	SolidityStructDef() (structName string, structs []string)
 }
 
 type typeComponent struct {
@@ -361,6 +368,70 @@ func (tc *typeComponent) String() string {
 	default:
 		return ""
 	}
+}
+
+func (tc *typeComponent) SolidityParamDef(inFunction bool) (string, []string) {
+	isRef, paramDef, childStructs := tc.SolidityTypeDef()
+	if isRef && inFunction {
+		paramDef = fmt.Sprintf("%s calldata", paramDef)
+	}
+	if tc.parameter != nil && tc.parameter.Name != "" {
+		paramDef = fmt.Sprintf("%s %s", paramDef, tc.parameter.Name)
+	}
+	return paramDef, childStructs
+}
+
+func (tc *typeComponent) SolidityTypeDef() (isRef bool, typeDef string, childStructs []string) {
+	switch tc.cType {
+	case ElementaryComponent:
+		isRef = tc.elementaryType.dynamic(tc)
+		return isRef, fmt.Sprintf("%s%s", tc.elementaryType.name, tc.elementarySuffix), []string{}
+	case FixedArrayComponent:
+		_, childSol, childStructs := tc.arrayChild.SolidityTypeDef()
+		return true, fmt.Sprintf("%s[%d]", childSol, tc.arrayLength), childStructs
+	case DynamicArrayComponent:
+		_, childSol, childStructs := tc.arrayChild.SolidityTypeDef()
+		return true, fmt.Sprintf("%s[]", childSol), childStructs
+	case TupleComponent:
+		structName, childStructs := tc.SolidityStructDef()
+		return true, structName, childStructs
+	default:
+		return false, "", []string{}
+	}
+}
+
+func (tc *typeComponent) SolidityStructDef() (string, []string) {
+	name := ""
+	if tc.parameter != nil {
+		match := internalTypeStructExtractor.FindStringSubmatch(tc.parameter.InternalType)
+		if match != nil {
+			name = match[2]
+		} else {
+			name = tc.parameter.Name
+		}
+	}
+	buff := new(strings.Builder)
+	buff.WriteString("struct ")
+	buff.WriteString(name)
+	buff.WriteString(" { ")
+
+	allChildStructs := []string{}
+	for i, child := range tc.tupleChildren {
+		if i > 0 {
+			buff.WriteString(" ")
+		}
+		_, childType, childStructs := child.SolidityTypeDef()
+		allChildStructs = append(allChildStructs, childStructs...)
+		buff.WriteString(childType)
+		if child.parameter != nil && child.parameter.Name != "" {
+			buff.WriteRune(' ')
+			buff.WriteString(child.parameter.Name)
+		}
+		buff.WriteString(";")
+	}
+
+	buff.WriteString(" }")
+	return name, append(allChildStructs, buff.String())
 }
 
 func (tc *typeComponent) ComponentType() ComponentType {

@@ -36,6 +36,7 @@ const sampleABI1 = `[
 		{
 			"name": "a",
 			"type": "tuple",
+			"internalType": "struct AType",
 			"components": [
 				{
 					"name": "b",
@@ -172,6 +173,111 @@ const sampleABI4 = `[
 	}
   ]`
 
+const sampleABI5 = `[
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "locator",
+              "type": "bytes32"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct AribtraryWidgets.Customer",
+          "name": "customer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "price",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string[]",
+              "name": "attributes",
+              "type": "string[]"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct AribtraryWidgets.Widget[]",
+          "name": "widgets",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "Invoiced",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "owner",
+                  "type": "address"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "locator",
+                  "type": "bytes32"
+                }
+              ],
+              "internalType": "struct AribtraryWidgets.Customer",
+              "name": "customer",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "string",
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "price",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "string[]",
+                  "name": "attributes",
+                  "type": "string[]"
+                }
+              ],
+              "internalType": "struct AribtraryWidgets.Widget[]",
+              "name": "widgets",
+              "type": "tuple[]"
+            }
+          ],
+          "internalType": "struct AribtraryWidgets.Invoice",
+          "name": "_invoice",
+          "type": "tuple"
+        }
+      ],
+      "name": "invoice",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ]`
+
 func testABI(t *testing.T, abiJSON string) (abi ABI) {
 	err := json.Unmarshal([]byte(abiJSON), &abi)
 	assert.NoError(t, err)
@@ -252,6 +358,12 @@ func TestDocsFunctionCallExample(t *testing.T) {
 	assert.Equal(t, `{"amount":"1000000000000000000","recipient":"03706ff580119b130e7d26c5e816913123c24d89"}`, string(jsonData))
 	assert.Equal(t, `["0x03706ff580119b130e7d26c5e816913123c24d89","0xde0b6b3a7640000"]`, string(jsonData2))
 	assert.Equal(t, "0xa9059cbb2ab09eb219583f4a59a5d0623ade346d962bcd4e46b11da047c9049b", sigHash.String())
+
+	// Check the solidity def
+	solDef, childStructs, err := f.SolidityDef()
+	assert.NoError(t, err)
+	assert.Equal(t, "function transfer(address recipient, uint256 amount) external returns (bool) { }", solDef)
+	assert.Empty(t, childStructs)
 }
 
 func TestTLdr(t *testing.T) {
@@ -293,6 +405,11 @@ func TestABIGetTupleTypeTree(t *testing.T) {
 	assert.Equal(t, "foo((uint256,string[2],bytes))", abi[0].String())
 	tc, err := abi[0].Inputs[0].TypeComponentTree()
 	assert.NoError(t, err)
+
+	solDef, childStructs, err := abi[0].SolidityDef()
+	assert.NoError(t, err)
+	assert.Equal(t, "function foo(AType calldata a) external { }", solDef)
+	assert.Equal(t, []string{"struct AType { uint256 b; string[2] c; bytes d; }"}, childStructs)
 
 	assert.Equal(t, TupleComponent, tc.ComponentType())
 	assert.Len(t, tc.TupleChildren(), 3)
@@ -543,6 +660,11 @@ func TestParseJSONArrayLotsOfTypes(t *testing.T) {
 	assert.Equal(t, "0x00", ethtypes.HexBytes0xPrefix(cv.Children[8].Value.([]byte)).String())
 	assert.Equal(t, "test string", cv.Children[9].Value)
 
+	solDef, childStructs, err := testABI(t, sampleABI2)[0].SolidityDef()
+	assert.NoError(t, err)
+	assert.Equal(t, "function foo(uint8 a, int256 b, address c, bool d, fixed64x10 e, ufixed128x18 f, bytes10 g, bytes calldata h, function i, string calldata j) external { }", solDef)
+	assert.Empty(t, childStructs)
+
 }
 
 func TestParseJSONBadData(t *testing.T) {
@@ -604,6 +726,9 @@ func TestSignatureHashInvalid(t *testing.T) {
 		},
 	}
 	_, err := e.SignatureHash()
+	assert.Regexp(t, "FF22025", err)
+
+	_, _, err = e.SolidityDef()
 	assert.Regexp(t, "FF22025", err)
 
 	assert.Equal(t, make(ethtypes.HexBytes0xPrefix, 32), e.SignatureHashBytes())
@@ -846,4 +971,30 @@ func TestEncodeCallDataValuesHelper(t *testing.T) {
 
 func TestABIDocumented(t *testing.T) {
 	ffapi.CheckObjectDocumented(&ABI{})
+}
+
+func TestComplexStructSolidityDef(t *testing.T) {
+
+	var abi ABI
+	err := json.Unmarshal([]byte(sampleABI5), &abi)
+	assert.NoError(t, err)
+
+	solDef, childStructs, err := abi.Functions()["invoice"].SolidityDef()
+	assert.NoError(t, err)
+	assert.Equal(t, "function invoice(Invoice calldata _invoice) external payable { }", solDef)
+	assert.Equal(t, []string{
+		"struct Customer { address owner; bytes32 locator; }",
+		"struct Widget { string description; uint256 price; string[] attributes; }",
+		"struct Invoice { Customer customer; Widget[] widgets; }",
+	}, childStructs)
+
+	solDef, childStructs, err = abi.Events()["Invoiced"].SolidityDef()
+	assert.NoError(t, err)
+	assert.Equal(t, "event Invoiced(Customer customer, Widget[] widgets)", solDef)
+	assert.Equal(t, []string{
+		"struct Customer { address owner; bytes32 locator; }",
+		"struct Widget { string description; uint256 price; string[] attributes; }",
+		"struct Invoice { Customer customer; Widget[] widgets; }",
+	}, childStructs)
+
 }
