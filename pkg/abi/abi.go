@@ -439,6 +439,30 @@ func (e *Entry) String() string {
 	return s
 }
 
+// SolString returns a Solidity - like string, with an empty function definition,
+// and any struct definitions separated afterwards with a ; (semicolon)
+func (e *Entry) SolString() string {
+	solStr, err := e.SolidityStringCtx(context.Background())
+	if err != nil {
+		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
+	}
+	return solStr
+}
+
+func (e *Entry) SolidityStringCtx(ctx context.Context) (string, error) {
+	solDef, childStructs, err := e.SolidityDefCtx(ctx)
+	if err != nil {
+		return "", err
+	}
+	buff := new(strings.Builder)
+	buff.WriteString(solDef)
+	for _, e := range childStructs {
+		buff.WriteString("; ")
+		buff.WriteString(e)
+	}
+	return buff.String(), nil
+}
+
 func (e *Entry) Signature() (string, error) {
 	return e.SignatureCtx(context.Background())
 }

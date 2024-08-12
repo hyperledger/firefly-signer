@@ -740,6 +740,8 @@ func TestSignatureHashInvalid(t *testing.T) {
 	_, _, err = e.SolidityDef()
 	assert.Regexp(t, "FF22025", err)
 
+	assert.Empty(t, e.SolString())
+
 	assert.Equal(t, make(ethtypes.HexBytes0xPrefix, 32), e.SignatureHashBytes())
 
 	e = &Entry{
@@ -1007,6 +1009,9 @@ func TestComplexStructSolidityDef(t *testing.T) {
 		"struct Widget { string description; uint256 price; string[] attributes; }",
 		"struct Invoice { Customer customer; Widget[] widgets; }",
 	}, childStructs)
+
+	assert.Equal(t, "function invoice(Invoice memory _invoice) external payable { }; struct Customer { address owner; bytes32 locator; }; struct Widget { string description; uint256 price; string[] attributes; }; struct Invoice { Customer customer; Widget[] widgets; }",
+		abi.Functions()["invoice"].SolString())
 
 	solDef, childStructs, err = abi.Events()["Invoiced"].SolidityDef()
 	assert.NoError(t, err)
