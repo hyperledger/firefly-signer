@@ -27,6 +27,7 @@ import (
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
+// The format of the "internalType" in the Solidity compiler is of the form "struct MySmartContract.MyStruct[]`
 var internalTypeStructExtractor = regexp.MustCompile(`^struct (.*\.)?([^.\[\]]+)(\[\d*\])*$`)
 
 // TypeComponent is a modelled representation of a component of an ABI type.
