@@ -29,11 +29,12 @@ import (
 
 const defaultR = 8
 
-func readScryptWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
+func readScryptWalletFile(jsonWallet []byte, password []byte, metadata map[string]interface{}) (WalletFile, error) {
 	var w *walletFileScrypt
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {
 		return nil, fmt.Errorf("invalid scrypt wallet file: %s", err)
 	}
+	w.metadata = metadata
 	return w, w.decrypt(password)
 }
 
@@ -46,14 +47,14 @@ func mustGenerateDerivedScryptKey(password string, salt []byte, n, p int) []byte
 }
 
 // creates an ethereum address wallet file
-func newScryptWalletFile(password string, keypair *secp256k1.KeyPair, n int, p int) WalletFile {
-	wf := newScryptWalletFileBytes(password, keypair.PrivateKeyBytes(), ethtypes.AddressPlainHex(keypair.Address), n, p)
-	wf.keypair = keypair
+func newScryptWalletFileSecp256k1(password string, keypair *secp256k1.KeyPair, n int, p int) WalletFile {
+	wf := newScryptWalletFileBytes(password, keypair.PrivateKeyBytes(), n, p)
+	wf.Metadata()["address"] = ethtypes.AddressPlainHex(keypair.Address).String()
 	return wf
 }
 
 // this allows creation of any size/type of key in the store
-func newScryptWalletFileBytes(password string, privateKey []byte, addr ethtypes.AddressPlainHex, n int, p int) *walletFileScrypt {
+func newScryptWalletFileBytes(password string, privateKey []byte, n int, p int) *walletFileScrypt {
 
 	// Generate a sale for the scrypt
 	salt := mustReadBytes(32, rand.Reader)
@@ -75,9 +76,13 @@ func newScryptWalletFileBytes(password string, privateKey []byte, addr ethtypes.
 
 	return &walletFileScrypt{
 		walletFileBase: walletFileBase{
-			ID:         fftypes.NewUUID(),
-			Address:    addr,
-			Version:    version3,
+			walletFileCoreFields: walletFileCoreFields{
+				ID:      fftypes.NewUUID(),
+				Version: version3,
+			},
+			walletFileMetadata: walletFileMetadata{
+				metadata: map[string]interface{}{},
+			},
 			privateKey: privateKey,
 		},
 		Crypto: cryptoScrypt{
@@ -107,8 +112,5 @@ func (w *walletFileScrypt) decrypt(password []byte) error {
 		return fmt.Errorf("invalid scrypt keystore: %s", err)
 	}
 	w.privateKey, err = w.Crypto.decryptCommon(derivedKey)
-	if err == nil {
-		w.keypair, err = secp256k1.NewSecp256k1KeyPair(w.privateKey)
-	}
 	return err
 }

@@ -252,7 +252,6 @@ func TestExampleABIDecode7(t *testing.T) {
 
 	// a tuple of dynamic types (which is the same as a fixed-length array of the dynamic types)
 	f := &Entry{
-		Name: "g",
 		Outputs: ParameterArray{
 			{
 				Type: "tuple",
@@ -285,7 +284,6 @@ func TestExampleABIDecode7(t *testing.T) {
 func TestExampleABIDecodeTupleDifferentOrder(t *testing.T) {
 
 	f := &Entry{
-		Name: "coupon",
 		Outputs: ParameterArray{
 			{
 				Type: "tuple[]",
@@ -316,7 +314,6 @@ func TestExampleABIDecodeTupleDifferentOrder(t *testing.T) {
 func TestExampleABIDecodeTuple(t *testing.T) {
 
 	f := &Entry{
-		Name: "coupon",
 		Outputs: ParameterArray{
 			{
 				Type: "tuple[]",
@@ -351,7 +348,6 @@ func TestExampleABIDecodeTuple(t *testing.T) {
 func TestExampleABIDecodeNonDynamicTuple(t *testing.T) {
 
 	f := &Entry{
-		Name: "coupon",
 		Outputs: ParameterArray{
 			{
 				Type: "tuple",
@@ -378,7 +374,6 @@ func TestExampleABIDecodeNonDynamicTuple(t *testing.T) {
 func TestExampleABIDecodeDoubleNestedTuple(t *testing.T) {
 
 	f := &Entry{
-		Name: "f",
 		Outputs: ParameterArray{
 			{
 				Type: "tuple[]",
@@ -442,7 +437,6 @@ func TestExampleABIDecodeDoubleNestedTuple(t *testing.T) {
 func TestExampleABIDecodeStaticNestedTupleInDynamicTuple(t *testing.T) {
 
 	f := &Entry{
-		Name: "f",
 		Outputs: ParameterArray{
 			{
 				Type: "tuple[]",
@@ -498,7 +492,6 @@ func TestExampleABIDecodeStaticNestedTupleInDynamicTuple(t *testing.T) {
 func TestExampleABIDecodeDoubleStaticNestedTuple(t *testing.T) {
 
 	f := &Entry{
-		Name: "f",
 		Outputs: ParameterArray{
 			{
 				Type: "tuple[]",
@@ -548,7 +541,6 @@ func TestExampleABIDecodeDoubleStaticNestedTuple(t *testing.T) {
 func TestExampleABIDecodeTupleFixed(t *testing.T) {
 
 	f := &Entry{
-		Name: "coupon",
 		Outputs: ParameterArray{
 			{
 				Type: "tuple[1]",
@@ -573,7 +565,6 @@ func TestExampleABIDecode8(t *testing.T) {
 
 	// a fixed-length array of dynamic types
 	f := &Entry{
-		Name: "g",
 		Outputs: ParameterArray{
 			{Type: "string[2]"},
 		},
