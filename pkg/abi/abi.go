@@ -698,7 +698,7 @@ func (e *Entry) SolidityDef() (string, []string, error) {
 	return e.SolidityDefCtx(context.Background())
 }
 
-// DescriptorStringCtx returns a Solidity-like descriptor of the entry, including its type
+// SolidityDefCtx returns a Solidity-like descriptor of the entry, including its type
 func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
 	// Everything apart from event and error is a type of function
 	isFunction := e.Type != Error && e.Type != Event
