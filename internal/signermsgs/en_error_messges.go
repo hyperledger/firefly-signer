@@ -103,4 +103,5 @@ var (
 	MsgInvalidEIP1559Transaction   = ffe("FF22084", "Transaction payload invalid (EIP-1559): %v")
 	MsgInvalidEIP155TransactionV   = ffe("FF22085", "Invalid V value from EIP-155 transaction (chainId=%d)")
 	MsgInvalidChainID              = ffe("FF22086", "Invalid chainId expected=%d actual=%d")
+	MsgRPCRequestBatchFailed       = ffe("FF22087", "Received response doesn't match the number of batched requests.")
 )

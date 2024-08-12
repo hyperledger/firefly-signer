@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -45,7 +45,7 @@ func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err err
 		return nil, err
 	}
 	s := &rpcServer{
-		backend:       rpcbackend.NewRPCClient(httpClient),
+		backend:       rpcbackend.NewRPCClient(ctx, httpClient),
 		apiServerDone: make(chan error),
 		wallet:        wallet,
 		chainID:       config.GetInt64(signerconfig.BackendChainID),
