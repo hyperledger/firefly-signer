@@ -373,7 +373,7 @@ func (tc *typeComponent) String() string {
 func (tc *typeComponent) SolidityParamDef(inFunction bool) (string, []string) {
 	isRef, paramDef, childStructs := tc.SolidityTypeDef()
 	if isRef && inFunction {
-		paramDef = fmt.Sprintf("%s calldata", paramDef)
+		paramDef = fmt.Sprintf("%s memory", paramDef)
 	}
 	if tc.parameter != nil && tc.parameter.Name != "" {
 		paramDef = fmt.Sprintf("%s %s", paramDef, tc.parameter.Name)
@@ -403,11 +403,10 @@ func (tc *typeComponent) SolidityTypeDef() (isRef bool, typeDef string, childStr
 func (tc *typeComponent) SolidityStructDef() (string, []string) {
 	name := ""
 	if tc.parameter != nil {
+		name = tc.parameter.Name
 		match := internalTypeStructExtractor.FindStringSubmatch(tc.parameter.InternalType)
 		if match != nil {
 			name = match[2]
-		} else {
-			name = tc.parameter.Name
 		}
 	}
 	buff := new(strings.Builder)

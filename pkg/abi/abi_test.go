@@ -29,148 +29,157 @@ import (
 )
 
 const sampleABI1 = `[
-	{
-	  "name": "foo",
-	  "type": "function",
-	  "inputs": [
-		{
-			"name": "a",
-			"type": "tuple",
-			"internalType": "struct AType",
-			"components": [
-				{
-					"name": "b",
-					"type": "uint"
-				},
-				{
-					"name": "c",
-					"type": "string[2]"
-				},
-				{
-					"name": "d",
-					"type": "bytes"
-				}
-			]
-		}
-	  ],
-	  "outputs": []
-	}
+    {
+      "name": "foo",
+      "type": "function",
+      "inputs": [
+        {
+            "name": "a",
+            "type": "tuple",
+            "internalType": "struct AType",
+            "components": [
+                {
+                    "name": "b",
+                    "type": "uint"
+                },
+                {
+                    "name": "c",
+                    "type": "string[2]"
+                },
+                {
+                    "name": "d",
+                    "type": "bytes"
+                }
+            ]
+        }
+      ],
+      "outputs": [
+            {
+                "name": "e",
+                "type": "uint256"
+            },
+            {
+                "name": "f",
+                "type": "string"
+            }
+      ]
+    }
   ]`
 
 const sampleABI2 = `[
-	{
-	  "name": "foo",
-	  "type": "function",
-	  "inputs": [
-		{
-			"name": "a",
-			"type": "uint8"
-		},
-		{
-			"name": "b",
-			"type": "int"
-		},
-		{
-			"name": "c",
-			"type": "address"
-		},
-		{
-			"name": "d",
-			"type": "bool"
-		},
-		{
-			"name": "e",
-			"type": "fixed64x10"
-		},
-		{
-			"name": "f",
-			"type": "ufixed"
-		},
-		{
-			"name": "g",
-			"type": "bytes10"
-		},
-		{
-			"name": "h",
-			"type": "bytes"
-		},
-		{
-			"name": "i",
-			"type": "function"
-		},
-		{
-			"name": "j",
-			"type": "string"
-		}
-	  ],
-	  "outputs": []
-	}
+    {
+      "name": "foo",
+      "type": "function",
+      "inputs": [
+        {
+            "name": "a",
+            "type": "uint8"
+        },
+        {
+            "name": "b",
+            "type": "int"
+        },
+        {
+            "name": "c",
+            "type": "address"
+        },
+        {
+            "name": "d",
+            "type": "bool"
+        },
+        {
+            "name": "e",
+            "type": "fixed64x10"
+        },
+        {
+            "name": "f",
+            "type": "ufixed"
+        },
+        {
+            "name": "g",
+            "type": "bytes10"
+        },
+        {
+            "name": "h",
+            "type": "bytes"
+        },
+        {
+            "name": "i",
+            "type": "function"
+        },
+        {
+            "name": "j",
+            "type": "string"
+        }
+      ],
+      "outputs": []
+    }
   ]`
 
 const sampleABI3 = `[
-	{
-		"type": "constructor",
-		"inputs": [
-		  {
-			  "name": "a",
-			  "type": "tuple",
-			  "components": [
-				  {
-					  "name": "b",
-					  "type": "uint"
-				  },
-				  {
-					  "name": "c",
-					  "type": "string[2]"
-				  },
-				  {
-					  "name": "d",
-					  "type": "bytes"
-				  }
-			  ]
-		  }
-		],
-		"outputs": []
-	},
-	{
-	  "name": "foo",
-	  "type": "function",
-	  "inputs": [
-		{
-			"name": "a",
-			"type": "tuple",
-			"components": [
-				{
-					"name": "b",
-					"type": "uint"
-				},
-				{
-					"name": "c",
-					"type": "string[2]"
-				},
-				{
-					"name": "d",
-					"type": "bytes"
-				}
-			]
-		}
-	  ],
-	  "outputs": []
-	}
+    {
+        "type": "constructor",
+        "inputs": [
+          {
+              "name": "a",
+              "type": "tuple",
+              "components": [
+                  {
+                      "name": "b",
+                      "type": "uint"
+                  },
+                  {
+                      "name": "c",
+                      "type": "string[2]"
+                  },
+                  {
+                      "name": "d",
+                      "type": "bytes"
+                  }
+              ]
+          }
+        ],
+        "outputs": []
+    },
+    {
+      "name": "foo",
+      "type": "function",
+      "inputs": [
+        {
+            "name": "a",
+            "type": "tuple",
+            "components": [
+                {
+                    "name": "b",
+                    "type": "uint"
+                },
+                {
+                    "name": "c",
+                    "type": "string[2]"
+                },
+                {
+                    "name": "d",
+                    "type": "bytes"
+                }
+            ]
+        }
+      ],
+      "outputs": []
+    }
   ]`
 
 const sampleABI4 = `[
-	{
-		"name": "simple",
-		"type": "function",
-		"inputs": [
-		  {
-			  "name": "a",
-			  "type": "string"
-		  }
-		],
-		"outputs": []
-	}
+    {
+        "name": "simple",
+        "type": "function",
+        "inputs": [
+          {
+              "name": "a",
+              "type": "string"
+          }
+        ],
+        "outputs": []
+    }
   ]`
 
 const sampleABI5 = `[
@@ -287,31 +296,31 @@ func testABI(t *testing.T, abiJSON string) (abi ABI) {
 func TestDocsFunctionCallExample(t *testing.T) {
 
 	transferABI := `[
-		{
-			"inputs": [
-				{
-					"internalType": "address",
-					"name": "recipient",
-					"type": "address"
-				},
-				{
-					"internalType": "uint256",
-					"name": "amount",
-					"type": "uint256"
-				}
-			],
-			"name": "transfer",
-			"outputs": [
-				{
-					"internalType": "bool",
-					"name": "",
-					"type": "bool"
-				}
-			],
-			"stateMutability": "nonpayable",
-			"type": "function"
-		}
-	]`
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "recipient",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "transfer",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
+                }
+            ],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ]`
 
 	// Parse the ABI definition
 	var abi ABI
@@ -320,9 +329,9 @@ func TestDocsFunctionCallExample(t *testing.T) {
 
 	// Parse some JSON input data conforming to the ABI
 	encodedValueTree, _ := f.Inputs.ParseJSON([]byte(`{
-		"recipient": "0x03706Ff580119B130E7D26C5e816913123C24d89",
-		"amount": "1000000000000000000"
-	}`))
+        "recipient": "0x03706Ff580119B130E7D26C5e816913123C24d89",
+        "amount": "1000000000000000000"
+    }`))
 
 	// We can serialize this directly to abi bytes
 	abiData, _ := encodedValueTree.EncodeABIData()
@@ -369,17 +378,17 @@ func TestDocsFunctionCallExample(t *testing.T) {
 func TestTLdr(t *testing.T) {
 
 	sampleABI, _ := ParseABI([]byte(`[
-		{
-			"name": "transfer",
-			"inputs": [
-				{"name": "recipient", "internalType": "address", "type": "address" },
-				{"name": "amount", "internalType": "uint256", "type": "uint256"}
-			],
-			"outputs": [{"internalType": "bool", "type": "bool"}],
-			"stateMutability": "nonpayable",
-			"type": "function"
-		}
-	]`))
+        {
+            "name": "transfer",
+            "inputs": [
+                {"name": "recipient", "internalType": "address", "type": "address" },
+                {"name": "amount", "internalType": "uint256", "type": "uint256"}
+            ],
+            "outputs": [{"internalType": "bool", "type": "bool"}],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ]`))
 	transferABIFn := sampleABI.Functions()["transfer"]
 	sampleABICallBytes, _ := transferABIFn.EncodeCallDataJSON([]byte(
 		`{"recipient":"0x4a0d852ebb58fc88cb260bb270ae240f72edc45b","amount":"100000000000000000"}`,
@@ -408,7 +417,7 @@ func TestABIGetTupleTypeTree(t *testing.T) {
 
 	solDef, childStructs, err := abi[0].SolidityDef()
 	assert.NoError(t, err)
-	assert.Equal(t, "function foo(AType calldata a) external { }", solDef)
+	assert.Equal(t, "function foo(AType memory a) external returns (uint256 e, string memory f) { }", solDef)
 	assert.Equal(t, []string{"struct AType { uint256 b; string[2] c; bytes d; }"}, childStructs)
 
 	assert.Equal(t, TupleComponent, tc.ComponentType())
@@ -432,18 +441,18 @@ func TestABIGetTupleTypeTree(t *testing.T) {
 func TestABIModifyReParse(t *testing.T) {
 
 	abiString := `[
-		{
-		  "name": "foo",
-		  "type": "function",
-		  "inputs": [
-			{
-				"name": "a",
-				"type": "uint256"
-			}
-		  ],
-		  "outputs": []
-		}
-	  ]`
+        {
+          "name": "foo",
+          "type": "function",
+          "inputs": [
+            {
+                "name": "a",
+                "type": "uint256"
+            }
+          ],
+          "outputs": []
+        }
+      ]`
 	var abi ABI
 	err := json.Unmarshal([]byte(abiString), &abi)
 	assert.NoError(t, err)
@@ -465,18 +474,18 @@ func TestABIModifyReParse(t *testing.T) {
 func TestABIModifyBadInputs(t *testing.T) {
 
 	abiString := `[
-		{
-		  "name": "foo",
-		  "type": "function",
-		  "inputs": [
-			{
-				"name": "a",
-				"type": "uint-1"
-			}
-		  ],
-		  "outputs": []
-		}
-	  ]`
+        {
+          "name": "foo",
+          "type": "function",
+          "inputs": [
+            {
+                "name": "a",
+                "type": "uint-1"
+            }
+          ],
+          "outputs": []
+        }
+      ]`
 	var abi ABI
 	err := json.Unmarshal([]byte(abiString), &abi)
 	assert.NoError(t, err)
@@ -500,18 +509,18 @@ func TestABIModifyBadInputs(t *testing.T) {
 func TestABIModifyBadOutputs(t *testing.T) {
 
 	abiString := `[
-		{
-		  "name": "foo",
-		  "type": "function",
-		  "inputs": [],
-		  "outputs": [
-			  {
-				"name": "a",
-				"type": "uint-1"
-			  }
-		  ]
-		}
-	  ]`
+        {
+          "name": "foo",
+          "type": "function",
+          "inputs": [],
+          "outputs": [
+              {
+                "name": "a",
+                "type": "uint-1"
+              }
+          ]
+        }
+      ]`
 	var abi ABI
 	err := json.Unmarshal([]byte(abiString), &abi)
 	assert.NoError(t, err)
@@ -534,12 +543,12 @@ func TestParseJSONObjectModeOk(t *testing.T) {
 	inputs := testABI(t, sampleABI1)[0].Inputs
 
 	values := `{
-		"a": {
-			"b": 12345,
-			"c": ["string1", "string2"],
-			"d": "0xfeedbeef"
-		}
-	}`
+        "a": {
+            "b": 12345,
+            "c": ["string1", "string2"],
+            "d": "0xfeedbeef"
+        }
+    }`
 	var jv interface{}
 	err := json.Unmarshal([]byte(values), &jv)
 	assert.NoError(t, err)
@@ -560,12 +569,12 @@ func TestParseJSONArrayModeOk(t *testing.T) {
 	inputs := testABI(t, sampleABI1)[0].Inputs
 
 	values := `[
-		[
-			12345,
-			["string1", "string2"],
-			"0xfeedbeef"
-		]
-	]`
+        [
+            12345,
+            ["string1", "string2"],
+            "0xfeedbeef"
+        ]
+    ]`
 
 	cv, err := inputs.ParseJSON([]byte(values))
 	assert.NoError(t, err)
@@ -583,12 +592,12 @@ func TestParseJSONMixedModeOk(t *testing.T) {
 	inputs := testABI(t, sampleABI1)[0].Inputs
 
 	values := `[
-		{
-			"b": 12345,
-			"c": ["string1", "string2"],
-			"d": "feedbeef"
-		}
-	]`
+        {
+            "b": 12345,
+            "c": ["string1", "string2"],
+            "d": "feedbeef"
+        }
+    ]`
 
 	cv, err := inputs.ParseJSON([]byte(values))
 	assert.NoError(t, err)
@@ -630,17 +639,17 @@ func TestParseJSONArrayLotsOfTypes(t *testing.T) {
 	inputs := testABI(t, sampleABI2)[0].Inputs
 
 	values := `[
-		"-12345",
-		"0x12345",
-		"0x4a0d852eBb58FC88Cb260Bb270AE240f72EdC45B",
-		true,
-		"-1.2345",
-		1.2345,
-		"0xfeedbeef",
-		"00010203040506070809",
-		"00",
-		"test string"
-	]`
+        "-12345",
+        "0x12345",
+        "0x4a0d852eBb58FC88Cb260Bb270AE240f72EdC45B",
+        true,
+        "-1.2345",
+        1.2345,
+        "0xfeedbeef",
+        "00010203040506070809",
+        "00",
+        "test string"
+    ]`
 
 	cv, err := inputs.ParseJSON([]byte(values))
 	assert.NoError(t, err)
@@ -662,7 +671,7 @@ func TestParseJSONArrayLotsOfTypes(t *testing.T) {
 
 	solDef, childStructs, err := testABI(t, sampleABI2)[0].SolidityDef()
 	assert.NoError(t, err)
-	assert.Equal(t, "function foo(uint8 a, int256 b, address c, bool d, fixed64x10 e, ufixed128x18 f, bytes10 g, bytes calldata h, function i, string calldata j) external { }", solDef)
+	assert.Equal(t, "function foo(uint8 a, int256 b, address c, bool d, fixed64x10 e, ufixed128x18 f, bytes10 g, bytes memory h, function i, string memory j) external { }", solDef)
 	assert.Empty(t, childStructs)
 
 }
@@ -676,18 +685,18 @@ func TestParseJSONBadData(t *testing.T) {
 
 func TestParseJSONBadABI(t *testing.T) {
 	inputs := testABI(t, `[
-		{
-		  "name": "foo",
-		  "type": "function",
-		  "inputs": [
-			{
-				"name": "a",
-				"type": "wrong"
-			}
-		  ],
-		  "outputs": []
-		}
-	  ]`)[0].Inputs
+        {
+          "name": "foo",
+          "type": "function",
+          "inputs": [
+            {
+                "name": "a",
+                "type": "wrong"
+            }
+          ],
+          "outputs": []
+        }
+      ]`)[0].Inputs
 	_, err := inputs.ParseJSON([]byte(`{}`))
 	assert.Regexp(t, "FF22025", err)
 
@@ -695,18 +704,18 @@ func TestParseJSONBadABI(t *testing.T) {
 
 func TestEncodeABIDataCtxBadABI(t *testing.T) {
 	f := testABI(t, `[
-		{
-		  "name": "foo",
-		  "type": "function",
-		  "inputs": [
-			{
-				"name": "a",
-				"type": "wrong"
-			}
-		  ],
-		  "outputs": []
-		}
-	  ]`)[0]
+        {
+          "name": "foo",
+          "type": "function",
+          "inputs": [
+            {
+                "name": "a",
+                "type": "wrong"
+            }
+          ],
+          "outputs": []
+        }
+      ]`)[0]
 	_, err := f.EncodeCallData(nil)
 	assert.Regexp(t, "FF22025", err)
 }
@@ -732,6 +741,17 @@ func TestSignatureHashInvalid(t *testing.T) {
 	assert.Regexp(t, "FF22025", err)
 
 	assert.Equal(t, make(ethtypes.HexBytes0xPrefix, 32), e.SignatureHashBytes())
+
+	e = &Entry{
+		Outputs: ParameterArray{
+			{
+				Type: "foobar",
+			},
+		},
+	}
+	_, _, err = e.SolidityDef()
+	assert.Regexp(t, "FF22025", err)
+
 }
 
 func TestDecodeEventIndexedOnly(t *testing.T) {
@@ -767,10 +787,10 @@ func TestDecodeEventIndexedOnly(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.JSONEq(t, `{
-		"from": "0000000000000000000000000000000000000000",
-		"to": "fb075bb99f2aa4c49955bf703509a227d7a12248",
-		"tokenId": "2333"
-	}`, string(j))
+        "from": "0000000000000000000000000000000000000000",
+        "to": "fb075bb99f2aa4c49955bf703509a227d7a12248",
+        "tokenId": "2333"
+    }`, string(j))
 }
 
 func TestDecodeEventMixed(t *testing.T) {
@@ -819,13 +839,13 @@ func TestDecodeEventMixed(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.JSONEq(t, `{
-		"indexed1": "11111",
-		"indexed2": "3968ef051b422d3d1cdc182a88bba8dd922e6fa4",
-		"unindexed1": "22222",
-		"unindexed2": true,
-		"indexed3": "592fa743889fc7f92ac2a37bb1f5ba1daf2a5c84741ca0e0061d243a2e6707ba",
-		"unindexed3": "Hello World"
-	}`, string(j))
+        "indexed1": "11111",
+        "indexed2": "3968ef051b422d3d1cdc182a88bba8dd922e6fa4",
+        "unindexed1": "22222",
+        "unindexed2": true,
+        "indexed3": "592fa743889fc7f92ac2a37bb1f5ba1daf2a5c84741ca0e0061d243a2e6707ba",
+        "unindexed3": "Hello World"
+    }`, string(j))
 }
 
 func TestDecodeEventBadABI(t *testing.T) {
@@ -981,7 +1001,7 @@ func TestComplexStructSolidityDef(t *testing.T) {
 
 	solDef, childStructs, err := abi.Functions()["invoice"].SolidityDef()
 	assert.NoError(t, err)
-	assert.Equal(t, "function invoice(Invoice calldata _invoice) external payable { }", solDef)
+	assert.Equal(t, "function invoice(Invoice memory _invoice) external payable { }", solDef)
 	assert.Equal(t, []string{
 		"struct Customer { address owner; bytes32 locator; }",
 		"struct Widget { string description; uint256 price; string[] attributes; }",
@@ -994,7 +1014,6 @@ func TestComplexStructSolidityDef(t *testing.T) {
 	assert.Equal(t, []string{
 		"struct Customer { address owner; bytes32 locator; }",
 		"struct Widget { string description; uint256 price; string[] attributes; }",
-		"struct Invoice { Customer customer; Widget[] widgets; }",
 	}, childStructs)
 
 }
