@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/firefly-common/pkg/config"
 	"github.com/hyperledger/firefly-common/pkg/ffresty"
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-signer/internal/signerconfig"
@@ -69,9 +70,9 @@ func newTestServer(t *testing.T, rpcHandler testRPCHandler, options ...RPCClient
 	var rb *RPCClient
 
 	if len(options) == 1 {
-		rb = NewRPCClientWithOption(ctx, c, options[0]).(*RPCClient)
+		rb = NewRPCClientWithOption(c, options[0]).(*RPCClient)
 	} else {
-		rb = NewRPCClient(ctx, c).(*RPCClient)
+		rb = NewRPCClient(c).(*RPCClient)
 	}
 
 	return ctx, rb, func() {
@@ -112,15 +113,30 @@ func newBatchTestServer(t *testing.T, rpcHandler testBatchRPCHandler, options ..
 	var rb *RPCClient
 
 	if len(options) == 1 {
-		rb = NewRPCClientWithOption(ctx, c, options[0]).(*RPCClient)
+		rb = NewRPCClientWithOption(c, options[0]).(*RPCClient)
 	} else {
-		rb = NewRPCClientWithOption(ctx, c, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{}}).(*RPCClient)
+		rpcConfig := config.RootSection("unittest")
+		InitConfig(rpcConfig)
+		rpcConfig.Set(ConfigBatchEnabled, true)
+		rpcOptions := ReadConfig(ctx, rpcConfig)
+		rb = NewRPCClientWithOption(c, rpcOptions).(*RPCClient)
 	}
 
 	return ctx, rb, func() {
 		cancelCtx()
 		server.Close()
 	}
+}
+
+func TestNewRPCClientFailDueToBatchContextMissing(t *testing.T) {
+
+	rpcConfig := config.RootSection("unittest")
+	InitConfig(rpcConfig)
+	rpcConfig.Set(ConfigBatchEnabled, true)
+
+	assert.Panics(t, func() {
+		NewRPCClientWithOption(nil, ReadConfig(nil, rpcConfig))
+	})
 }
 
 func TestSyncRequestOK(t *testing.T) {
@@ -269,7 +285,7 @@ func TestSyncRPCCallBadJSONResponse(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(context.Background(), signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	rb := NewRPCClient(context.Background(), c).(*RPCClient)
+	rb := NewRPCClient(c).(*RPCClient)
 
 	var txCount ethtypes.HexInteger
 	rpcErr := rb.CallRPC(context.Background(), &txCount, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
@@ -290,7 +306,7 @@ func TestSyncRPCCallFailParseJSONResponse(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(context.Background(), signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	rb := NewRPCClient(context.Background(), c).(*RPCClient)
+	rb := NewRPCClient(c).(*RPCClient)
 
 	var mapResult map[string]interface{}
 	rpcErr := rb.CallRPC(context.Background(), &mapResult, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
@@ -341,7 +357,7 @@ func TestSyncRequestConcurrency(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	rb := NewRPCClientWithOption(ctx, c, RPCClientOptions{
+	rb := NewRPCClientWithOption(c, RPCClientOptions{
 		MaxConcurrentRequest: 1,
 	}).(*RPCClient)
 
@@ -406,10 +422,12 @@ func TestBatchSyncRequestCanceledContext(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	rb := NewRPCClientWithOption(ctx, c, RPCClientOptions{
+	rb := NewRPCClientWithOption(c, RPCClientOptions{
 		BatchOptions: &RPCClientBatchOptions{
-			BatchSize:        1,
-			BatchWorkerCount: 1,
+			BatchDispatcherContext:      ctx,
+			Enabled:                     true,
+			BatchSize:                   1,
+			BatchMaxDispatchConcurrency: 1,
 		},
 	}).(*RPCClient)
 
@@ -425,9 +443,60 @@ func TestBatchSyncRequestCanceledContext(t *testing.T) {
 	// this checks request hit cancel context
 	_, err = rb.SyncRequest(ctx, &RPCRequest{})
 	assert.Regexp(t, "FF22063", err)
-
 }
-func TestBatchSyncRequestCanceledContextWhenQueueingABatch(t *testing.T) {
+
+func TestBatchSyncRequestCanceledContextWhenQueueing(t *testing.T) {
+
+	ctx, cancelCtx := context.WithCancel(context.Background())
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.FailNow(t, "Not expecting JSON-RPC endpoint to get called")
+	}))
+	defer server.Close()
+
+	signerconfig.Reset()
+	prefix := signerconfig.BackendConfig
+	prefix.Set(ffresty.HTTPConfigURL, server.URL)
+	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
+	assert.NoError(t, err)
+
+	rpcConfig := config.RootSection("unittest")
+	InitConfig(rpcConfig)
+	rpcConfig.Set(ConfigBatchEnabled, true)
+	rpcConfig.Set(ConfigBatchTimeout, "2h") // very long delay
+	rpcConfig.Set(ConfigBatchSize, 2000)    // very big batch size
+
+	rpcOptions := ReadConfig(ctx, rpcConfig)
+
+	rb := NewRPCClientWithOption(c, rpcOptions).(*RPCClient)
+
+	checkDone := make(chan bool)
+	go func() {
+		reqContext := context.Background()
+		_, err = rb.SyncRequest(reqContext, &RPCRequest{})
+		assert.Regexp(t, "FF22063", err) // this checks the response hit cancel context
+		close(checkDone)
+	}()
+	time.Sleep(50 * time.Millisecond) // wait for the request to be queued and start the ticker
+	cancelCtx()
+	<-checkDone
+
+	ctx2, cancelCtx2 := context.WithCancel(context.Background())
+
+	rpcOptions = ReadConfig(ctx2, rpcConfig)
+	rb = NewRPCClientWithOption(c, rpcOptions).(*RPCClient)
+
+	checkDone = make(chan bool)
+	go func() {
+		reqContext := context.Background()
+		_, err = rb.SyncRequest(reqContext, &RPCRequest{})
+		assert.Regexp(t, "FF22063", err) // this checks the response hit cancel context
+		close(checkDone)
+	}()
+	cancelCtx2() // cancel context straight away to check the pending request are drained correctly
+	<-checkDone
+}
+
+func TestBatchSyncRequestCanceledContextWhenDispatchingABatch(t *testing.T) {
 
 	blocked := make(chan struct{})
 	ctx, cancelCtx := context.WithCancel(context.Background())
@@ -444,14 +513,16 @@ func TestBatchSyncRequestCanceledContextWhenQueueingABatch(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	rb := NewRPCClientWithOption(ctx, c, RPCClientOptions{
+	rb := NewRPCClientWithOption(c, RPCClientOptions{
 		BatchOptions: &RPCClientBatchOptions{
-			BatchSize:        1,
-			BatchWorkerCount: 1,
+			BatchDispatcherContext:      ctx,
+			Enabled:                     true,
+			BatchSize:                   1,
+			BatchMaxDispatchConcurrency: 1,
 		},
 	}).(*RPCClient)
 
-	rb.requestBatchWorkerSlots <- true // fill the worker slot so all batch will be queueing
+	rb.requestBatchConcurrencySlots <- true // fill the worker slot so all batch will be queueing
 
 	checkDone := make(chan bool)
 	go func() {
@@ -466,6 +537,8 @@ func TestBatchSyncRequestCanceledContextWhenQueueingABatch(t *testing.T) {
 }
 func TestBatchSyncRPCCallErrorResponse(t *testing.T) {
 
+	bgCtx := context.Background()
+
 	ctx, rb, done := newBatchTestServer(t, func(rpcReqs []*RPCRequest) (status int, rpcRes []*RPCResponse) {
 		assert.Equal(t, 1, len(rpcReqs))
 		return 500, []*RPCResponse{{
@@ -475,7 +548,10 @@ func TestBatchSyncRPCCallErrorResponse(t *testing.T) {
 				Message: "pop",
 			},
 		}}
-	}, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{ /*use default configuration for batching*/ }})
+	}, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{
+		BatchDispatcherContext: bgCtx,
+		Enabled:                true,
+	}})
 	rb.requestCounter = 12345
 	defer done()
 
@@ -485,11 +561,15 @@ func TestBatchSyncRPCCallErrorResponse(t *testing.T) {
 }
 
 func TestBatchSyncRPCCallErrorCountMismatch(t *testing.T) {
+	bgCtx := context.Background()
 
 	ctx, rb, done := newBatchTestServer(t, func(rpcReqs []*RPCRequest) (status int, rpcRes []*RPCResponse) {
 		assert.Equal(t, 1, len(rpcReqs))
 		return 500, []*RPCResponse{}
-	}, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{ /*use default configuration for batching*/ }})
+	}, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{
+		BatchDispatcherContext: bgCtx,
+		Enabled:                true,
+	}})
 	rb.requestCounter = 12345
 	defer done()
 
@@ -499,6 +579,7 @@ func TestBatchSyncRPCCallErrorCountMismatch(t *testing.T) {
 }
 
 func TestBatchSyncRPCCallBadJSONResponse(t *testing.T) {
+	bgCtx := context.Background()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
@@ -512,7 +593,10 @@ func TestBatchSyncRPCCallBadJSONResponse(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(context.Background(), signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	rb := NewRPCClientWithOption(context.Background(), c, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{ /*use default configuration for batching*/ }}).(*RPCClient)
+	rb := NewRPCClientWithOption(c, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{
+		BatchDispatcherContext: bgCtx,
+		Enabled:                true,
+	}}).(*RPCClient)
 
 	var txCount ethtypes.HexInteger
 	rpcErr := rb.CallRPC(context.Background(), &txCount, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
@@ -520,6 +604,7 @@ func TestBatchSyncRPCCallBadJSONResponse(t *testing.T) {
 }
 
 func TestBatchSyncRPCCallFailParseJSONResponse(t *testing.T) {
+	bgCtx := context.Background()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
@@ -533,7 +618,10 @@ func TestBatchSyncRPCCallFailParseJSONResponse(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(context.Background(), signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	rb := NewRPCClientWithOption(context.Background(), c, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{ /*use default configuration for batching*/ }}).(*RPCClient)
+	rb := NewRPCClientWithOption(c, RPCClientOptions{BatchOptions: &RPCClientBatchOptions{
+		BatchDispatcherContext: bgCtx,
+		Enabled:                true,
+	}}).(*RPCClient)
 
 	var mapResult map[string]interface{}
 	rpcErr := rb.CallRPC(context.Background(), &mapResult, "eth_getTransactionCount", ethtypes.MustNewAddress("0xfb075bb99f2aa4c49955bf703509a227d7a12248"), "pending")
@@ -589,14 +677,16 @@ func TestBatchRequestsOKWithBatchSize(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	tH := 2 * time.Hour
-	rb := NewRPCClientWithOption(ctx, c, RPCClientOptions{
-		MaxConcurrentRequest: 10,
-		BatchOptions: &RPCClientBatchOptions{
-			BatchDelay: &tH, // very long delay, so need to rely on batch size to be hit for sending a batch
-			BatchSize:  2,
-		},
-	}).(*RPCClient)
+	rpcConfig := config.RootSection("unittest")
+	InitConfig(rpcConfig)
+	rpcConfig.Set(ConfigBatchEnabled, true)
+	rpcConfig.Set(ConfigMaxConcurrentRequest, 10)
+	rpcConfig.Set(ConfigBatchTimeout, "2h") // very long delay, so need to rely on batch size to be hit for sending a batch
+	rpcConfig.Set(ConfigBatchSize, 2)
+
+	rpcOptions := ReadConfig(ctx, rpcConfig)
+
+	rb := NewRPCClientWithOption(c, rpcOptions).(*RPCClient)
 
 	round := 400
 
@@ -670,15 +760,18 @@ func TestBatchRequestsTestWorkerCounts(t *testing.T) {
 	assert.NoError(t, err)
 
 	// only a single worker
-	tH := 2 * time.Hour
-	rb := NewRPCClientWithOption(ctx, c, RPCClientOptions{
-		MaxConcurrentRequest: 10,
-		BatchOptions: &RPCClientBatchOptions{
-			BatchDelay:       &tH, // very long delay, so need to rely on batch size to be hit for sending a batch
-			BatchSize:        2,
-			BatchWorkerCount: 1,
-		},
-	}).(*RPCClient)
+
+	rpcConfig := config.RootSection("unittest")
+	InitConfig(rpcConfig)
+	rpcConfig.Set(ConfigBatchEnabled, true)
+	rpcConfig.Set(ConfigMaxConcurrentRequest, 10)
+	rpcConfig.Set(ConfigBatchTimeout, "2h") // very long delay, so need to rely on batch size to be hit for sending a batch
+	rpcConfig.Set(ConfigBatchSize, 2)
+	rpcConfig.Set(ConfigBatchMaxDispatchConcurrency, 1)
+
+	rpcOptions := ReadConfig(ctx, rpcConfig)
+
+	rb := NewRPCClientWithOption(c, rpcOptions).(*RPCClient)
 
 	round := 5 // doing first round, each round will have at least 200ms delay, so the whole flow will guaranteed to be more than 1s
 
@@ -709,12 +802,14 @@ func TestBatchRequestsTestWorkerCounts(t *testing.T) {
 
 	// number of worker equal to the number of rounds
 	// so the delay should be slightly greater than per request delay (200ms), but hopefully less than 300ms (with 100ms overhead)
-	rb = NewRPCClientWithOption(ctx, c, RPCClientOptions{
+	rb = NewRPCClientWithOption(c, RPCClientOptions{
 		MaxConcurrentRequest: 10,
 		BatchOptions: &RPCClientBatchOptions{
-			BatchDelay:       &tH, // very long delay, so need to rely on batch size to be hit for sending a batch
-			BatchSize:        2,
-			BatchWorkerCount: round,
+			BatchDispatcherContext:      ctx,
+			Enabled:                     true,
+			BatchTimeout:                2 * time.Hour, // very long delay, so need to rely on batch size to be hit for sending a batch
+			BatchSize:                   2,
+			BatchMaxDispatchConcurrency: round,
 		},
 	}).(*RPCClient)
 
@@ -780,14 +875,18 @@ func TestBatchRequestsOKWithBatchDelay(t *testing.T) {
 	prefix.Set(ffresty.HTTPConfigURL, server.URL)
 	c, err := ffresty.New(ctx, signerconfig.BackendConfig)
 	assert.NoError(t, err)
-	hundredMs := 100 * time.Millisecond
-	rb := NewRPCClientWithOption(ctx, c, RPCClientOptions{
-		MaxConcurrentRequest: 10,
-		BatchOptions: &RPCClientBatchOptions{
-			BatchDelay: &hundredMs,
-			BatchSize:  2000, // very big batch size, so need to rely on batch delay to be hit for sending a batch
-		},
-	}).(*RPCClient)
+
+	rpcConfig := config.RootSection("ut_fs_config")
+	InitConfig(rpcConfig)
+	rpcConfig.Set(ConfigBatchEnabled, true)
+	rpcConfig.Set(ConfigMaxConcurrentRequest, 10)
+	rpcConfig.Set(ConfigBatchTimeout, "100ms") // very long delay, so need to rely on batch size to be hit for sending a batch
+	rpcConfig.Set(ConfigBatchSize, 2000)
+	rpcConfig.Set(ConfigBatchMaxDispatchConcurrency, 1)
+
+	rpcOptions := ReadConfig(ctx, rpcConfig)
+
+	rb := NewRPCClientWithOption(c, rpcOptions).(*RPCClient)
 
 	round := 5
 

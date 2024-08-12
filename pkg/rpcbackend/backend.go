@@ -50,12 +50,12 @@ type Backend interface {
 }
 
 // NewRPCClient Constructor
-func NewRPCClient(ctx context.Context, client *resty.Client) Backend {
-	return NewRPCClientWithOption(ctx, client, RPCClientOptions{})
+func NewRPCClient(client *resty.Client) Backend {
+	return NewRPCClientWithOption(client, RPCClientOptions{})
 }
 
 // NewRPCClientWithOption Constructor
-func NewRPCClientWithOption(ctx context.Context, client *resty.Client, options RPCClientOptions) Backend {
+func NewRPCClientWithOption(client *resty.Client, options RPCClientOptions) Backend {
 	rpcClient := &RPCClient{
 		client: client,
 	}
@@ -64,44 +64,36 @@ func NewRPCClientWithOption(ctx context.Context, client *resty.Client, options R
 		rpcClient.concurrencySlots = make(chan bool, options.MaxConcurrentRequest)
 	}
 
-	if options.BatchOptions != nil {
-		batchDelay := 50 * time.Millisecond
+	if options.BatchOptions != nil && options.BatchOptions.Enabled {
+		if options.BatchOptions.BatchDispatcherContext == nil {
+			panic("must provide a batch dispatcher context when batch is enabled")
+		}
+		batchTimeout := 50 * time.Millisecond
 		batchSize := 500
 		batchWorkerCount := 50
-		if options.BatchOptions.BatchDelay != nil {
-			batchDelay = *options.BatchOptions.BatchDelay
+		if options.BatchOptions.BatchTimeout > 0 {
+			batchTimeout = options.BatchOptions.BatchTimeout
 		}
 
-		if options.BatchOptions.BatchSize != 0 {
+		if options.BatchOptions.BatchSize > 0 {
 			batchSize = options.BatchOptions.BatchSize
 		}
-		if options.BatchOptions.BatchWorkerCount != 0 {
-			batchWorkerCount = options.BatchOptions.BatchWorkerCount
+		if options.BatchOptions.BatchMaxDispatchConcurrency > 0 {
+			batchWorkerCount = options.BatchOptions.BatchMaxDispatchConcurrency
 		}
-		rpcClient.requestBatchWorkerSlots = make(chan bool, batchWorkerCount)
-		rpcClient.startBatcher(ctx, batchDelay, batchSize)
+		rpcClient.requestBatchConcurrencySlots = make(chan bool, batchWorkerCount)
+		rpcClient.startBatchDispatcher(options.BatchOptions.BatchDispatcherContext, batchTimeout, batchSize)
 	}
 
 	return rpcClient
 }
 
 type RPCClient struct {
-	client                  *resty.Client
-	concurrencySlots        chan bool
-	requestCounter          int64
-	requestBatchQueue       chan *batchRequest
-	requestBatchWorkerSlots chan bool
-}
-
-type RPCClientBatchOptions struct {
-	BatchDelay       *time.Duration
-	BatchSize        int
-	BatchWorkerCount int
-}
-
-type RPCClientOptions struct {
-	MaxConcurrentRequest int64
-	BatchOptions         *RPCClientBatchOptions
+	client                       *resty.Client
+	concurrencySlots             chan bool
+	requestCounter               int64
+	requestBatchQueue            chan *batchRequest
+	requestBatchConcurrencySlots chan bool
 }
 
 type RPCRequest struct {
@@ -174,40 +166,68 @@ type batchRequest struct {
 	rpcErr chan error
 }
 
-func (rc *RPCClient) startBatcher(ctx context.Context, batchDelay time.Duration, batchSize int) {
-	requestQueue := make(chan *batchRequest)
+func (rc *RPCClient) startBatchDispatcher(dispatcherRootContext context.Context, batchTimeout time.Duration, batchSize int) {
+	if rc.requestBatchQueue == nil { // avoid orphaned dispatcher
+		requestQueue := make(chan *batchRequest)
+		go func() {
+			var batch []*batchRequest
+			var ticker *time.Ticker
+			var tickerChannel <-chan time.Time
+			for {
+				select {
+				case req := <-requestQueue:
+					batch = append(batch, req)
+					if ticker == nil {
+						// first request received start a ticker
+						ticker = time.NewTicker(batchTimeout)
+						defer ticker.Stop()
+						tickerChannel = ticker.C
+					}
 
-	go func() {
-		ticker := time.NewTicker(batchDelay)
-		defer ticker.Stop()
+					if len(batch) >= batchSize {
+						rc.dispatchBatch(dispatcherRootContext, batch)
+						batch = nil
+						ticker.Stop() // batch dispatched, stop the ticker, the next request will start a new ticker if needed
+						ticker = nil
+						tickerChannel = nil
+					}
 
-		var batch []*batchRequest
+				case <-tickerChannel:
+					if len(batch) > 0 {
+						rc.dispatchBatch(dispatcherRootContext, batch)
+						batch = nil
 
-		for {
-			select {
-			case req := <-requestQueue:
-				batch = append(batch, req)
-				if len(batch) >= batchSize {
-					rc.sendBatch(ctx, batch)
-					batch = nil
+						ticker.Stop() // batch dispatched, stop the ticker, the next request will start a new ticker if needed
+						ticker = nil
+						tickerChannel = nil
+					}
+
+				case <-dispatcherRootContext.Done():
+					if ticker != nil {
+						ticker.Stop() // clean up the ticker
+					}
+					select { // drain the queue
+					case req := <-requestQueue:
+						batch = append(batch, req)
+					default:
+					}
+					for i, req := range batch {
+						// mark all queueing requests as failed
+						cancelCtxErr := i18n.NewError(dispatcherRootContext, signermsgs.MsgRequestCanceledContext, req.rpcReq.ID)
+						batch[i].rpcErr <- cancelCtxErr
+					}
+
+					return
 				}
-			case <-ticker.C:
-				if len(batch) > 0 {
-					rc.sendBatch(ctx, batch)
-					batch = nil
-				}
-			case <-ctx.Done():
-				return
 			}
-		}
-	}()
-
-	rc.requestBatchQueue = requestQueue
+		}()
+		rc.requestBatchQueue = requestQueue
+	}
 }
 
-func (rc *RPCClient) sendBatch(ctx context.Context, batch []*batchRequest) {
+func (rc *RPCClient) dispatchBatch(ctx context.Context, batch []*batchRequest) {
 	select {
-	case rc.requestBatchWorkerSlots <- true:
+	case rc.requestBatchConcurrencySlots <- true: // use a buffered channel to control the number of concurrent thread for batch dispatcher
 		// wait for the worker slot and continue
 	case <-ctx.Done():
 		for _, req := range batch {
@@ -218,85 +238,91 @@ func (rc *RPCClient) sendBatch(ctx context.Context, batch []*batchRequest) {
 	}
 	go func() {
 		defer func() {
-			<-rc.requestBatchWorkerSlots
+			<-rc.requestBatchConcurrencySlots
 		}()
 
-		batchRPCTraceID := fmt.Sprintf("batch-%d", time.Now().UnixNano())
-		traceIDs := make([]string, len(batch))
-
-		var rpcReqs []*RPCRequest
-		for i, req := range batch {
-			// We always set the back-end request ID - as we need to support requests coming in from
-			// multiple concurrent clients on our front-end that might use clashing IDs.
-			var beReq = *req.rpcReq
-			beReq.JSONRpc = "2.0"
-			rpcTraceID := rc.allocateRequestID(&beReq)
-			if req.rpcReq.ID != nil {
-				// We're proxying a request with front-end RPC ID - log that as well
-				rpcTraceID = fmt.Sprintf("%s->%s/%s", req.rpcReq.ID, batchRPCTraceID, rpcTraceID)
-			}
-			traceIDs[i] = rpcTraceID
-			rpcReqs = append(rpcReqs, &beReq)
-		}
-		log.L(ctx).Debugf("RPC[%s] --> BATCH %d requests", batchRPCTraceID, len(rpcReqs))
-
-		responses := make([]*RPCResponse, len(batch))
-		res, err := rc.client.R().
-			SetContext(ctx).
-			SetBody(rpcReqs).
-			SetResult(&responses).
-			SetError(&responses).
-			Post("")
-
-		if err != nil {
-			log.L(ctx).Errorf("RPC[%s] <-- ERROR: %s", batchRPCTraceID, err)
-			for _, req := range batch {
-				req.rpcErr <- err
-			}
-			return
-		}
-
-		if len(responses) != len(batch) {
-			err := i18n.NewError(ctx, signermsgs.MsgRPCRequestBatchFailed)
-			for _, req := range batch {
-				req.rpcErr <- err
-			}
-			return
-		}
-
-		for i, resp := range responses {
-			if logrus.IsLevelEnabled(logrus.TraceLevel) {
-				jsonOutput, _ := json.Marshal(resp)
-				log.L(ctx).Tracef("RPC[%s] OUTPUT: %s", batchRPCTraceID, jsonOutput)
-			}
-
-			// JSON/RPC allows errors to be returned with a 200 status code, as well as other status codes
-			if res.IsError() || (resp != nil && resp.Error != nil && resp.Error.Code != 0) {
-				rpcMsg := ""
-				errLog := ""
-				if resp != nil {
-					rpcMsg = resp.Message()
-					errLog = rpcMsg
-				}
-				if rpcMsg == "" {
-					// Log the raw result in the case of JSON parse error etc. (note that Resty no longer
-					// returns this as an error - rather the body comes back raw)
-					errLog = string(res.Body())
-					rpcMsg = i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed, res.Status()).Error()
-				}
-				traceID := traceIDs[i]
-				log.L(ctx).Errorf("RPC[%s] <-- [%d]: %s", traceID, res.StatusCode(), errLog)
-				batch[i].rpcErr <- fmt.Errorf(rpcMsg)
-			} else {
-				if resp.Result == nil {
-					// We don't want a result for errors, but a null success response needs to go in there
-					resp.Result = fftypes.JSONAnyPtr(fftypes.NullString)
-				}
-				batch[i].rpcRes <- resp
-
-			}
-		}
+		// once a concurrency slot is obtained, dispatch the batch
+		rc.dispatch(ctx, batch)
 	}()
+}
+
+func (rc *RPCClient) dispatch(ctx context.Context, batch []*batchRequest) {
+
+	batchRPCTraceID := fmt.Sprintf("batch-%d", time.Now().UnixNano())
+	traceIDs := make([]string, len(batch))
+
+	var rpcReqs []*RPCRequest
+	for i, req := range batch {
+		// We always set the back-end request ID - as we need to support requests coming in from
+		// multiple concurrent clients on our front-end that might use clashing IDs.
+		var beReq = *req.rpcReq
+		beReq.JSONRpc = "2.0"
+		rpcTraceID := rc.allocateRequestID(&beReq)
+		if req.rpcReq.ID != nil {
+			// We're proxying a request with front-end RPC ID - log that as well
+			rpcTraceID = fmt.Sprintf("%s->%s/%s", req.rpcReq.ID, batchRPCTraceID, rpcTraceID)
+		}
+		traceIDs[i] = rpcTraceID
+		rpcReqs = append(rpcReqs, &beReq)
+	}
+	log.L(ctx).Debugf("RPC[%s] --> BATCH %d requests", batchRPCTraceID, len(rpcReqs))
+
+	responses := make([]*RPCResponse, len(batch))
+	res, err := rc.client.R().
+		SetContext(ctx).
+		SetBody(rpcReqs).
+		SetResult(&responses).
+		SetError(&responses).
+		Post("")
+
+	if err != nil {
+		log.L(ctx).Errorf("RPC[%s] <-- ERROR: %s", batchRPCTraceID, err)
+		for _, req := range batch {
+			req.rpcErr <- err
+		}
+		return
+	}
+
+	if len(responses) != len(batch) {
+		err := i18n.NewError(ctx, signermsgs.MsgRPCRequestBatchFailed)
+		for _, req := range batch {
+			req.rpcErr <- err
+		}
+		return
+	}
+
+	for i, resp := range responses {
+		if logrus.IsLevelEnabled(logrus.TraceLevel) {
+			jsonOutput, _ := json.Marshal(resp)
+			log.L(ctx).Tracef("RPC[%s] OUTPUT: %s", batchRPCTraceID, jsonOutput)
+		}
+
+		// JSON/RPC allows errors to be returned with a 200 status code, as well as other status codes
+		if res.IsError() || (resp != nil && resp.Error != nil && resp.Error.Code != 0) {
+			rpcMsg := ""
+			errLog := ""
+			if resp != nil {
+				rpcMsg = resp.Message()
+				errLog = rpcMsg
+			}
+			if rpcMsg == "" {
+				// Log the raw result in the case of JSON parse error etc. (note that Resty no longer
+				// returns this as an error - rather the body comes back raw)
+				errLog = string(res.Body())
+				rpcMsg = i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed, res.Status()).Error()
+			}
+			traceID := traceIDs[i]
+			log.L(ctx).Errorf("RPC[%s] <-- [%d]: %s", traceID, res.StatusCode(), errLog)
+			batch[i].rpcErr <- fmt.Errorf(rpcMsg)
+		} else {
+			if resp.Result == nil {
+				// We don't want a result for errors, but a null success response needs to go in there
+				resp.Result = fftypes.JSONAnyPtr(fftypes.NullString)
+			}
+			batch[i].rpcRes <- resp
+
+		}
+	}
 }
 
 func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error) {
@@ -314,28 +340,7 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 	}
 
 	if rc.requestBatchQueue != nil {
-		req := &batchRequest{
-			rpcReq: rpcReq,
-			rpcRes: make(chan *RPCResponse, 1),
-			rpcErr: make(chan error, 1),
-		}
-
-		select {
-		case rc.requestBatchQueue <- req:
-		case <-ctx.Done():
-			err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
-			return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err
-		}
-
-		select {
-		case rpcRes := <-req.rpcRes:
-			return rpcRes, nil
-		case err := <-req.rpcErr:
-			return nil, err
-		case <-ctx.Done():
-			err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
-			return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err
-		}
+		return rc.batchSyncRequest(ctx, rpcReq)
 	} else {
 		// We always set the back-end request ID - as we need to support requests coming in from
 		// multiple concurrent clients on our front-end that might use clashing IDs.
@@ -396,6 +401,31 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 		return rpcRes, nil
 	}
 
+}
+
+func (rc *RPCClient) batchSyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRes *RPCResponse, err error) {
+	req := &batchRequest{
+		rpcReq: rpcReq,
+		rpcRes: make(chan *RPCResponse, 1),
+		rpcErr: make(chan error, 1),
+	}
+
+	select {
+	case rc.requestBatchQueue <- req:
+	case <-ctx.Done():
+		err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
+		return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err
+	}
+
+	select {
+	case rpcRes := <-req.rpcRes:
+		return rpcRes, nil
+	case err := <-req.rpcErr:
+		return nil, err
+	case <-ctx.Done():
+		err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
+		return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err
+	}
 }
 
 func RPCErrorResponse(err error, id *fftypes.JSONAny, code RPCCode) *RPCResponse {

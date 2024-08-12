@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -53,4 +53,10 @@ var (
 	ConfigBackendChainID  = ffc("config.backend.chainId", "Optionally set the Chain ID of the blockchain. Otherwise the Network ID will be queried, and used as the Chain ID in signing", "number")
 	ConfigBackendURL      = ffc("config.backend.url", "URL for the backend JSON/RPC server / blockchain node", "url")
 	ConfigBackendProxyURL = ffc("config.backend.proxy.url", "Optional HTTP proxy URL", "url")
+
+	ConfigRPCBatchMaxConcurrentRequest = ffc("config.maxConcurrentRequest", "The maximum number of concurrent JSON-RPC requests get processed at a time", i18n.IntType)
+	ConfigRPCBatchEnabled              = ffc("config.batch.enabled", "Whether to enable batching JSON-RPC requests", i18n.BooleanType)
+	ConfigRPCBatchSize                 = ffc("config.batch.size", "When the amount of queued requests reaches this number, they will be batched and dispatched", i18n.IntType)
+	ConfigRPCBatchTimeout              = ffc("config.batch.timeout", "When the time since the first request was queued reaches this timeout, all requests in the queue will be batched and dispatched", i18n.TimeDurationType)
+	ConfigRPCBatchDispatchConcurrency  = ffc("config.batch.dispatchConcurrency", "The maximum number of concurrent batch dispatching process", i18n.IntType)
 )

@@ -45,7 +45,7 @@ func NewServer(ctx context.Context, wallet ethsigner.Wallet) (ss Server, err err
 		return nil, err
 	}
 	s := &rpcServer{
-		backend:       rpcbackend.NewRPCClient(ctx, httpClient),
+		backend:       rpcbackend.NewRPCClient(httpClient),
 		apiServerDone: make(chan error),
 		wallet:        wallet,
 		chainID:       config.GetInt64(signerconfig.BackendChainID),
