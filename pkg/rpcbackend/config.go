@@ -25,7 +25,7 @@ import (
 
 const (
 	// ConfigMaxRequestConcurrency the maximum number of concurrent JSON-RPC requests get processed at a time
-	ConfigMaxConcurrentRequest = "maxConcurrentRequest"
+	ConfigMaxConcurrentRequests = "maxConcurrentRequests"
 	// ConfigBatchEnabled whether to enable batching JSON-RPC requests: https://www.jsonrpc.org/specification#batch
 	ConfigBatchEnabled = "batch.enabled"
 	// ConfigBatchSize when the amount of queued requests reaches this number, they will be batched and dispatched
@@ -57,7 +57,7 @@ type RPCClientOptions struct {
 
 func InitConfig(section config.Section) {
 	section.AddKnownKey(ConfigBatchEnabled, false)
-	section.AddKnownKey(ConfigMaxConcurrentRequest, 0)
+	section.AddKnownKey(ConfigMaxConcurrentRequests, 0)
 	section.AddKnownKey(ConfigBatchSize, DefaultConfigBatchSize)
 	section.AddKnownKey(ConfigBatchTimeout, DefaultConfigTimeout)
 	section.AddKnownKey(ConfigBatchMaxDispatchConcurrency, DefaultConfigDispatchConcurrency)
@@ -65,7 +65,7 @@ func InitConfig(section config.Section) {
 
 func ReadConfig(batchDispatcherContext context.Context, section config.Section) RPCClientOptions {
 	return RPCClientOptions{
-		MaxConcurrentRequest: section.GetInt64(ConfigMaxConcurrentRequest),
+		MaxConcurrentRequest: section.GetInt64(ConfigMaxConcurrentRequests),
 		BatchOptions: &RPCClientBatchOptions{
 			Enabled:                     section.GetBool(ConfigBatchEnabled),
 			BatchTimeout:                section.GetDuration(ConfigBatchTimeout),

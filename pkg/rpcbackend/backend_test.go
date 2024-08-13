@@ -680,7 +680,7 @@ func TestBatchRequestsOKWithBatchSize(t *testing.T) {
 	rpcConfig := config.RootSection("unittest")
 	InitConfig(rpcConfig)
 	rpcConfig.Set(ConfigBatchEnabled, true)
-	rpcConfig.Set(ConfigMaxConcurrentRequest, 10)
+	rpcConfig.Set(ConfigMaxConcurrentRequests, 10)
 	rpcConfig.Set(ConfigBatchTimeout, "2h") // very long delay, so need to rely on batch size to be hit for sending a batch
 	rpcConfig.Set(ConfigBatchSize, 2)
 
@@ -764,7 +764,7 @@ func TestBatchRequestsTestWorkerCounts(t *testing.T) {
 	rpcConfig := config.RootSection("unittest")
 	InitConfig(rpcConfig)
 	rpcConfig.Set(ConfigBatchEnabled, true)
-	rpcConfig.Set(ConfigMaxConcurrentRequest, 10)
+	rpcConfig.Set(ConfigMaxConcurrentRequests, 10)
 	rpcConfig.Set(ConfigBatchTimeout, "2h") // very long delay, so need to rely on batch size to be hit for sending a batch
 	rpcConfig.Set(ConfigBatchSize, 2)
 	rpcConfig.Set(ConfigBatchMaxDispatchConcurrency, 1)
@@ -879,7 +879,7 @@ func TestBatchRequestsOKWithBatchDelay(t *testing.T) {
 	rpcConfig := config.RootSection("ut_fs_config")
 	InitConfig(rpcConfig)
 	rpcConfig.Set(ConfigBatchEnabled, true)
-	rpcConfig.Set(ConfigMaxConcurrentRequest, 10)
+	rpcConfig.Set(ConfigMaxConcurrentRequests, 10)
 	rpcConfig.Set(ConfigBatchTimeout, "100ms") // very long delay, so need to rely on batch size to be hit for sending a batch
 	rpcConfig.Set(ConfigBatchSize, 2000)
 	rpcConfig.Set(ConfigBatchMaxDispatchConcurrency, 1)
