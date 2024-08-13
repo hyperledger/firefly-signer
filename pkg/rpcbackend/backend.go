@@ -316,6 +316,10 @@ func (rc *RPCClient) dispatch(ctx context.Context, batch []*batchRequest) {
 			log.L(ctx).Errorf("RPC[%s] <-- [%d]: %s", traceID, res.StatusCode(), errLog)
 			batch[i].rpcErr <- fmt.Errorf(rpcMsg)
 		} else {
+			if resp == nil {
+				// .... sometimes the JSON-RPC endpoint could return null...
+				resp = new(RPCResponse)
+			}
 			if resp.Result == nil {
 				// We don't want a result for errors, but a null success response needs to go in there
 				resp.Result = fftypes.JSONAnyPtr(fftypes.NullString)
