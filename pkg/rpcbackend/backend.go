@@ -90,6 +90,7 @@ func NewRPCClientWithOption(client *resty.Client, options RPCClientOptions) Back
 
 type RPCClient struct {
 	client                       *resty.Client
+	batchDispatcherContext       context.Context
 	concurrencySlots             chan bool
 	requestCounter               int64
 	requestBatchQueue            chan *batchRequest
@@ -167,45 +168,34 @@ type batchRequest struct {
 }
 
 func (rc *RPCClient) startBatchDispatcher(dispatcherRootContext context.Context, batchTimeout time.Duration, batchSize int) {
+	rc.batchDispatcherContext = dispatcherRootContext
 	if rc.requestBatchQueue == nil { // avoid orphaned dispatcher
 		requestQueue := make(chan *batchRequest)
 		go func() {
 			var batch []*batchRequest
-			var ticker *time.Ticker
-			var tickerChannel <-chan time.Time
+			var timeoutChannel <-chan time.Time
 			for {
 				select {
 				case req := <-requestQueue:
 					batch = append(batch, req)
-					if ticker == nil {
-						// first request received start a ticker
-						ticker = time.NewTicker(batchTimeout)
-						defer ticker.Stop()
-						tickerChannel = ticker.C
+					if timeoutChannel == nil {
+						// first request received, start a batch timeout
+						timeoutChannel = time.After(batchTimeout)
 					}
 
 					if len(batch) >= batchSize {
-						rc.dispatchBatch(dispatcherRootContext, batch)
+						rc.dispatchBatch(rc.batchDispatcherContext, batch)
 						batch = nil
-						ticker.Stop() // batch dispatched, stop the ticker, the next request will start a new ticker if needed
-						ticker = nil
-						tickerChannel = nil
+						timeoutChannel = nil // stop the timeout and let it get reset by the next request
 					}
 
-				case <-tickerChannel:
+				case <-timeoutChannel:
 					if len(batch) > 0 {
-						rc.dispatchBatch(dispatcherRootContext, batch)
+						rc.dispatchBatch(rc.batchDispatcherContext, batch)
 						batch = nil
-
-						ticker.Stop() // batch dispatched, stop the ticker, the next request will start a new ticker if needed
-						ticker = nil
-						tickerChannel = nil
+						timeoutChannel = nil // stop the timeout and let it get reset by the next request
 					}
-
-				case <-dispatcherRootContext.Done():
-					if ticker != nil {
-						ticker.Stop() // clean up the ticker
-					}
+				case <-rc.batchDispatcherContext.Done():
 					select { // drain the queue
 					case req := <-requestQueue:
 						batch = append(batch, req)
@@ -213,7 +203,7 @@ func (rc *RPCClient) startBatchDispatcher(dispatcherRootContext context.Context,
 					}
 					for i, req := range batch {
 						// mark all queueing requests as failed
-						cancelCtxErr := i18n.NewError(dispatcherRootContext, signermsgs.MsgRequestCanceledContext, req.rpcReq.ID)
+						cancelCtxErr := i18n.NewError(rc.batchDispatcherContext, signermsgs.MsgRequestCanceledContext, req.rpcReq.ID)
 						batch[i].rpcErr <- cancelCtxErr
 					}
 
@@ -412,6 +402,9 @@ func (rc *RPCClient) batchSyncRequest(ctx context.Context, rpcReq *RPCRequest) (
 
 	select {
 	case rc.requestBatchQueue <- req:
+	case <-rc.batchDispatcherContext.Done():
+		err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
+		return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err
 	case <-ctx.Done():
 		err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
 		return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err
@@ -422,6 +415,9 @@ func (rc *RPCClient) batchSyncRequest(ctx context.Context, rpcReq *RPCRequest) (
 		return rpcRes, nil
 	case err := <-req.rpcErr:
 		return nil, err
+	case <-rc.batchDispatcherContext.Done():
+		err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
+		return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err
 	case <-ctx.Done():
 		err := i18n.NewError(ctx, signermsgs.MsgRequestCanceledContext, rpcReq.ID)
 		return RPCErrorResponse(err, rpcReq.ID, RPCCodeInternalError), err

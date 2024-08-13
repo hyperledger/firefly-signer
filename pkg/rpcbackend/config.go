@@ -37,6 +37,7 @@ const (
 )
 
 const (
+	DefaultMaxConcurrentRequests     = 50
 	DefaultConfigBatchSize           = 500
 	DefaultConfigTimeout             = "50ms"
 	DefaultConfigDispatchConcurrency = 50
@@ -57,7 +58,7 @@ type RPCClientOptions struct {
 
 func InitConfig(section config.Section) {
 	section.AddKnownKey(ConfigBatchEnabled, false)
-	section.AddKnownKey(ConfigMaxConcurrentRequests, 0)
+	section.AddKnownKey(ConfigMaxConcurrentRequests, DefaultMaxConcurrentRequests)
 	section.AddKnownKey(ConfigBatchSize, DefaultConfigBatchSize)
 	section.AddKnownKey(ConfigBatchTimeout, DefaultConfigTimeout)
 	section.AddKnownKey(ConfigBatchMaxDispatchConcurrency, DefaultConfigDispatchConcurrency)
