@@ -139,6 +139,18 @@ func TestNewRPCClientFailDueToBatchContextMissing(t *testing.T) {
 	})
 }
 
+func TestNewRPCClientFailDueToInvalidExcludeMethodRegexMissing(t *testing.T) {
+
+	rpcConfig := config.RootSection("unittest")
+	InitConfig(rpcConfig)
+	rpcConfig.Set(ConfigBatchEnabled, true)
+	rpcConfig.Set(ConfigBatchExcludeMethodsRegex, "([A-Z")
+
+	assert.Panics(t, func() {
+		NewRPCClientWithOption(nil, ReadConfig(context.Background(), rpcConfig))
+	})
+}
+
 func TestSyncRequestOK(t *testing.T) {
 
 	rpcRequestBytes := []byte(`{
@@ -402,6 +414,55 @@ func TestBatchSyncRPCCallNullResponse(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, `null`, rpcRes.Result.String())
+}
+
+func TestBatchSyncRPCCallDisableMethods(t *testing.T) {
+	rpcRequestBytes := []byte(`{
+		"id": 2,
+		"method": "eth_getTransactionByHash",
+		"params": [
+			"0x61ca9c99c1d752fb3bda568b8566edf33ba93585c64a970566e6dfb540a5cbc1"
+		]
+	}`)
+
+	rpcServerResponseBytes := []byte(`{
+		"jsonrpc": "2.0",
+		"id": "1",
+		"result": {
+			"blockHash": "0x471a236bac44222faf63e3d7808a2a68a704a75ca2f0774f072764867f458268",
+			"nonce": "0x24"
+		}
+	}`)
+
+	var rpcRequest RPCRequest
+	err := json.Unmarshal(rpcRequestBytes, &rpcRequest)
+	assert.NoError(t, err)
+
+	var rpcServerResponse RPCResponse
+	err = json.Unmarshal(rpcServerResponseBytes, &rpcServerResponse)
+	assert.NoError(t, err)
+	bgCtx := context.Background()
+
+	rpcConfig := config.RootSection("unittest")
+	InitConfig(rpcConfig)
+	rpcConfig.Set(ConfigBatchEnabled, true)
+	rpcConfig.Set(ConfigBatchExcludeMethodsRegex, "^eth_getTransactionByHash$")
+
+	ctx, rb, done := newTestServer(t, func(rpcReq *RPCRequest) (status int, rpcRes *RPCResponse) {
+		assert.Equal(t, "2.0", rpcReq.JSONRpc)
+		assert.Equal(t, "eth_getTransactionByHash", rpcReq.Method)
+		assert.Equal(t, `"000012346"`, rpcReq.ID.String())
+		assert.Equal(t, `"0x61ca9c99c1d752fb3bda568b8566edf33ba93585c64a970566e6dfb540a5cbc1"`, rpcReq.Params[0].String())
+		rpcServerResponse.ID = rpcReq.ID
+		return 200, &rpcServerResponse
+	}, ReadConfig(bgCtx, rpcConfig))
+	rb.requestCounter = 12345
+	defer done()
+
+	rpcRes, err := rb.SyncRequest(ctx, &rpcRequest)
+	assert.NoError(t, err)
+	assert.Equal(t, `2`, rpcRes.ID.String())
+	assert.Equal(t, `0x24`, rpcRes.Result.JSONObject().GetString(`nonce`))
 }
 
 func TestBatchSyncRequestCanceledContext(t *testing.T) {
@@ -818,7 +879,7 @@ func TestBatchRequestsTestWorkerCounts(t *testing.T) {
 	rpcConfig.Set(ConfigMaxConcurrentRequests, 10)
 	rpcConfig.Set(ConfigBatchTimeout, "2h") // very long delay, so need to rely on batch size to be hit for sending a batch
 	rpcConfig.Set(ConfigBatchSize, 2)
-	rpcConfig.Set(ConfigBatchMaxDispatchConcurrency, 1)
+	rpcConfig.Set(ConfigBatchDispatchConcurrency, 1)
 
 	rpcOptions := ReadConfig(ctx, rpcConfig)
 
@@ -933,7 +994,7 @@ func TestBatchRequestsOKWithBatchDelay(t *testing.T) {
 	rpcConfig.Set(ConfigMaxConcurrentRequests, 10)
 	rpcConfig.Set(ConfigBatchTimeout, "100ms") // very long delay, so need to rely on batch size to be hit for sending a batch
 	rpcConfig.Set(ConfigBatchSize, 2000)
-	rpcConfig.Set(ConfigBatchMaxDispatchConcurrency, 1)
+	rpcConfig.Set(ConfigBatchDispatchConcurrency, 1)
 
 	rpcOptions := ReadConfig(ctx, rpcConfig)
 
@@ -947,11 +1008,12 @@ func TestBatchRequestsOKWithBatchDelay(t *testing.T) {
 		requestCount := make(chan bool, reqPerRound)
 		for i := 0; i < reqPerRound; i++ {
 			go func() {
-				_, err := rb.SyncRequest(ctx, &RPCRequest{
+				res, err := rb.SyncRequest(ctx, &RPCRequest{
 					Method: "eth_getTransactionByHash",
 					Params: []*fftypes.JSONAny{fftypes.JSONAnyPtr(`"0xf44d5387087f61237bdb5132e9cf0f38ab20437128f7291b8df595305a1a8284"`)},
 				})
 				assert.Nil(t, err)
+				assert.Equal(t, `0x61ca9c99c1d752fb3bda568b8566edf33ba93585c64a970566e6dfb540a5cbc1`, res.Result.JSONObject().GetString(`hash`))
 				requestCount <- true
 
 			}()

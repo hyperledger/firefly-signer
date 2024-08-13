@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sync/atomic"
 	"time"
 
@@ -81,6 +82,15 @@ func NewRPCClientWithOption(client *resty.Client, options RPCClientOptions) Back
 		if options.BatchOptions.BatchMaxDispatchConcurrency > 0 {
 			batchWorkerCount = options.BatchOptions.BatchMaxDispatchConcurrency
 		}
+
+		if options.BatchOptions.BatchExcludeMethodsRegex != "" {
+			excludeRegex, err := regexp.Compile(options.BatchOptions.BatchExcludeMethodsRegex)
+			if err != nil {
+				panic(err)
+			}
+			rpcClient.batchExcludeMethodsMatcher = excludeRegex
+		}
+
 		rpcClient.requestBatchConcurrencySlots = make(chan bool, batchWorkerCount)
 		rpcClient.startBatchDispatcher(options.BatchOptions.BatchDispatcherContext, batchTimeout, batchSize)
 	}
@@ -95,6 +105,7 @@ type RPCClient struct {
 	requestCounter               int64
 	requestBatchQueue            chan *batchRequest
 	requestBatchConcurrencySlots chan bool
+	batchExcludeMethodsMatcher   *regexp.Regexp
 }
 
 type RPCRequest struct {
@@ -329,7 +340,7 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 		}()
 	}
 
-	if rc.requestBatchQueue != nil {
+	if rc.requestBatchQueue != nil && (rc.batchExcludeMethodsMatcher == nil || !rc.batchExcludeMethodsMatcher.MatchString(rpcReq.Method)) {
 		return rc.batchSyncRequest(ctx, rpcReq)
 	} else {
 		// We always set the back-end request ID - as we need to support requests coming in from

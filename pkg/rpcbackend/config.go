@@ -33,7 +33,9 @@ const (
 	// ConfigBatchTimeout when the time since the first request was queued reaches this timeout, all requests in the queue will be batched and dispatched
 	ConfigBatchTimeout = "batch.timeout"
 	// ConfigBatchTimeout the maximum number of concurrent batch dispatching process
-	ConfigBatchMaxDispatchConcurrency = "batch.dispatchConcurrency"
+	ConfigBatchDispatchConcurrency = "batch.dispatchConcurrency"
+	// ConfigBatchExcludeMethodsRegex A Regex string to disable batch for the matching JSON-RPC methods in the requests
+	ConfigBatchExcludeMethodsRegex = "batch.excludeMethodsRegex"
 )
 
 const (
@@ -49,6 +51,7 @@ type RPCClientBatchOptions struct {
 	BatchTimeout                time.Duration
 	BatchSize                   int
 	BatchMaxDispatchConcurrency int
+	BatchExcludeMethodsRegex    string
 }
 
 type RPCClientOptions struct {
@@ -61,7 +64,8 @@ func InitConfig(section config.Section) {
 	section.AddKnownKey(ConfigMaxConcurrentRequests, DefaultMaxConcurrentRequests)
 	section.AddKnownKey(ConfigBatchSize, DefaultConfigBatchSize)
 	section.AddKnownKey(ConfigBatchTimeout, DefaultConfigTimeout)
-	section.AddKnownKey(ConfigBatchMaxDispatchConcurrency, DefaultConfigDispatchConcurrency)
+	section.AddKnownKey(ConfigBatchDispatchConcurrency, DefaultConfigDispatchConcurrency)
+	section.AddKnownKey(ConfigBatchExcludeMethodsRegex)
 }
 
 func ReadConfig(batchDispatcherContext context.Context, section config.Section) RPCClientOptions {
@@ -71,8 +75,9 @@ func ReadConfig(batchDispatcherContext context.Context, section config.Section) 
 			Enabled:                     section.GetBool(ConfigBatchEnabled),
 			BatchTimeout:                section.GetDuration(ConfigBatchTimeout),
 			BatchSize:                   section.GetInt(ConfigBatchSize),
-			BatchMaxDispatchConcurrency: section.GetInt(ConfigBatchMaxDispatchConcurrency),
+			BatchMaxDispatchConcurrency: section.GetInt(ConfigBatchDispatchConcurrency),
 			BatchDispatcherContext:      batchDispatcherContext,
+			BatchExcludeMethodsRegex:    section.GetString(ConfigBatchExcludeMethodsRegex),
 		},
 	}
 }

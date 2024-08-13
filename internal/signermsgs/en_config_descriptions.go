@@ -58,5 +58,6 @@ var (
 	ConfigRPCBatchEnabled               = ffc("config.batch.enabled", "Whether to enable batching JSON-RPC requests", i18n.BooleanType)
 	ConfigRPCBatchSize                  = ffc("config.batch.size", "When the amount of queued requests reaches this number, they will be batched and dispatched", i18n.IntType)
 	ConfigRPCBatchTimeout               = ffc("config.batch.timeout", "When the time since the first request was queued reaches this timeout, all requests in the queue will be batched and dispatched", i18n.TimeDurationType)
+	ConfigRPCBatchExcludeMethodsRegex   = ffc("config.batch.excludeMethodsRegex", "A Regex string to disable batch for the matching JSON-RPC methods in the requests", i18n.StringType)
 	ConfigRPCBatchDispatchConcurrency   = ffc("config.batch.dispatchConcurrency", "The maximum number of concurrent batch dispatching process", i18n.IntType)
 )
