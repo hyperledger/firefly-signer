@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -43,9 +43,15 @@ func GenerateSecp256k1KeyPair() (*KeyPair, error) {
 	return wrapSecp256k1Key(key, key.PubKey()), nil
 }
 
+// Deprecated: Note there is no error condition returned by this function (use KeyPairFromBytes)
 func NewSecp256k1KeyPair(b []byte) (*KeyPair, error) {
 	key, pubKey := btcec.PrivKeyFromBytes(b)
 	return wrapSecp256k1Key(key, pubKey), nil
+}
+
+func KeyPairFromBytes(b []byte) *KeyPair {
+	key, pubKey := btcec.PrivKeyFromBytes(b)
+	return wrapSecp256k1Key(key, pubKey)
 }
 
 func wrapSecp256k1Key(key *btcec.PrivateKey, pubKey *btcec.PublicKey) *KeyPair {

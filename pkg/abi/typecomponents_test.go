@@ -671,6 +671,11 @@ func TestTypeComponentStringInvalid(t *testing.T) {
 	}
 	assert.Empty(t, tc.String())
 
+	isRef, solDef, childStructs := tc.SolidityTypeDef()
+	assert.False(t, isRef)
+	assert.Empty(t, solDef)
+	assert.Empty(t, childStructs)
+
 }
 
 func TestTypeComponentParseExternalOk(t *testing.T) {

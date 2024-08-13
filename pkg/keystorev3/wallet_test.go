@@ -18,6 +18,7 @@ package keystorev3
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"testing/iotest"
@@ -163,4 +164,34 @@ func TestWalletFileCustomBytesLight(t *testing.T) {
 	kp, _ := secp256k1.NewSecp256k1KeyPair(zeroToTheRight)
 	assert.NoError(t, err)
 	assert.Equal(t, kp.Address, w2.KeyPair().Address)
+}
+
+func TestMarshalWalletJSONFail(t *testing.T) {
+	_, err := marshalWalletJSON(&walletFileBase{}, map[bool]bool{false: true})
+	assert.Error(t, err)
+}
+
+func TestWalletFileCustomBytesUnsetAddress(t *testing.T) {
+	customBytes := ([]byte)("something deterministic for testing")
+
+	w := NewWalletFileCustomBytesLight("correcthorsebatterystaple", customBytes)
+
+	w.Metadata()["address"] = nil
+	w.Metadata()["myKeyIdentifier"] = "something I know works for me"
+	w.Metadata()["id"] = "attempting to set this does not work"
+	w.Metadata()["version"] = 42
+
+	jsonBytes, err := json.Marshal(w)
+	assert.NoError(t, err)
+
+	var roundTripBackFromJSON map[string]interface{}
+	err = json.Unmarshal(jsonBytes, &roundTripBackFromJSON)
+	assert.NoError(t, err)
+
+	_, hasAddress := roundTripBackFromJSON["address"]
+	assert.False(t, hasAddress)
+	assert.Equal(t, "something I know works for me", roundTripBackFromJSON["myKeyIdentifier"])
+	assert.Equal(t, float64(w.GetVersion()), roundTripBackFromJSON["version"])
+	assert.Equal(t, w.GetID().String(), roundTripBackFromJSON["id"])
+
 }

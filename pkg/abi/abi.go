@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -439,6 +439,30 @@ func (e *Entry) String() string {
 	return s
 }
 
+// SolString returns a Solidity - like string, with an empty function definition,
+// and any struct definitions separated afterwards with a ; (semicolon)
+func (e *Entry) SolString() string {
+	solStr, err := e.SolidityStringCtx(context.Background())
+	if err != nil {
+		log.L(context.Background()).Warnf("ABI parsing failed: %s", err)
+	}
+	return solStr
+}
+
+func (e *Entry) SolidityStringCtx(ctx context.Context) (string, error) {
+	solDef, childStructs, err := e.SolidityDefCtx(ctx)
+	if err != nil {
+		return "", err
+	}
+	buff := new(strings.Builder)
+	buff.WriteString(solDef)
+	for _, e := range childStructs {
+		buff.WriteString("; ")
+		buff.WriteString(e)
+	}
+	return buff.String(), nil
+}
+
 func (e *Entry) Signature() (string, error) {
 	return e.SignatureCtx(context.Background())
 }
@@ -670,6 +694,63 @@ func (e *Entry) SignatureCtx(ctx context.Context) (string, error) {
 	return buff.String(), nil
 }
 
+func (e *Entry) SolidityDef() (string, []string, error) {
+	return e.SolidityDefCtx(context.Background())
+}
+
+// SolidityDefCtx returns a Solidity-like descriptor of the entry, including its type
+func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
+	// Everything apart from event and error is a type of function
+	isFunction := e.Type != Error && e.Type != Event
+
+	allChildStructs := []string{}
+	buff := new(strings.Builder)
+	buff.WriteString(string(e.Type))
+	buff.WriteRune(' ')
+	buff.WriteString(e.Name)
+	buff.WriteRune('(')
+	for i, p := range e.Inputs {
+		if i > 0 {
+			buff.WriteString(", ")
+		}
+		s, childStructs, err := p.SolidityDefCtx(ctx, isFunction)
+		if err != nil {
+			return "", nil, err
+		}
+		allChildStructs = append(allChildStructs, childStructs...)
+		buff.WriteString(s)
+	}
+	buff.WriteRune(')')
+
+	if isFunction {
+		buff.WriteString(" external")
+		if e.StateMutability != "" &&
+			// The state mutability nonpayable is reflected in Solidity by not specifying a state mutability modifier at all.
+			e.StateMutability != NonPayable {
+			buff.WriteRune(' ')
+			buff.WriteString(string(e.StateMutability))
+		}
+		if len(e.Outputs) > 0 {
+			buff.WriteString(" returns (")
+			for i, p := range e.Outputs {
+				if i > 0 {
+					buff.WriteString(", ")
+				}
+				s, childStructs, err := p.SolidityDefCtx(ctx, isFunction)
+				if err != nil {
+					return "", nil, err
+				}
+				allChildStructs = append(allChildStructs, childStructs...)
+				buff.WriteString(s)
+			}
+			buff.WriteRune(')')
+		}
+		buff.WriteString(" { }")
+	}
+
+	return buff.String(), allChildStructs, nil
+}
+
 // Validate processes all the components of the type of this ABI parameter.
 // - The elementary type
 // - The fixed/variable length array dimensions
@@ -699,6 +780,16 @@ func (p *Parameter) SignatureStringCtx(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return tc.String(), nil
+}
+
+func (p *Parameter) SolidityDefCtx(ctx context.Context, inFunction bool) (string, []string, error) {
+	// Ensure the type component tree has been parsed
+	tc, err := p.TypeComponentTreeCtx(ctx)
+	if err != nil {
+		return "", nil, err
+	}
+	solDef, childStructs := tc.SolidityParamDef(inFunction)
+	return solDef, childStructs, nil
 }
 
 // String returns the signature string. If a Validate needs to be initiated, and that
