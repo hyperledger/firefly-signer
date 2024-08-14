@@ -17,6 +17,7 @@
 package secp256k1
 
 import (
+	"context"
 	"math/big"
 	"testing"
 
@@ -56,6 +57,16 @@ func TestGeneratedKeyRoundTrip(t *testing.T) {
 	addr, err = sig.Recover(data, 1001)
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.Address, *addr)
+
+	sigRSV := sig.CompactRSV()
+	sig2, err := DecodeCompactRSV(context.Background(), sigRSV)
+	assert.NoError(t, err)
+	addr, err = sig2.Recover(data, 1001)
+	assert.NoError(t, err)
+	assert.Equal(t, keypair.Address, *addr)
+
+	_, err = DecodeCompactRSV(context.Background(), []byte("wrong"))
+	assert.Regexp(t, "FF22087", err)
 
 	_, err = sig.Recover(data, 42)
 	assert.Regexp(t, "invalid V value in signature", err)
