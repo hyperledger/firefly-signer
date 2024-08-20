@@ -226,6 +226,11 @@ const sampleABI5 = `[
           "internalType": "struct AribtraryWidgets.Widget[]",
           "name": "widgets",
           "type": "tuple[]"
+        },
+        {
+          "name": "account",
+          "type": "address",
+          "indexed": true
         }
       ],
       "name": "Invoiced",
@@ -1015,7 +1020,7 @@ func TestComplexStructSolidityDef(t *testing.T) {
 
 	solDef, childStructs, err = abi.Events()["Invoiced"].SolidityDef()
 	assert.NoError(t, err)
-	assert.Equal(t, "event Invoiced(Customer customer, Widget[] widgets)", solDef)
+	assert.Equal(t, "event Invoiced(Customer customer, Widget[] widgets, address indexed account)", solDef)
 	assert.Equal(t, []string{
 		"struct Customer { address owner; bytes32 locator; }",
 		"struct Widget { string description; uint256 price; string[] attributes; }",

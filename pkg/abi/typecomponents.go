@@ -66,7 +66,7 @@ type TypeComponent interface {
 	DecodeABIData(d []byte, offset int) (*ComponentValue, error)
 	DecodeABIDataCtx(ctx context.Context, d []byte, offest int) (*ComponentValue, error)
 
-	SolidityParamDef(inFunction bool) (solDef string, structDefs []string) // gives a string that can be used to define this param in solidity
+	SolidityParamDef(isFunction, isEvent bool) (solDef string, structDefs []string) // gives a string that can be used to define this param in solidity
 	SolidityTypeDef() (isRef bool, typeDef string, childStructs []string)
 	SolidityStructDef() (structName string, structs []string)
 }
@@ -371,13 +371,18 @@ func (tc *typeComponent) String() string {
 	}
 }
 
-func (tc *typeComponent) SolidityParamDef(inFunction bool) (string, []string) {
+func (tc *typeComponent) SolidityParamDef(isFunction, isEvent bool) (string, []string) {
 	isRef, paramDef, childStructs := tc.SolidityTypeDef()
-	if isRef && inFunction {
-		paramDef = fmt.Sprintf("%s memory", paramDef)
+	if isRef && isFunction {
+		paramDef += " memory"
 	}
-	if tc.parameter != nil && tc.parameter.Name != "" {
-		paramDef = fmt.Sprintf("%s %s", paramDef, tc.parameter.Name)
+	if tc.parameter != nil {
+		if isEvent && tc.parameter.Indexed {
+			paramDef += " indexed"
+		}
+		if tc.parameter.Name != "" {
+			paramDef = fmt.Sprintf("%s %s", paramDef, tc.parameter.Name)
+		}
 	}
 	return paramDef, childStructs
 }

@@ -702,6 +702,7 @@ func (e *Entry) SolidityDef() (string, []string, error) {
 func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
 	// Everything apart from event and error is a type of function
 	isFunction := e.Type != Error && e.Type != Event
+	isEvent := e.Type == Event
 
 	allChildStructs := []string{}
 	buff := new(strings.Builder)
@@ -713,7 +714,7 @@ func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
 		if i > 0 {
 			buff.WriteString(", ")
 		}
-		s, childStructs, err := p.SolidityDefCtx(ctx, isFunction)
+		s, childStructs, err := p.SolidityDefCtx(ctx, isFunction, isEvent)
 		if err != nil {
 			return "", nil, err
 		}
@@ -736,7 +737,7 @@ func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
 				if i > 0 {
 					buff.WriteString(", ")
 				}
-				s, childStructs, err := p.SolidityDefCtx(ctx, isFunction)
+				s, childStructs, err := p.SolidityDefCtx(ctx, true, false)
 				if err != nil {
 					return "", nil, err
 				}
@@ -782,13 +783,13 @@ func (p *Parameter) SignatureStringCtx(ctx context.Context) (string, error) {
 	return tc.String(), nil
 }
 
-func (p *Parameter) SolidityDefCtx(ctx context.Context, inFunction bool) (string, []string, error) {
+func (p *Parameter) SolidityDefCtx(ctx context.Context, isFunction, isEvent bool) (string, []string, error) {
 	// Ensure the type component tree has been parsed
 	tc, err := p.TypeComponentTreeCtx(ctx)
 	if err != nil {
 		return "", nil, err
 	}
-	solDef, childStructs := tc.SolidityParamDef(inFunction)
+	solDef, childStructs := tc.SolidityParamDef(isFunction, isEvent)
 	return solDef, childStructs, nil
 }
 
