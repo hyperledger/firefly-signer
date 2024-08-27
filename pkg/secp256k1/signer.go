@@ -17,10 +17,13 @@
 package secp256k1
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
 	ecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
+	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"golang.org/x/crypto/sha3"
 )
@@ -97,6 +100,26 @@ func (s *SignatureData) RecoverDirect(message []byte, chainID int64) (a *ethtype
 		return nil, err
 	}
 	return PublicKeyToAddress(pubKey), nil
+}
+
+// We use the ethereum convention of R,S,V for compact packing (mentioned because Golang tends to prefer V,R,S)
+func (s *SignatureData) CompactRSV() []byte {
+	signatureBytes := make([]byte, 65)
+	s.R.FillBytes(signatureBytes[0:32])
+	s.S.FillBytes(signatureBytes[32:64])
+	signatureBytes[64] = byte(s.V.Int64())
+	return signatureBytes
+}
+
+func DecodeCompactRSV(ctx context.Context, compactRSV []byte) (*SignatureData, error) {
+	if len(compactRSV) != 65 {
+		return nil, i18n.NewError(ctx, signermsgs.MsgSigningInvalidCompactRSV, len(compactRSV))
+	}
+	var sig SignatureData
+	sig.R = new(big.Int).SetBytes(compactRSV[0:32])
+	sig.S = new(big.Int).SetBytes(compactRSV[32:64])
+	sig.V = new(big.Int).SetBytes(compactRSV[64:65])
+	return &sig, nil
 }
 
 // Sign hashes the input then signs it
