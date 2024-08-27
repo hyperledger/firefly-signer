@@ -66,7 +66,7 @@ type TypeComponent interface {
 	DecodeABIData(d []byte, offset int) (*ComponentValue, error)
 	DecodeABIDataCtx(ctx context.Context, d []byte, offest int) (*ComponentValue, error)
 
-	SolidityParamDef(isFunction, isEvent bool) (solDef string, structDefs []string) // gives a string that can be used to define this param in solidity
+	SolidityParamDef(fieldType SolFieldType) (solDef string, structDefs []string) // gives a string that can be used to define this param in solidity
 	SolidityTypeDef() (isRef bool, typeDef string, childStructs []string)
 	SolidityStructDef() (structName string, structs []string)
 }
@@ -185,6 +185,14 @@ const (
 	BaseTypeBytes    BaseTypeName = "bytes"
 	BaseTypeFunction BaseTypeName = "function"
 	BaseTypeString   BaseTypeName = "string"
+)
+
+type SolFieldType int
+
+const (
+	FunctionInput     SolFieldType = iota // input to a function, or a constructor
+	EventOrErrorField                     // a field of an event or an error
+	StructField                           // a field of a struct
 )
 
 // tupleTypeString appears in the same place in the ABI as elementary type strings, but it is not an elementary type.
@@ -371,13 +379,13 @@ func (tc *typeComponent) String() string {
 	}
 }
 
-func (tc *typeComponent) SolidityParamDef(isFunction, isEvent bool) (string, []string) {
+func (tc *typeComponent) SolidityParamDef(fieldType SolFieldType) (string, []string) {
 	isRef, paramDef, childStructs := tc.SolidityTypeDef()
-	if isRef && isFunction {
+	if isRef && fieldType == FunctionInput {
 		paramDef += " memory"
 	}
 	if tc.parameter != nil {
-		if isEvent && tc.parameter.Indexed {
+		if fieldType == EventOrErrorField && tc.parameter.Indexed {
 			paramDef += " indexed"
 		}
 		if tc.parameter.Name != "" {

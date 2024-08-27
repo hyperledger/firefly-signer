@@ -701,8 +701,13 @@ func (e *Entry) SolidityDef() (string, []string, error) {
 // SolidityDefCtx returns a Solidity-like descriptor of the entry, including its type
 func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
 	// Everything apart from event and error is a type of function
-	isFunction := e.Type != Error && e.Type != Event
-	isEvent := e.Type == Event
+	var fieldType SolFieldType
+	switch e.Type {
+	case Error, Event:
+		fieldType = EventOrErrorField
+	default:
+		fieldType = FunctionInput
+	}
 
 	allChildStructs := []string{}
 	buff := new(strings.Builder)
@@ -714,7 +719,7 @@ func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
 		if i > 0 {
 			buff.WriteString(", ")
 		}
-		s, childStructs, err := p.SolidityDefCtx(ctx, isFunction, isEvent)
+		s, childStructs, err := p.SolidityDefCtx(ctx, fieldType)
 		if err != nil {
 			return "", nil, err
 		}
@@ -723,7 +728,7 @@ func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
 	}
 	buff.WriteRune(')')
 
-	if isFunction {
+	if fieldType == FunctionInput {
 		buff.WriteString(" external")
 		if e.StateMutability != "" &&
 			// The state mutability nonpayable is reflected in Solidity by not specifying a state mutability modifier at all.
@@ -737,7 +742,7 @@ func (e *Entry) SolidityDefCtx(ctx context.Context) (string, []string, error) {
 				if i > 0 {
 					buff.WriteString(", ")
 				}
-				s, childStructs, err := p.SolidityDefCtx(ctx, true, false)
+				s, childStructs, err := p.SolidityDefCtx(ctx, fieldType)
 				if err != nil {
 					return "", nil, err
 				}
@@ -783,13 +788,13 @@ func (p *Parameter) SignatureStringCtx(ctx context.Context) (string, error) {
 	return tc.String(), nil
 }
 
-func (p *Parameter) SolidityDefCtx(ctx context.Context, isFunction, isEvent bool) (string, []string, error) {
+func (p *Parameter) SolidityDefCtx(ctx context.Context, fieldType SolFieldType) (string, []string, error) {
 	// Ensure the type component tree has been parsed
 	tc, err := p.TypeComponentTreeCtx(ctx)
 	if err != nil {
 		return "", nil, err
 	}
-	solDef, childStructs := tc.SolidityParamDef(isFunction, isEvent)
+	solDef, childStructs := tc.SolidityParamDef(fieldType)
 	return solDef, childStructs, nil
 }
 
