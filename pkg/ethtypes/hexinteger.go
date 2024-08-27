@@ -36,7 +36,7 @@ func (h HexInteger) MarshalJSON() ([]byte, error) {
 }
 
 func (h *HexInteger) UnmarshalJSON(b []byte) error {
-	bi, err := UnmarshalBigInt(b)
+	bi, err := UnmarshalBigInt(context.Background(), b)
 	if err != nil {
 		return err
 	}

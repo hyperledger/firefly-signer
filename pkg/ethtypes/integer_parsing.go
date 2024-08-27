@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
@@ -49,7 +48,7 @@ func BigIntegerFromString(ctx context.Context, s string) (*big.Int, error) {
 	return i, nil
 }
 
-func UnmarshalBigInt(b []byte) (*big.Int, error) {
+func UnmarshalBigInt(ctx context.Context, b []byte) (*big.Int, error) {
 	var i interface{}
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.UseNumber()
@@ -63,6 +62,6 @@ func UnmarshalBigInt(b []byte) (*big.Int, error) {
 	case string:
 		return BigIntegerFromString(context.Background(), i)
 	default:
-		return nil, fmt.Errorf("unable to parse integer from type %T", i)
+		return nil, i18n.NewError(ctx, signermsgs.MsgInvalidJSONTypeForBigInt, i)
 	}
 }

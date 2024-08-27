@@ -90,7 +90,7 @@ func TestHexIntegerBadType(t *testing.T) {
 	}`
 
 	err := json.Unmarshal([]byte(testData), &testStruct)
-	assert.Regexp(t, "unable to parse integer", err)
+	assert.Regexp(t, "FF22091", err)
 }
 
 func TestHexIntegerBadJSON(t *testing.T) {
