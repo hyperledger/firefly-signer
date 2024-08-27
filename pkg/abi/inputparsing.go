@@ -135,17 +135,7 @@ func getIntegerFromInterface(ctx context.Context, desc string, v interface{}) (*
 		// no prefix means decimal etc.
 		i, ok := i.SetString(vt, 0)
 		if !ok {
-			f, _, err := big.ParseFloat(vt, 10, 256, big.ToNearestEven)
-			if err != nil {
-				return nil, i18n.NewError(ctx, signermsgs.MsgInvalidIntegerABIInput, vt, v, desc)
-			}
-			i, accuracy := f.Int(i)
-			if accuracy != big.Exact {
-				// If we weren't able to decode without losing precision, return an error
-				return nil, i18n.NewError(ctx, signermsgs.MsgInvalidIntegerABIInput, vt, v, desc)
-			}
-
-			return i, nil
+			return nil, i18n.NewError(ctx, signermsgs.MsgInvalidIntegerABIInput, vt, v, desc)
 		}
 		return i, nil
 	case *big.Float:

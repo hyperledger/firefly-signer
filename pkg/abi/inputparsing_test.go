@@ -18,11 +18,9 @@ package abi
 
 import (
 	"context"
-	"encoding/json"
 	"math/big"
 	"testing"
 
-	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
 )
@@ -187,22 +185,6 @@ func TestGetIntegerFromInterface(t *testing.T) {
 	i, err = getIntegerFromInterface(ctx, "ut", &iI32)
 	assert.NoError(t, err)
 	assert.Equal(t, "-12345", i.String())
-
-	var scientificNumber fftypes.JSONAny
-	err = json.Unmarshal([]byte("1.0000000000000000000000001e+25"), &scientificNumber)
-	assert.NoError(t, err)
-
-	i, err = getIntegerFromInterface(ctx, "ut", scientificNumber)
-	assert.NoError(t, err)
-	assert.Equal(t, "10000000000000000000000001", i.String())
-
-	var hugeNumber fftypes.JSONAny
-	err = json.Unmarshal([]byte("10000000000000000000000000000001"), &hugeNumber)
-	assert.NoError(t, err)
-
-	i, err = getIntegerFromInterface(ctx, "ut", hugeNumber)
-	assert.NoError(t, err)
-	assert.Equal(t, "10000000000000000000000000000001", i.String())
 
 	i32 := int32(-12345)
 	var iPI32 TestInt32PtrCustomType = &i32
