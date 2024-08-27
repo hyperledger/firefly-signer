@@ -19,6 +19,7 @@ package rpcbackend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -91,7 +92,7 @@ type RPCError struct {
 }
 
 func (e *RPCError) Error() error {
-	return fmt.Errorf(e.Message)
+	return errors.New(e.Message)
 }
 
 func (e *RPCError) String() string {
@@ -208,7 +209,7 @@ func (rc *RPCClient) SyncRequest(ctx context.Context, rpcReq *RPCRequest) (rpcRe
 			rpcMsg = i18n.NewError(ctx, signermsgs.MsgRPCRequestFailed, res.Status()).Error()
 		}
 		log.L(ctx).Errorf("RPC[%s] <-- [%d]: %s", rpcTraceID, res.StatusCode(), errLog)
-		err := fmt.Errorf(rpcMsg)
+		err := errors.New(rpcMsg)
 		return rpcRes, err
 	}
 	log.L(ctx).Infof("RPC[%s] <-- %s [%d] OK (%.2fms)", rpcTraceID, rpcReq.Method, res.StatusCode(), float64(time.Since(rpcStartTime))/float64(time.Millisecond))
