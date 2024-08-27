@@ -104,4 +104,7 @@ var (
 	MsgInvalidEIP155TransactionV   = ffe("FF22085", "Invalid V value from EIP-155 transaction (chainId=%d)")
 	MsgInvalidChainID              = ffe("FF22086", "Invalid chainId expected=%d actual=%d")
 	MsgSigningInvalidCompactRSV    = ffe("FF22087", "Invalid signature data (compact R,S,V) length=%d (expected=65)")
+	MsgInvalidNumberString         = ffe("FF22088", "Invalid integer string '%s'")
+	MsgInvalidIntPrecisionLoss     = ffe("FF22089", "String %s cannot be converted to integer without losing precision")
+	MsgInvalidUint64PrecisionLoss  = ffe("FF22090", "String %s cannot be converted to a uint64 without losing precision")
 )

@@ -18,11 +18,11 @@ package ethtypes
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
+	"github.com/hyperledger/firefly-signer/internal/signermsgs"
 )
 
 // HexUint64 is a positive integer - serializes to JSON as an 0x hex string (no leading zeros), and parses flexibly depending on the prefix (so 0x for hex, or base 10 for plain string / float64)
@@ -40,22 +40,15 @@ func (h HexUint64) MarshalJSON() ([]byte, error) {
 }
 
 func (h *HexUint64) UnmarshalJSON(b []byte) error {
-	var i interface{}
-	_ = json.Unmarshal(b, &i)
-	switch i := i.(type) {
-	case float64:
-		*h = HexUint64(i)
-		return nil
-	case string:
-		i64, err := strconv.ParseUint(i, 0, 64)
-		if err != nil {
-			return fmt.Errorf("unable to parse integer: %s", i)
-		}
-		*h = HexUint64(i64)
-		return nil
-	default:
-		return fmt.Errorf("unable to parse integer from type %T", i)
+	bi, err := UnmarshalBigInt(b)
+	if err != nil {
+		return err
 	}
+	if !bi.IsUint64() {
+		return i18n.NewError(context.Background(), signermsgs.MsgInvalidUint64PrecisionLoss, b)
+	}
+	*h = HexUint64(bi.Uint64())
+	return nil
 }
 
 func (h HexUint64) Uint64() uint64 {

@@ -1,4 +1,4 @@
-// Copyright © 2023 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -18,7 +18,6 @@ package ethtypes
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -37,25 +36,15 @@ func (h HexInteger) MarshalJSON() ([]byte, error) {
 }
 
 func (h *HexInteger) UnmarshalJSON(b []byte) error {
-	var i interface{}
-	_ = json.Unmarshal(b, &i)
-	switch i := i.(type) {
-	case float64:
-		*h = HexInteger(*big.NewInt(int64(i)))
-		return nil
-	case string:
-		bi, ok := new(big.Int).SetString(i, 0)
-		if !ok {
-			return fmt.Errorf("unable to parse integer: %s", i)
-		}
-		if bi.Sign() < 0 {
-			return fmt.Errorf("negative values are not supported: %s", i)
-		}
-		*h = HexInteger(*bi)
-		return nil
-	default:
-		return fmt.Errorf("unable to parse integer from type %T", i)
+	bi, err := UnmarshalBigInt(b)
+	if err != nil {
+		return err
 	}
+	if bi.Sign() < 0 {
+		return fmt.Errorf("negative values are not supported: %s", b)
+	}
+	*h = HexInteger(*bi)
+	return nil
 }
 
 func (h *HexInteger) BigInt() *big.Int {

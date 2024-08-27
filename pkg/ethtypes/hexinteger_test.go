@@ -73,7 +73,10 @@ func TestHexIntegerMissingBytes(t *testing.T) {
 	}`
 
 	err := json.Unmarshal([]byte(testData), &testStruct)
-	assert.Regexp(t, "unable to parse integer", err)
+	assert.Regexp(t, "FF22088", err)
+
+	err = testStruct.I1.UnmarshalJSON([]byte(`{!badJSON`))
+	assert.Regexp(t, "invalid", err)
 }
 
 func TestHexIntegerBadType(t *testing.T) {
