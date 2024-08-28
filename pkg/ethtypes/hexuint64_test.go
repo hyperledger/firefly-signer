@@ -73,7 +73,7 @@ func TestHexUint64MissingBytes(t *testing.T) {
 	}`
 
 	err := json.Unmarshal([]byte(testData), &testStruct)
-	assert.Regexp(t, "unable to parse integer", err)
+	assert.Regexp(t, "FF22088", err)
 }
 
 func TestHexUint64BadType(t *testing.T) {
@@ -87,7 +87,7 @@ func TestHexUint64BadType(t *testing.T) {
 	}`
 
 	err := json.Unmarshal([]byte(testData), &testStruct)
-	assert.Regexp(t, "unable to parse integer", err)
+	assert.Regexp(t, "FF22091", err)
 }
 
 func TestHexUint64BadJSON(t *testing.T) {
@@ -115,7 +115,21 @@ func TestHexUint64BadNegative(t *testing.T) {
 	}`
 
 	err := json.Unmarshal([]byte(testData), &testStruct)
-	assert.Regexp(t, "parse", err)
+	assert.Regexp(t, "FF22090", err)
+}
+
+func TestHexUint64BadTooLarge(t *testing.T) {
+
+	testStruct := struct {
+		I1 HexUint64 `json:"i1"`
+	}{}
+
+	testData := `{
+		"i1": "18446744073709551616"
+	}`
+
+	err := json.Unmarshal([]byte(testData), &testStruct)
+	assert.Regexp(t, "FF22090", err)
 }
 
 func TestHexUint64Constructor(t *testing.T) {
