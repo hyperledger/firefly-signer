@@ -291,6 +291,7 @@ func TestFFIMethodToABINestedArray(t *testing.T) {
 				Type:         "string[][]",
 				InternalType: "string[][]",
 				Indexed:      false,
+				Components:   abi.ParameterArray{},
 			},
 		},
 		Outputs: abi.ParameterArray{},
