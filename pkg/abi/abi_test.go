@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/ffapi"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const sampleABI1 = `[
@@ -1025,5 +1026,23 @@ func TestComplexStructSolidityDef(t *testing.T) {
 		"struct Customer { address owner; bytes32 locator; }",
 		"struct Widget { string description; uint256 price; string[] attributes; }",
 	}, childStructs)
+
+}
+
+func TestRoundTripEmptyComponents(t *testing.T) {
+
+	abiString := `[
+	  {"type":"function", "name":"fn1", "inputs": [
+	    { "type": "tuple", "name":"param1","components": [] }
+	  ], "outputs": []}
+	]`
+	var abi ABI
+	err := json.Unmarshal([]byte(abiString), &abi)
+	require.NoError(t, err)
+
+	roundTripped, err := json.Marshal(&abi)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, abiString, string(roundTripped))
 
 }

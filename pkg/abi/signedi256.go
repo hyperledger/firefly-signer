@@ -26,9 +26,9 @@ var posMax = map[uint16]*big.Int{}
 var negMax = map[uint16]*big.Int{}
 
 func init() {
-	for i := 8; i <= 256; i += 8 {
-		posMax[uint16(i)] = maxPositiveSignedInt(uint(i))
-		negMax[uint16(i)] = maxNegativeSignedInt(uint(i))
+	for i := uint16(8); i <= uint16(256); i += 8 {
+		posMax[i] = maxPositiveSignedInt(uint(i))
+		negMax[i] = maxNegativeSignedInt(uint(i))
 	}
 }
 
