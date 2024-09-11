@@ -79,3 +79,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/hyperledger/firefly-common => github.com/kaleido-io/firefly-common v0.0.0-20240827134901-edb07289f156

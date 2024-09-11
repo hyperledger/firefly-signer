@@ -45,8 +45,7 @@ func GenerateSecp256k1KeyPair() (*KeyPair, error) {
 
 // Deprecated: Note there is no error condition returned by this function (use KeyPairFromBytes)
 func NewSecp256k1KeyPair(b []byte) (*KeyPair, error) {
-	key, pubKey := btcec.PrivKeyFromBytes(b)
-	return wrapSecp256k1Key(key, pubKey), nil
+	return KeyPairFromBytes(b), nil
 }
 
 func KeyPairFromBytes(b []byte) *KeyPair {
