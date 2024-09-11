@@ -1,13 +1,15 @@
 module github.com/hyperledger/firefly-signer
 
-go 1.21
+go 1.22
+
+toolchain go1.22.7
 
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/gorilla/mux v1.8.1
-	github.com/hyperledger/firefly-common v1.4.6
+	github.com/hyperledger/firefly-common v1.4.10
 	github.com/karlseguin/ccache v2.0.3+incompatible
 	github.com/pelletier/go-toml v1.9.5
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
@@ -71,6 +73,7 @@ require (
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/term v0.16.0 // indirect
+	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
