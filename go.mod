@@ -9,7 +9,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/gorilla/mux v1.8.1
-	github.com/hyperledger/firefly-common v1.4.10
+	github.com/hyperledger/firefly-common v1.4.11
 	github.com/karlseguin/ccache v2.0.3+incompatible
 	github.com/pelletier/go-toml v1.9.5
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
