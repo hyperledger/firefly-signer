@@ -1,4 +1,4 @@
-FROM golang:1.21-bullseye AS builder
+FROM golang:1.22-bullseye AS builder
 ARG BUILD_VERSION
 ENV BUILD_VERSION=${BUILD_VERSION}
 ADD . /ffsigner
