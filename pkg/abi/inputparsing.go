@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
@@ -456,13 +457,14 @@ func walkTupleInput(ctx context.Context, breadcrumbs string, input interface{}, 
 		Children:  make([]*ComponentValue, len(component.tupleChildren)),
 	}
 	for i, tupleChild := range component.tupleChildren {
-		if tupleChild.keyName == "" {
-			return nil, i18n.NewError(ctx, signermsgs.MsgTupleInABINoName, i, breadcrumbs)
+		keyName := tupleChild.keyName
+		if keyName == "" {
+			keyName = strconv.Itoa(i)
 		}
-		childBreadcrumbs := fmt.Sprintf("%s.%s", breadcrumbs, tupleChild.keyName)
-		v, ok := iMap[tupleChild.keyName]
+		childBreadcrumbs := fmt.Sprintf("%s.%s", breadcrumbs, keyName)
+		v, ok := iMap[keyName]
 		if !ok {
-			return nil, i18n.NewError(ctx, signermsgs.MsgMissingInputKeyABITuple, tupleChild.keyName, childBreadcrumbs)
+			return nil, i18n.NewError(ctx, signermsgs.MsgMissingInputKeyABITuple, keyName, childBreadcrumbs)
 		}
 		cv.Children[i], err = walkInput(ctx, childBreadcrumbs, v, component.tupleChildren[i])
 		if err != nil {
