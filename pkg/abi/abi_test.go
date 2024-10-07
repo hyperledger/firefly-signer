@@ -1027,3 +1027,48 @@ func TestComplexStructSolidityDef(t *testing.T) {
 	}, childStructs)
 
 }
+
+func TestErrorString(t *testing.T) {
+
+	customErrABI := ABI{
+		{
+			Type: Error,
+			Name: "ExampleError",
+			Inputs: ParameterArray{
+				{
+					Name: "param1",
+					Type: "string",
+				},
+				{
+					Name: "param2",
+					Type: "uint256",
+				},
+			},
+		},
+	}
+
+	revertReason, err := customErrABI[0].EncodeCallDataJSON([]byte(`{"param1":"test1","param2":12345}`))
+	assert.NoError(t, err)
+
+	errString, ok := customErrABI.ErrorString(revertReason)
+	assert.True(t, ok)
+	assert.Equal(t, `ExampleError("test1","12345")`, errString)
+
+	e, cv, ok := customErrABI.ParseError(revertReason)
+	assert.True(t, ok)
+	assert.NotNil(t, e)
+	assert.NotNil(t, cv)
+
+	exampleDefaultError := ethtypes.MustNewHexBytes0xPrefix(`0x08c379a0` +
+		`0000000000000000000000000000000000000000000000000000000000000020` +
+		`000000000000000000000000000000000000000000000000000000000000001a` +
+		`4e6f7420656e6f7567682045746865722070726f76696465642e000000000000`)
+	errString, ok = customErrABI.ErrorString(exampleDefaultError)
+	assert.True(t, ok)
+	assert.Equal(t, `Error("Not enough Ether provided.")`, errString)
+
+	mismatchError := ethtypes.MustNewHexBytes0xPrefix(`0x11223344`)
+	_, ok = customErrABI.ErrorString(mismatchError)
+	assert.False(t, ok)
+
+}

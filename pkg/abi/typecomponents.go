@@ -630,6 +630,7 @@ func parseMSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, 
 	if err != nil {
 		return i18n.WrapError(ctx, err, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
+	//nolint:gosec // we used bitSize on ParseUint above
 	ec.m = uint16(val)
 	if ec.m < ec.elementaryType.mMin || ec.m > ec.elementaryType.mMax {
 		return i18n.NewError(ctx, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
@@ -646,6 +647,7 @@ func parseNSuffix(ctx context.Context, abiTypeString string, ec *typeComponent, 
 	if err != nil {
 		return i18n.WrapError(ctx, err, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
 	}
+	//nolint:gosec // we used bitSize on ParseUint above
 	ec.n = uint16(val)
 	if ec.n < ec.elementaryType.nMin || ec.n > ec.elementaryType.nMax {
 		return i18n.NewError(ctx, signermsgs.MsgInvalidABISuffix, abiTypeString, ec.elementaryType)
@@ -672,10 +674,11 @@ func parseMxNSuffix(ctx context.Context, abiTypeString string, ec *typeComponent
 
 // parseArrayM parses the "8" in "uint256[8]" for a fixed length array of <type>[M]
 func parseArrayM(ctx context.Context, abiTypeString string, ac *typeComponent, mStr string) error {
-	val, err := strconv.ParseUint(mStr, 10, 64)
+	val, err := strconv.ParseUint(mStr, 10, 32)
 	if err != nil {
 		return i18n.WrapError(ctx, err, signermsgs.MsgInvalidABIArraySpec, abiTypeString)
 	}
+	//nolint:gosec // we used bitSize on ParseUint above
 	ac.arrayLength = int(val)
 	return nil
 }

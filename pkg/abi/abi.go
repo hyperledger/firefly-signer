@@ -315,6 +315,56 @@ func (a ABI) Errors() map[string]*Entry {
 	return m
 }
 
+// Returns the components value from the parsed error
+func (a ABI) ParseError(revertData []byte) (*Entry, *ComponentValue, bool) {
+	return a.ParseErrorCtx(context.Background(), revertData)
+}
+
+// Returns the components value from the parsed error
+func (a ABI) ParseErrorCtx(ctx context.Context, revertData []byte) (*Entry, *ComponentValue, bool) {
+	// Always include the default error
+	a = append(ABI{
+		{Type: Error, Name: "Error", Inputs: ParameterArray{{Name: "reason", Type: "string"}}},
+	}, a...)
+	for _, e := range a {
+		if e.Type == Error {
+			if cv, err := e.DecodeCallDataCtx(ctx, revertData); err == nil {
+				return e, cv, true
+			}
+		}
+	}
+	return nil, nil, false
+}
+
+func (a ABI) ErrorString(revertData []byte) (string, bool) {
+	return a.ErrorStringCtx(context.Background(), revertData)
+}
+
+func (a ABI) ErrorStringCtx(ctx context.Context, revertData []byte) (string, bool) {
+	var parsed []interface{}
+	e, cv, ok := a.ParseErrorCtx(ctx, revertData)
+	if ok {
+		if res, err := NewSerializer().SetFormattingMode(FormatAsFlatArrays).SerializeInterfaceCtx(ctx, cv); err == nil {
+			parsed, ok = res.([]interface{})
+		}
+	}
+	if !ok || parsed == nil {
+		return "", false
+	}
+	buff := new(bytes.Buffer)
+	buff.WriteString(e.Name)
+	buff.WriteRune('(')
+	for i, c := range parsed {
+		if i > 0 {
+			buff.WriteRune(',')
+		}
+		b, _ := json.Marshal(c)
+		buff.Write(b)
+	}
+	buff.WriteRune(')')
+	return buff.String(), true
+}
+
 // Validate processes all the components of all the parameters in this ABI entry
 func (e *Entry) Validate() (err error) {
 	return e.ValidateCtx(context.Background())
