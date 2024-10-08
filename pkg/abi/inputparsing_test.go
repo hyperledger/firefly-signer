@@ -230,6 +230,10 @@ func TestGetIntegerFromInterface(t *testing.T) {
 	assert.Regexp(t, "FF22030", err)
 	assert.Nil(t, i)
 
+	i, err = getIntegerFromInterface(ctx, "ut", json.Number("wrong"))
+	assert.Regexp(t, "FF22030", err)
+	assert.Nil(t, i)
+
 }
 
 func TestGetFloatFromInterface(t *testing.T) {
@@ -666,39 +670,6 @@ func TestTuplesWrongType(t *testing.T) {
 	_, err := inputs.ParseJSON([]byte(values))
 	assert.Regexp(t, "FF22038", err)
 
-}
-
-func TestTuplesMissingName(t *testing.T) {
-	const sample = `[
-		{
-		"name": "foo",
-		"type": "function",
-		"inputs": [
-			{
-				"name": "a",
-				"type": "tuple",
-				"components": [
-					{
-						"type": "uint256"
-					}
-				]
-			}
-		],
-		"outputs": []
-		}
-	]`
-
-	inputs := testABI(t, sample)[0].Inputs
-
-	// Fine if you use the array syntax
-	values := `{ "a": [12345] }`
-	_, err := inputs.ParseJSON([]byte(values))
-	assert.NoError(t, err)
-
-	// But the missing name is a problem for the object syntax
-	values = `{ "a": {"b":12345} }`
-	_, err = inputs.ParseJSON([]byte(values))
-	assert.Regexp(t, "FF22039", err)
 }
 
 func TestTupleEncodeIndividualFixedParam(t *testing.T) {

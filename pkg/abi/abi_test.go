@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger/firefly-common/pkg/ffapi"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const sampleABI1 = `[
@@ -1070,5 +1071,28 @@ func TestErrorString(t *testing.T) {
 	mismatchError := ethtypes.MustNewHexBytes0xPrefix(`0x11223344`)
 	_, ok = customErrABI.ErrorString(mismatchError)
 	assert.False(t, ok)
+
+}
+
+func TestUnnamedInputOutput(t *testing.T) {
+
+	sampleABI := ABI{
+		{Type: Function, Name: "set", Inputs: ParameterArray{
+			{Type: "uint256"},
+			{Type: "string"},
+		}},
+	}
+
+	cv, err := sampleABI[0].Inputs.ParseJSON([]byte(`{"0":12345,"1":"test"}`))
+	require.NoError(t, err)
+	res, err := NewSerializer().SetFormattingMode(FormatAsFlatArrays).SerializeJSON(cv)
+	require.NoError(t, err)
+	require.JSONEq(t, `["12345","test"]`, string(res))
+
+	cv, err = sampleABI[0].Inputs.ParseJSON([]byte(`[12345,"test"]`))
+	require.NoError(t, err)
+	res, err = NewSerializer().SetFormattingMode(FormatAsObjects).SerializeJSON(cv)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"0":"12345","1":"test"}`, string(res))
 
 }
