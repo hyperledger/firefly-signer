@@ -18,6 +18,7 @@ package abi
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -149,6 +150,10 @@ func HexByteSerializer(b []byte) interface{} {
 
 func HexByteSerializer0xPrefix(b []byte) interface{} {
 	return "0x" + hex.EncodeToString(b)
+}
+
+func Base64ByteSerializer(b []byte) interface{} {
+	return base64.StdEncoding.EncodeToString(b)
 }
 
 func NumericDefaultNameGenerator(idx int) string {

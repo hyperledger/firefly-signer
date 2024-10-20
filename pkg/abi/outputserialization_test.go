@@ -18,7 +18,6 @@ package abi
 
 import (
 	"context"
-	"encoding/base64"
 	"math/big"
 	"strconv"
 	"testing"
@@ -78,9 +77,7 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 		SetIntSerializer(func(i *big.Int) interface{} {
 			return "0o" + i.Text(8)
 		}).
-		SetByteSerializer(func(b []byte) interface{} {
-			return base64.StdEncoding.EncodeToString(b)
-		}).
+		SetByteSerializer(Base64ByteSerializer).
 		SerializeJSON(v)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `[
