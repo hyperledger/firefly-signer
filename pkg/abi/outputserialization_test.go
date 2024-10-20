@@ -111,6 +111,40 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 	]`, string(j3))
 }
 
+func TestJSONSerializationNumbers(t *testing.T) {
+
+	abi := testABI(t, sampleABI1)
+	assert.NotNil(t, abi)
+
+	v, err := (ParameterArray{{Type: "uint"}, {Type: "int"}}).ParseJSON([]byte(`[
+	   "123000000000000000000000112233",
+	   "-0x18d6f3720c92d9d437801b669"
+	]`))
+	assert.NoError(t, err)
+
+	j, err := v.JSON()
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+	   "0": "123000000000000000000000112233",
+	   "1": "-123000000000000000000000112233"
+	}`, string(j))
+
+	j, err = NewSerializer().SetIntSerializer(HexIntSerializer0xPrefix).SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+	   "0": "0x18d6f3720c92d9d437801b669",
+	   "1": "-0x18d6f3720c92d9d437801b669"
+	}`, string(j))
+
+	j, err = NewSerializer().SetIntSerializer(JSONNumberIntSerializer).SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+	   "0": 123000000000000000000000112233,
+	   "1": -123000000000000000000000112233
+	}`, string(j))
+
+}
+
 func TestJSONSerializationForTypes(t *testing.T) {
 
 	abi := testABI(t, sampleABI2)

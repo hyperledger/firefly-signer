@@ -110,7 +110,16 @@ func Base10StringIntSerializer(i *big.Int) interface{} {
 }
 
 func HexIntSerializer0xPrefix(i *big.Int) interface{} {
-	return "0x" + i.Text(16)
+	absHi := new(big.Int).Abs(i)
+	sign := ""
+	if i.Sign() < 0 {
+		sign = "-"
+	}
+	return fmt.Sprintf("%s0x%s", sign, absHi.Text(16))
+}
+
+func JSONNumberIntSerializer(i *big.Int) interface{} {
+	return json.Number(i.String())
 }
 
 func Base10StringFloatSerializer(f *big.Float) interface{} {
