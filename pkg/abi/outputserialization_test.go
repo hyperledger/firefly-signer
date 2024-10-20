@@ -59,6 +59,7 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 		SetFormattingMode(FormatAsFlatArrays).
 		SetIntSerializer(HexIntSerializer0xPrefix).
 		SetByteSerializer(HexByteSerializer0xPrefix).
+		SetPretty(true).
 		SerializeJSON(v)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `[
@@ -71,6 +72,7 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 			"0xfeedbeef"
 		]
 	]`, string(j2))
+	assert.Contains(t, string(j2), "\n")
 
 	j3, err := NewSerializer().
 		SetFormattingMode(FormatAsSelfDescribingArrays).

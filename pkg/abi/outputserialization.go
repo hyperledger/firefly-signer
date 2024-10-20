@@ -32,11 +32,12 @@ import (
 // Serializer contains a set of options for how to serialize an parsed
 // ABI value tree, into JSON.
 type Serializer struct {
-	ts FormattingMode
-	is IntSerializer
-	fs FloatSerializer
-	bs ByteSerializer
-	dn DefaultNameGenerator
+	ts     FormattingMode
+	is     IntSerializer
+	fs     FloatSerializer
+	bs     ByteSerializer
+	dn     DefaultNameGenerator
+	pretty bool
 }
 
 // NewSerializer creates a new ABI value tree serializer, with the default
@@ -103,6 +104,11 @@ func (s *Serializer) SetByteSerializer(bs ByteSerializer) *Serializer {
 
 func (s *Serializer) SetDefaultNameGenerator(dn DefaultNameGenerator) *Serializer {
 	s.dn = dn
+	return s
+}
+
+func (s *Serializer) SetPretty(pretty bool) *Serializer {
+	s.pretty = pretty
 	return s
 }
 
@@ -176,6 +182,9 @@ func (s *Serializer) SerializeJSONCtx(ctx context.Context, cv *ComponentValue) (
 	v, err := s.walkOutput(ctx, "", cv)
 	if err != nil {
 		return nil, err
+	}
+	if s.pretty {
+		return json.MarshalIndent(&v, "", "  ")
 	}
 	return json.Marshal(&v)
 }
