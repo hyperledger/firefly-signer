@@ -112,9 +112,6 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 
 func TestJSONSerializationNumbers(t *testing.T) {
 
-	abi := testABI(t, sampleABI1)
-	assert.NotNil(t, abi)
-
 	v, err := (ParameterArray{{Type: "uint"}, {Type: "int"}}).ParseJSON([]byte(`[
 	   "123000000000000000000000112233",
 	   "-0x18d6f3720c92d9d437801b669"
@@ -140,6 +137,56 @@ func TestJSONSerializationNumbers(t *testing.T) {
 	assert.JSONEq(t, `{
 	   "0": 123000000000000000000000112233,
 	   "1": -123000000000000000000000112233
+	}`, string(j))
+
+}
+
+func TestJSONSerializationAddresses(t *testing.T) {
+
+	v, err := (ParameterArray{{Type: "address"}}).ParseJSON([]byte(`[
+	   "0xC66A547171fdE5FbEfC546B58E66AaC300Cb6150"
+	]`))
+	assert.NoError(t, err)
+
+	j, err := v.JSON()
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+	   "0": "c66a547171fde5fbefc546b58e66aac300cb6150"
+	}`, string(j))
+
+	j, err = NewSerializer().
+		SetByteSerializer(Base64ByteSerializer). // confirming no effect
+		SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+		"0": "xmpUcXH95fvvxUa1jmaqwwDLYVA="
+	}`, string(j))
+
+	j, err = NewSerializer().
+		SetByteSerializer(Base64ByteSerializer). // confirming no effect
+		SetAddressSerializer(HexAddrSerializer0xPrefix).
+		SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+		"0": "0xc66a547171fde5fbefc546b58e66aac300cb6150"
+	 }`, string(j))
+
+	j, err = NewSerializer().
+		SetByteSerializer(Base64ByteSerializer). // confirming no effect
+		SetAddressSerializer(HexAddrSerializerPlain).
+		SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+		"0": "c66a547171fde5fbefc546b58e66aac300cb6150"
+	}`, string(j))
+
+	j, err = NewSerializer().
+		SetByteSerializer(Base64ByteSerializer). // confirming no effect
+		SetAddressSerializer(ChecksumAddrSerializer).
+		SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+		"0": "0xC66A547171fdE5FbEfC546B58E66AaC300Cb6150"
 	}`, string(j))
 
 }

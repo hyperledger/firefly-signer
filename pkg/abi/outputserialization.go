@@ -27,6 +27,7 @@ import (
 
 	"github.com/hyperledger/firefly-common/pkg/i18n"
 	"github.com/hyperledger/firefly-signer/internal/signermsgs"
+	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 )
 
 // Serializer contains a set of options for how to serialize an parsed
@@ -37,6 +38,7 @@ type Serializer struct {
 	fs     FloatSerializer
 	bs     ByteSerializer
 	dn     DefaultNameGenerator
+	ad     AddressSerializer
 	pretty bool
 }
 
@@ -52,6 +54,7 @@ func NewSerializer() *Serializer {
 		fs: Base10StringFloatSerializer,
 		bs: HexByteSerializer,
 		dn: NumericDefaultNameGenerator,
+		ad: nil, // we fall back to bytes serializer to preserve compatibility
 	}
 }
 
@@ -82,6 +85,8 @@ type FloatSerializer func(f *big.Float) interface{}
 
 type ByteSerializer func(b []byte) interface{}
 
+type AddressSerializer func(addr [20]byte) interface{}
+
 func (s *Serializer) SetFormattingMode(ts FormattingMode) *Serializer {
 	s.ts = ts
 	return s
@@ -99,6 +104,11 @@ func (s *Serializer) SetFloatSerializer(fs FloatSerializer) *Serializer {
 
 func (s *Serializer) SetByteSerializer(bs ByteSerializer) *Serializer {
 	s.bs = bs
+	return s
+}
+
+func (s *Serializer) SetAddressSerializer(ad AddressSerializer) *Serializer {
+	s.ad = ad
 	return s
 }
 
@@ -158,6 +168,18 @@ func HexByteSerializer0xPrefix(b []byte) interface{} {
 	return "0x" + hex.EncodeToString(b)
 }
 
+func HexAddrSerializer0xPrefix(addr [20]byte) interface{} {
+	return ethtypes.Address0xHex(addr).String()
+}
+
+func HexAddrSerializerPlain(addr [20]byte) interface{} {
+	return ethtypes.AddressPlainHex(addr).String()
+}
+
+func ChecksumAddrSerializer(addr [20]byte) interface{} {
+	return ethtypes.AddressWithChecksum(addr).String()
+}
+
 func Base64ByteSerializer(b []byte) interface{} {
 	return base64.StdEncoding.EncodeToString(b)
 }
@@ -210,9 +232,12 @@ func (s *Serializer) serializeElementaryType(ctx context.Context, breadcrumbs st
 	case ElementaryTypeInt, ElementaryTypeUint:
 		return s.is(cv.Value.(*big.Int)), nil
 	case ElementaryTypeAddress:
-		addr := make([]byte, 20)
-		cv.Value.(*big.Int).FillBytes(addr)
-		return s.bs(addr), nil
+		var addr [20]byte
+		cv.Value.(*big.Int).FillBytes(addr[:])
+		if s.ad == nil {
+			return s.bs(addr[:]), nil
+		}
+		return s.ad(addr), nil
 	case ElementaryTypeBool:
 		return (cv.Value.(*big.Int).Int64() == 1), nil
 	case ElementaryTypeFixed, ElementaryTypeUfixed:
