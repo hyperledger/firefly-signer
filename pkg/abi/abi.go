@@ -394,7 +394,9 @@ func (pa ParameterArray) ParseJSON(data []byte) (*ComponentValue, error) {
 
 func (pa ParameterArray) ParseJSONCtx(ctx context.Context, data []byte) (*ComponentValue, error) {
 	var jsonTree interface{}
-	err := json.Unmarshal(data, &jsonTree)
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	err := decoder.Decode(&jsonTree)
 	if err != nil {
 		return nil, err
 	}
