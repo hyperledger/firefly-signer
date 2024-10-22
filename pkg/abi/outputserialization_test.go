@@ -18,7 +18,6 @@ package abi
 
 import (
 	"context"
-	"encoding/base64"
 	"math/big"
 	"strconv"
 	"testing"
@@ -60,6 +59,7 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 		SetFormattingMode(FormatAsFlatArrays).
 		SetIntSerializer(HexIntSerializer0xPrefix).
 		SetByteSerializer(HexByteSerializer0xPrefix).
+		SetPretty(true).
 		SerializeJSON(v)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `[
@@ -72,15 +72,14 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 			"0xfeedbeef"
 		]
 	]`, string(j2))
+	assert.Contains(t, string(j2), "\n")
 
 	j3, err := NewSerializer().
 		SetFormattingMode(FormatAsSelfDescribingArrays).
 		SetIntSerializer(func(i *big.Int) interface{} {
 			return "0o" + i.Text(8)
 		}).
-		SetByteSerializer(func(b []byte) interface{} {
-			return base64.StdEncoding.EncodeToString(b)
-		}).
+		SetByteSerializer(Base64ByteSerializer).
 		SerializeJSON(v)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `[
@@ -109,6 +108,87 @@ func TestJSONSerializationFormatsTuple(t *testing.T) {
 			]
 		}	
 	]`, string(j3))
+}
+
+func TestJSONSerializationNumbers(t *testing.T) {
+
+	v, err := (ParameterArray{{Type: "uint"}, {Type: "int"}}).ParseJSON([]byte(`[
+	   "123000000000000000000000112233",
+	   "-0x18d6f3720c92d9d437801b669"
+	]`))
+	assert.NoError(t, err)
+
+	j, err := v.JSON()
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+	   "0": "123000000000000000000000112233",
+	   "1": "-123000000000000000000000112233"
+	}`, string(j))
+
+	j, err = NewSerializer().SetIntSerializer(HexIntSerializer0xPrefix).SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+	   "0": "0x18d6f3720c92d9d437801b669",
+	   "1": "-0x18d6f3720c92d9d437801b669"
+	}`, string(j))
+
+	j, err = NewSerializer().SetIntSerializer(JSONNumberIntSerializer).SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+	   "0": 123000000000000000000000112233,
+	   "1": -123000000000000000000000112233
+	}`, string(j))
+
+}
+
+func TestJSONSerializationAddresses(t *testing.T) {
+
+	v, err := (ParameterArray{{Type: "address"}}).ParseJSON([]byte(`[
+	   "0xC66A547171fdE5FbEfC546B58E66AaC300Cb6150"
+	]`))
+	assert.NoError(t, err)
+
+	j, err := v.JSON()
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+	   "0": "c66a547171fde5fbefc546b58e66aac300cb6150"
+	}`, string(j))
+
+	j, err = NewSerializer().
+		SetByteSerializer(Base64ByteSerializer). // confirming no effect
+		SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+		"0": "xmpUcXH95fvvxUa1jmaqwwDLYVA="
+	}`, string(j))
+
+	j, err = NewSerializer().
+		SetByteSerializer(Base64ByteSerializer). // confirming no effect
+		SetAddressSerializer(HexAddrSerializer0xPrefix).
+		SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+		"0": "0xc66a547171fde5fbefc546b58e66aac300cb6150"
+	 }`, string(j))
+
+	j, err = NewSerializer().
+		SetByteSerializer(Base64ByteSerializer). // confirming no effect
+		SetAddressSerializer(HexAddrSerializerPlain).
+		SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+		"0": "c66a547171fde5fbefc546b58e66aac300cb6150"
+	}`, string(j))
+
+	j, err = NewSerializer().
+		SetByteSerializer(Base64ByteSerializer). // confirming no effect
+		SetAddressSerializer(ChecksumAddrSerializer).
+		SerializeJSON(v)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{
+		"0": "0xC66A547171fdE5FbEfC546B58E66AaC300Cb6150"
+	}`, string(j))
+
 }
 
 func TestJSONSerializationForTypes(t *testing.T) {

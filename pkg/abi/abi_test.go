@@ -685,7 +685,7 @@ func TestParseJSONArrayLotsOfTypes(t *testing.T) {
 func TestParseJSONBadData(t *testing.T) {
 	inputs := testABI(t, sampleABI1)[0].Inputs
 	_, err := inputs.ParseJSON([]byte(`{`))
-	assert.Regexp(t, "unexpected end", err)
+	assert.Regexp(t, "unexpected EOF", err)
 
 }
 
