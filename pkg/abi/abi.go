@@ -352,7 +352,11 @@ func (a ABI) ErrorStringCtx(ctx context.Context, revertData []byte) (strError st
 func FormatErrorStringCtx(ctx context.Context, e *Entry, cv *ComponentValue) string {
 	var ok bool
 	var parsed []interface{}
-	if res, err := NewSerializer().SetFormattingMode(FormatAsFlatArrays).SerializeInterfaceCtx(ctx, cv); err == nil {
+	if res, err := NewSerializer().
+		SetFormattingMode(FormatAsFlatArrays).
+		SetIntSerializer(Base10StringIntSerializer).
+		SetAddressSerializer(HexAddrSerializer0xPrefix).
+		SerializeInterfaceCtx(ctx, cv); err == nil {
 		parsed, ok = res.([]interface{})
 	}
 	buff := new(strings.Builder)
