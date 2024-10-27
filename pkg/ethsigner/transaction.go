@@ -299,8 +299,7 @@ func recoverCommon(tx *Transaction, message []byte, chainID int64, v int64, r, s
 	}, nil
 }
 
-func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
-
+func decodeEIP1559SignaturePayload(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64, rlpMinLen int) (rlp.List, *Transaction, error) {
 	if len(rawTx) == 0 || rawTx[0] != TransactionType1559 {
 		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, "TransactionType")
 	}
@@ -311,18 +310,17 @@ func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPre
 		log.L(ctx).Errorf("Invalid EIP-1559 transaction data '%s': %s", rawTx, err)
 		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, err)
 	}
-
-	if decoded == nil || len(decoded.(rlp.List)) < 12 {
-		log.L(ctx).Errorf("Invalid EIP-1559 transaction data '%s': EOF", rawTx)
-		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, "EOF")
-	}
 	rlpList := decoded.(rlp.List)
 
+	if len(rlpList) < rlpMinLen {
+		log.L(ctx).Errorf("Invalid EIP-1559 transaction data (%d RLP elements)", rlpList)
+		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidEIP1559Transaction, "EOF")
+	}
 	encodedChainID := rlpList[0].ToData().IntOrZero().Int64()
 	if encodedChainID != chainID {
 		return nil, nil, i18n.NewError(ctx, signermsgs.MsgInvalidChainID, chainID, encodedChainID)
 	}
-	tx := &Transaction{
+	return rlpList, &Transaction{
 		Nonce:                (*ethtypes.HexInteger)(rlpList[1].ToData().Int()),
 		MaxPriorityFeePerGas: (*ethtypes.HexInteger)(rlpList[2].ToData().Int()),
 		MaxFeePerGas:         (*ethtypes.HexInteger)(rlpList[3].ToData().Int()),
@@ -331,6 +329,19 @@ func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPre
 		Value:                (*ethtypes.HexInteger)(rlpList[6].ToData().Int()),
 		Data:                 ethtypes.HexBytes0xPrefix(rlpList[7].ToData()),
 		// No access list support
+	}, nil
+}
+
+func DecodeEIP1559SignaturePayload(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*Transaction, error) {
+	_, tx, err := decodeEIP1559SignaturePayload(ctx, rawTx, chainID, 9 /* no signature data */)
+	return tx, err
+}
+
+func RecoverEIP1559Transaction(ctx context.Context, rawTx ethtypes.HexBytes0xPrefix, chainID int64) (*ethtypes.Address0xHex, *TransactionWithOriginalPayload, error) {
+
+	rlpList, tx, err := decodeEIP1559SignaturePayload(ctx, rawTx, chainID, 12 /* with signature data */)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return recoverCommon(tx,

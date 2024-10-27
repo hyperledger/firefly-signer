@@ -1,4 +1,4 @@
-// Copyright © 2022 Kaleido, Inc.
+// Copyright © 2024 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -31,6 +31,7 @@ import (
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEncodeExistingLegacyEIP155(t *testing.T) {
@@ -292,6 +293,36 @@ func TestRecoverEIP1559BadStructure(t *testing.T) {
 		rlp.WrapInt(big.NewInt(12345)),
 	}).Encode()...), 1001)
 	assert.Regexp(t, "FF22084.*EOF", err)
+}
+
+func TestDecodeEIP1559SignaturePayloadEmpty(t *testing.T) {
+	_, err := DecodeEIP1559SignaturePayload(context.Background(), []byte{}, 1001)
+	assert.Regexp(t, "FF22084.*TransactionType", err)
+}
+
+func TestRoundTripEIP1559Payload(t *testing.T) {
+
+	txIn := Transaction{
+		Nonce:                ethtypes.NewHexInteger64(3),
+		GasLimit:             ethtypes.NewHexInteger64(40574),
+		MaxPriorityFeePerGas: ethtypes.NewHexInteger64(505050),
+		MaxFeePerGas:         ethtypes.NewHexInteger64(606060),
+		To:                   ethtypes.MustNewAddress("0x497eedc4299dea2f2a364be10025d0ad0f702de3"),
+		Data:                 ethtypes.MustNewHexBytes0xPrefix("0xfeedbeef"),
+		Value:                ethtypes.NewHexInteger64(100000000),
+	}
+	abiData := txIn.SignaturePayloadEIP1559(1001).Bytes()
+
+	txOut, err := DecodeEIP1559SignaturePayload(context.Background(), abiData, 1001)
+	require.NoError(t, err)
+
+	jsonIn, err := json.Marshal(txIn)
+	require.NoError(t, err)
+	jsonOut, err := json.Marshal(txOut)
+	require.NoError(t, err)
+
+	require.JSONEq(t, string(jsonIn), string(jsonOut))
+
 }
 
 func TestRecoverEIP1559BadChainID(t *testing.T) {
