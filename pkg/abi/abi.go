@@ -355,6 +355,7 @@ func FormatErrorStringCtx(ctx context.Context, e *Entry, cv *ComponentValue) str
 	if res, err := NewSerializer().
 		SetFormattingMode(FormatAsFlatArrays).
 		SetIntSerializer(Base10StringIntSerializer).
+		SetByteSerializer(HexByteSerializer0xPrefix).
 		SetAddressSerializer(HexAddrSerializer0xPrefix).
 		SerializeInterfaceCtx(ctx, cv); err == nil {
 		parsed, ok = res.([]interface{})
