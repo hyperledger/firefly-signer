@@ -340,29 +340,40 @@ func (a ABI) ErrorString(revertData []byte) (string, bool) {
 	return a.ErrorStringCtx(context.Background(), revertData)
 }
 
-func (a ABI) ErrorStringCtx(ctx context.Context, revertData []byte) (string, bool) {
-	var parsed []interface{}
+func (a ABI) ErrorStringCtx(ctx context.Context, revertData []byte) (strError string, ok bool) {
 	e, cv, ok := a.ParseErrorCtx(ctx, revertData)
 	if ok {
-		if res, err := NewSerializer().SetFormattingMode(FormatAsFlatArrays).SerializeInterfaceCtx(ctx, cv); err == nil {
-			parsed, ok = res.([]interface{})
+		strError = FormatErrorStringCtx(ctx, e, cv)
+		ok = strError != ""
+	}
+	return strError, ok
+}
+
+func FormatErrorStringCtx(ctx context.Context, e *Entry, cv *ComponentValue) string {
+	var ok bool
+	var parsed []interface{}
+	if res, err := NewSerializer().
+		SetFormattingMode(FormatAsFlatArrays).
+		SetIntSerializer(Base10StringIntSerializer).
+		SetByteSerializer(HexByteSerializer0xPrefix).
+		SetAddressSerializer(HexAddrSerializer0xPrefix).
+		SerializeInterfaceCtx(ctx, cv); err == nil {
+		parsed, ok = res.([]interface{})
+	}
+	buff := new(strings.Builder)
+	if ok && parsed != nil {
+		buff.WriteString(e.Name)
+		buff.WriteRune('(')
+		for i, c := range parsed {
+			if i > 0 {
+				buff.WriteRune(',')
+			}
+			b, _ := json.Marshal(c)
+			buff.Write(b)
 		}
+		buff.WriteRune(')')
 	}
-	if !ok || parsed == nil {
-		return "", false
-	}
-	buff := new(bytes.Buffer)
-	buff.WriteString(e.Name)
-	buff.WriteRune('(')
-	for i, c := range parsed {
-		if i > 0 {
-			buff.WriteRune(',')
-		}
-		b, _ := json.Marshal(c)
-		buff.Write(b)
-	}
-	buff.WriteRune(')')
-	return buff.String(), true
+	return buff.String()
 }
 
 // Validate processes all the components of all the parameters in this ABI entry
