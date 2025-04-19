@@ -1,11 +1,11 @@
 module github.com/hyperledger/firefly-signer
 
-go 1.22
+go 1.23
 
-toolchain go1.22.7
+toolchain go1.23.7
 
 require (
-	github.com/btcsuite/btcd/btcec/v2 v2.3.2
+	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/gorilla/mux v1.8.1
@@ -27,7 +27,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/getkin/kin-openapi v0.122.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect

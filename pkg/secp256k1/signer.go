@@ -1,4 +1,4 @@
-// Copyright © 2024 Kaleido, Inc.
+// Copyright © 2025 Kaleido, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -135,18 +135,16 @@ func (k *KeyPair) SignDirect(message []byte) (ethSig *SignatureData, err error) 
 	if k == nil {
 		return nil, fmt.Errorf("nil signer")
 	}
-	sig, err := ecdsa.SignCompact(k.PrivateKey, message, false) // uses S256() by default
-	if err == nil {
-		// btcec does all the hard work for us. However, the interface of btcec is such
-		// that we need to unpack the result for Ethereum encoding.
-		ethSig = &SignatureData{
-			V: new(big.Int),
-			R: new(big.Int),
-			S: new(big.Int),
-		}
-		ethSig.V = ethSig.V.SetInt64(int64(sig[0]))
-		ethSig.R = ethSig.R.SetBytes(sig[1:33])
-		ethSig.S = ethSig.S.SetBytes(sig[33:65])
+	sig := ecdsa.SignCompact(k.PrivateKey, message, false) // uses S256() by default
+	// btcec does all the hard work for us. However, the interface of btcec is such
+	// that we need to unpack the result for Ethereum encoding.
+	ethSig = &SignatureData{
+		V: new(big.Int),
+		R: new(big.Int),
+		S: new(big.Int),
 	}
-	return ethSig, err
+	ethSig.V = ethSig.V.SetInt64(int64(sig[0]))
+	ethSig.R = ethSig.R.SetBytes(sig[1:33])
+	ethSig.S = ethSig.S.SetBytes(sig[33:65])
+	return ethSig, nil
 }
