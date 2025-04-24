@@ -1,8 +1,6 @@
 module github.com/hyperledger/firefly-signer
 
-go 1.22
-
-toolchain go1.22.7
+go 1.23.0
 
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
@@ -17,8 +15,8 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.31.0
-	golang.org/x/text v0.21.0
+	golang.org/x/crypto v0.35.0
+	golang.org/x/text v0.22.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -70,9 +68,9 @@ require (
 	gitlab.com/hfuss/mux-prometheus v0.0.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20240110193028-0dcbfd608b1e // indirect
-	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
