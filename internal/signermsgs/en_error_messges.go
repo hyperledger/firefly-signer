@@ -107,4 +107,5 @@ var (
 	MsgInvalidIntPrecisionLoss     = ffe("FF22089", "String %s cannot be converted to integer without losing precision")
 	MsgInvalidUint64PrecisionLoss  = ffe("FF22090", "String %s cannot be converted to a uint64 without losing precision")
 	MsgInvalidJSONTypeForBigInt    = ffe("FF22091", "JSON parsed '%T' cannot be converted to an integer")
+	MsgHexUintNegative             = ffe("FF22092", "Cannot convert negative integer %d to unsigned")
 )

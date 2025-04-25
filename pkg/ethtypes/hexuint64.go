@@ -67,6 +67,9 @@ func (h *HexUint64) Scan(src interface{}) error {
 	case nil:
 		return nil
 	case int64:
+		if src < 0 {
+			return i18n.NewError(context.Background(), signermsgs.MsgHexUintNegative, src)
+		}
 		*h = HexUint64(src)
 		return nil
 	case uint64:
