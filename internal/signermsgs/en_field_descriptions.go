@@ -32,7 +32,7 @@ var (
 	ABIParameterIndexed      = ffm("EthABIParameter.indexed", "Whether this parameter uses one of the topics, or is in the data area")
 	ABIParameterInternalType = ffm("EthABIParameter.internalType", "Used by the solc compiler to include additional details - importantly the struct name for tuples")
 
-	EthTransactionFrom                 = ffm("EthTransaction.internalType", "The from address (not encoded into the transaction directly, but used on this structure on input)")
+	EthTransactionFrom                 = ffm("EthTransaction.from", "The from address (not encoded into the transaction directly, but used on this structure on input)")
 	EthTransactionNonce                = ffm("EthTransaction.nonce", "Number used once (nonce) that specifies the sequence of this transaction in all transactions sent to the chain from this signing address")
 	EthTransactionGasPrice             = ffm("EthTransaction.gasPrice", "The price per unit offered for the gas used when executing this transaction, if submitting to a chain that requires gas fees (in wei of the native chain token)")
 	EthTransactionMaxPriorityFeePerGas = ffm("EthTransaction.maxPriorityFeePerGas", "Part of the EIP-1559 extension to transaction pricing. The amount provided to the miner of the block per unit of gas, in addition to the base fee (which is burned when the block is mined)")
