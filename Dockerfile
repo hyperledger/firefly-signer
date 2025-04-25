@@ -1,11 +1,11 @@
-FROM golang:1.22-bullseye AS builder
+FROM golang:1.23-bookworm AS builder
 ARG BUILD_VERSION
 ENV BUILD_VERSION=${BUILD_VERSION}
 ADD . /ffsigner
 WORKDIR /ffsigner
 RUN make
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 WORKDIR /ffsigner
 RUN apt update -y \
     && apt install -y curl jq \

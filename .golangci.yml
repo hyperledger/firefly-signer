@@ -20,8 +20,9 @@ linters-settings:
     values:
       regexp:
         COMPANY: .*
+        YEAR_LAX: '202\d'
     template: |-
-      Copyright © {{ YEAR }} {{ COMPANY }}
+      Copyright © {{ YEAR_LAX }} {{ COMPANY }}
 
       SPDX-License-Identifier: Apache-2.0
 
