@@ -7,7 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/gorilla/mux v1.8.1
-	github.com/hyperledger/firefly-common v1.4.11
+	github.com/hyperledger/firefly-common v1.5.1
 	github.com/karlseguin/ccache v2.0.3+incompatible
 	github.com/pelletier/go-toml v1.9.5
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
@@ -77,5 +77,3 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/hyperledger/firefly-common => github.com/kaleido-io/firefly-common v0.0.0-20240827134901-edb07289f156
