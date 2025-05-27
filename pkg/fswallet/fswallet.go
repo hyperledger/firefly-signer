@@ -42,12 +42,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type SyncAddressCallback func(context.Context, ethtypes.Address0xHex) error
+
 // Wallet is a directory containing a set of KeystoreV3 files, conforming
 // to the ethsigner.Wallet interface and providing notifications when new
 // keys are added to the wallet (via FS listener).
 type Wallet interface {
 	ethsigner.WalletTypedData
 	GetWalletFile(ctx context.Context, addr ethtypes.Address0xHex) (keystorev3.WalletFile, error)
+	SetSyncAddressCallback(SyncAddressCallback)
 	AddListener(listener chan<- ethtypes.Address0xHex)
 }
 
@@ -99,6 +102,7 @@ type fsWallet struct {
 	metadataKeyFileProperty      *template.Template
 	metadataPasswordFileProperty *template.Template
 	primaryMatchRegex            *regexp.Regexp
+	syncAddressCallback          SyncAddressCallback
 
 	mux               sync.Mutex
 	addressToFileMap  map[ethtypes.Address0xHex]string // map for lookup to filename
@@ -139,10 +143,23 @@ func (w *fsWallet) Initialize(ctx context.Context) error {
 	return w.Refresh(ctx)
 }
 
+// Asynchronously listen for all addresses as they are detected - during startup, or after startup
 func (w *fsWallet) AddListener(listener chan<- ethtypes.Address0xHex) {
 	w.mux.Lock()
 	defer w.mux.Unlock()
 	w.listeners = append(w.listeners, listener)
+}
+
+// As an alternative to registering a listener are able to supply a single *synchronous* callback
+// that will process all of the addresses that exist on-disk at the time of refresh in-line.
+// This is very useful if you want to be sure your application using this module does not advertise it
+// is available until it has built a lookup map for all of the files that existed before it started.
+//
+// This will (by definition) delay initialize/refresh while that processing happens.
+//
+// This function is called under the lock of addresses, so your processing should be efficient.
+func (w *fsWallet) SetSyncAddressCallback(callback SyncAddressCallback) {
+	w.syncAddressCallback = callback
 }
 
 // GetAccounts returns the currently cached list of known addresses
@@ -197,13 +214,14 @@ func (w *fsWallet) Refresh(ctx context.Context) error {
 			files = append(files, fi)
 		}
 	}
-	if len(files) > 0 {
-		w.notifyNewFiles(ctx, files...)
-	}
-	return nil
+	return w.notifyNewFiles(ctx, files...)
 }
 
-func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) {
+func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) error {
+	if len(files) == 0 {
+		return nil
+	}
+
 	// Lock now we have the list
 	w.mux.Lock()
 	defer w.mux.Unlock()
@@ -224,7 +242,8 @@ func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) {
 	listeners := make([]chan<- ethtypes.Address0xHex, len(w.listeners))
 	copy(listeners, w.listeners)
 	log.L(ctx).Debugf("Processed %d files. Found %d new addresses", len(files), len(newAddresses))
-	// Avoid holding the lock while calling the listeners, by using a go-routine
+
+	// Avoid holding the lock while calling the async listeners, by using a go-routine
 	go func() {
 		for _, l := range w.listeners {
 			for _, addr := range newAddresses {
@@ -232,6 +251,18 @@ func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) {
 			}
 		}
 	}()
+
+	// Sync callbacks are called here in-line, with the lock.
+	if w.syncAddressCallback != nil {
+		for _, addr := range newAddresses {
+			if err := w.syncAddressCallback(ctx, *addr); err != nil {
+				log.L(ctx).Errorf("sync listener returned error for address %s: %s", addr, err)
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (w *fsWallet) Close() error {
