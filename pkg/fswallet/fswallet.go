@@ -157,7 +157,11 @@ func (w *fsWallet) AddListener(listener chan<- ethtypes.Address0xHex) {
 //
 // This will (by definition) delay initialize/refresh while that processing happens.
 //
-// This function is called under the lock of addresses, so your processing should be efficient.
+// Note there is no guarantee that this callback will be called on a single go-routine, as no
+// locks are held while calling it. So if refresh is called on two goroutines concurrently, it
+// will be called concurrently. However, it is guaranteed to be called in-line with the
+// initialize/refresh so you know once that calls returns all new keys detected by it have
+// driven the callback.
 func (w *fsWallet) SetSyncAddressCallback(callback SyncAddressCallback) {
 	w.syncAddressCallback = callback
 }
@@ -217,15 +221,11 @@ func (w *fsWallet) Refresh(ctx context.Context) error {
 	return w.notifyNewFiles(ctx, files...)
 }
 
-func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) error {
-	if len(files) == 0 {
-		return nil
-	}
-
+func (w *fsWallet) processNewFiles(ctx context.Context, files ...fs.FileInfo) (listeners []chan<- ethtypes.Address0xHex, newAddresses []*ethtypes.Address0xHex) {
 	// Lock now we have the list
 	w.mux.Lock()
 	defer w.mux.Unlock()
-	newAddresses := make([]*ethtypes.Address0xHex, 0)
+	newAddresses = make([]*ethtypes.Address0xHex, 0)
 	for _, f := range files {
 		addr := w.matchFilename(ctx, f)
 		if addr != nil {
@@ -239,27 +239,40 @@ func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) err
 			}
 		}
 	}
-	listeners := make([]chan<- ethtypes.Address0xHex, len(w.listeners))
+	listeners = make([]chan<- ethtypes.Address0xHex, len(w.listeners))
 	copy(listeners, w.listeners)
 	log.L(ctx).Debugf("Processed %d files. Found %d new addresses", len(files), len(newAddresses))
+	return listeners, newAddresses
+}
 
-	// Avoid holding the lock while calling the async listeners, by using a go-routine
-	go func() {
-		for _, l := range w.listeners {
+func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) error {
+
+	// This function takes te lock and releases with a copy of the listeners, and a list of new addresses
+	listeners, newAddresses := w.processNewFiles(ctx, files...)
+
+	if len(newAddresses) > 0 {
+
+		if w.syncAddressCallback != nil {
+			// Sync callbacks are called here in-line, but outside the lock.
 			for _, addr := range newAddresses {
-				l <- *addr
+				if err := w.syncAddressCallback(ctx, *addr); err != nil {
+					log.L(ctx).Errorf("sync listener returned error for address %s: %s", addr, err)
+					return err
+				}
 			}
 		}
-	}()
 
-	// Sync callbacks are called here in-line, with the lock.
-	if w.syncAddressCallback != nil {
-		for _, addr := range newAddresses {
-			if err := w.syncAddressCallback(ctx, *addr); err != nil {
-				log.L(ctx).Errorf("sync listener returned error for address %s: %s", addr, err)
-				return err
-			}
+		if len(listeners) > 0 {
+			// Avoid any blocking of this routine using a separate go-routine that will deliver async callbacks
+			go func() {
+				for _, l := range listeners {
+					for _, addr := range newAddresses {
+						l <- *addr
+					}
+				}
+			}()
 		}
+
 	}
 
 	return nil
