@@ -19,7 +19,6 @@ package fswallet
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -65,16 +64,16 @@ func TestFileListener(t *testing.T) {
 	listener2 := make(chan ethtypes.Address0xHex, 1)
 	f.AddListener(listener2)
 
-	testPWFIle, err := ioutil.ReadFile("../../test/keystore_toml/1f185718734552d08278aa70f804580bab5fd2b4.pwd")
+	testPWFIle, err := os.ReadFile("../../test/keystore_toml/1f185718734552d08278aa70f804580bab5fd2b4.pwd")
 	assert.NoError(t, err)
 
-	err = ioutil.WriteFile(path.Join(f.conf.Path, "1f185718734552d08278aa70f804580bab5fd2b4.pwd"), testPWFIle, 0644)
+	err = os.WriteFile(path.Join(f.conf.Path, "1f185718734552d08278aa70f804580bab5fd2b4.pwd"), testPWFIle, 0644)
 	assert.NoError(t, err)
 
-	testKeyFIle, err := ioutil.ReadFile("../../test/keystore_toml/1f185718734552d08278aa70f804580bab5fd2b4.key.json")
+	testKeyFIle, err := os.ReadFile("../../test/keystore_toml/1f185718734552d08278aa70f804580bab5fd2b4.key.json")
 	assert.NoError(t, err)
 
-	err = ioutil.WriteFile(path.Join(f.conf.Path, "1f185718734552d08278aa70f804580bab5fd2b4.key.json"), testKeyFIle, 0644)
+	err = os.WriteFile(path.Join(f.conf.Path, "1f185718734552d08278aa70f804580bab5fd2b4.key.json"), testKeyFIle, 0644)
 	assert.NoError(t, err)
 
 	newAddr1 := <-listener1

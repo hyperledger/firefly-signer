@@ -19,6 +19,7 @@ package fswallet
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -435,4 +436,56 @@ func TestLoadKeyBadPath(t *testing.T) {
 	_, err := f.loadWalletFile(ctx, *ethtypes.MustNewAddress("0xFFFF5718734552d08278aa70f804580bab5fd2b4"), "../../test/keystore_toml/wrong.txt")
 	assert.Regexp(t, "FF22015", err)
 
+}
+
+func TestSyncInitCallbackOK(t *testing.T) {
+	config.RootConfigReset()
+	logrus.SetLevel(logrus.TraceLevel)
+
+	unitTestConfig := config.RootSection("ut_fs_config")
+	InitConfig(unitTestConfig)
+	unitTestConfig.Set(ConfigPath, "../../test/keystore_toml")
+	unitTestConfig.Set(ConfigFilenamesPrimaryMatchRegex, "^((0x)?[0-9a-z]+).key.json$")
+	unitTestConfig.Set(ConfigFilenamesPasswordExt, ".pwd")
+	unitTestConfig.Set(ConfigDisableListener, true)
+	ctx := context.Background()
+
+	ff, err := NewFilesystemWallet(ctx, ReadConfig(unitTestConfig))
+	assert.NoError(t, err)
+	defer ff.Close()
+
+	callCount := 0
+	ff.SetSyncAddressCallback(func(ctx context.Context, ah ethtypes.Address0xHex) error {
+		callCount++
+		return nil
+	})
+
+	err = ff.Initialize(ctx)
+	assert.NoError(t, err)
+
+	assert.Equal(t, callCount, 2)
+}
+
+func TestSyncInitCallbackError(t *testing.T) {
+	config.RootConfigReset()
+	logrus.SetLevel(logrus.TraceLevel)
+
+	unitTestConfig := config.RootSection("ut_fs_config")
+	InitConfig(unitTestConfig)
+	unitTestConfig.Set(ConfigPath, "../../test/keystore_toml")
+	unitTestConfig.Set(ConfigFilenamesPrimaryMatchRegex, "^((0x)?[0-9a-z]+).key.json$")
+	unitTestConfig.Set(ConfigFilenamesPasswordExt, ".pwd")
+	unitTestConfig.Set(ConfigDisableListener, true)
+	ctx := context.Background()
+
+	ff, err := NewFilesystemWallet(ctx, ReadConfig(unitTestConfig))
+	assert.NoError(t, err)
+	defer ff.Close()
+
+	ff.SetSyncAddressCallback(func(ctx context.Context, ah ethtypes.Address0xHex) error {
+		return fmt.Errorf("pop")
+	})
+
+	err = ff.Initialize(ctx)
+	assert.Regexp(t, "pop", err)
 }
