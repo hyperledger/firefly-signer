@@ -247,7 +247,7 @@ func (w *fsWallet) processNewFiles(ctx context.Context, files ...fs.FileInfo) (l
 
 func (w *fsWallet) notifyNewFiles(ctx context.Context, files ...fs.FileInfo) error {
 
-	// This function takes te lock and releases with a copy of the listeners, and a list of new addresses
+	// This function takes the lock and releases with a copy of the listeners, and a list of new addresses
 	listeners, newAddresses := w.processNewFiles(ctx, files...)
 
 	if len(newAddresses) > 0 {
