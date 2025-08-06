@@ -19,11 +19,14 @@ package secp256k1
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"testing"
 
+	"github.com/hyperledger/firefly-common/pkg/fftypes"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const ethMessagePrefix = "\u0019Ethereum Signed Message:\n"
@@ -82,5 +85,33 @@ func TestSignFailNil(t *testing.T) {
 
 	_, err := (*KeyPair)(nil).Sign(addEthMessagePrefix([]byte(sampleMessage)))
 	assert.Regexp(t, "nil signer", err)
+
+}
+
+func TestSignLargerPayloads(t *testing.T) {
+
+	// use one signing key
+	key := KeyPairFromBytes(fftypes.MustParseBytes32("fb822cf045d9154a796c68fb41ebdc6e8c15e36b622d52940cca9701c07cb89d")[:])
+
+	// gen payloads from 0 to 1024 bytes
+	var payloads [][]byte
+	largestPayload := make([]byte, 1024)
+	for i := 0; i < len(largestPayload); i++ {
+		largestPayload[i] = (byte)('a' + (i % 26))
+		smallerPayload := make([]byte, i)
+		copy(smallerPayload[:], largestPayload[0:i])
+		fmt.Println(string(smallerPayload))
+		payloads = append(payloads, smallerPayload)
+	}
+
+	// check each gives a different signature
+	for i, p := range payloads {
+		sig, err := key.SignDirect(p)
+		require.NoError(t, err)
+		require.Len(t, sig.CompactRSV(), 65)
+		for iShouldNotEqual := 0; iShouldNotEqual < (i - 1); iShouldNotEqual++ {
+			require.NotEqual(t, p, payloads[iShouldNotEqual])
+		}
+	}
 
 }
