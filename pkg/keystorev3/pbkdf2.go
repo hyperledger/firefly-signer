@@ -28,7 +28,7 @@ const (
 	prfHmacSHA256 = "hmac-sha256"
 )
 
-func readPbkdf2WalletFile(jsonWallet []byte, password []byte, metadata map[string]interface{}) (WalletFile, error) {
+func readPbkdf2WalletFile(jsonWallet []byte, password []byte, metadata map[string]interface{}, keyScheme KeyScheme) (WalletFile, error) {
 	var w *walletFilePbkdf2
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {
 		return nil, fmt.Errorf("invalid pbkdf2 keystore: %s", err)

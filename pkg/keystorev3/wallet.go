@@ -62,11 +62,14 @@ func ReadWalletFile(jsonWallet []byte, password []byte) (WalletFile, error) {
 	if w.Version != version3 {
 		return nil, fmt.Errorf("incorrect keyfile version (only V3 supported): %d", w.Version)
 	}
+	if w.KeyScheme == "" {
+		w.KeyScheme = KeySchemeSecp256k1
+	}
 	switch w.Crypto.KDF {
 	case kdfTypeScrypt:
-		return readScryptWalletFile(jsonWallet, password, w.metadata)
+		return readScryptWalletFile(jsonWallet, password, w.metadata, w.KeyScheme)
 	case kdfTypePbkdf2:
-		return readPbkdf2WalletFile(jsonWallet, password, w.metadata)
+		return readPbkdf2WalletFile(jsonWallet, password, w.metadata, w.KeyScheme)
 	default:
 		return nil, fmt.Errorf("unsupported kdf: %s", w.Crypto.KDF)
 	}

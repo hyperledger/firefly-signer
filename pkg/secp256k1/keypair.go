@@ -37,6 +37,10 @@ func (k *KeyPair) PublicKeyBytes() []byte {
 	return k.PublicKey.SerializeUncompressed()[1:]
 }
 
+func (k *KeyPair) GetAddress() string {
+	return k.Address.String()
+}
+
 func GenerateSecp256k1KeyPair() (*KeyPair, error) {
 	// Generates key of curve S256() by default
 	key, _ := btcec.NewPrivateKey()

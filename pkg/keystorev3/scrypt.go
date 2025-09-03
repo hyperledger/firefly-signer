@@ -29,12 +29,17 @@ import (
 
 const defaultR = 8
 
-func readScryptWalletFile(jsonWallet []byte, password []byte, metadata map[string]interface{}) (WalletFile, error) {
+func readScryptWalletFile(jsonWallet []byte, password []byte, metadata map[string]interface{}, keyScheme KeyScheme) (WalletFile, error) {
 	var w *walletFileScrypt
 	if err := json.Unmarshal(jsonWallet, &w); err != nil {
 		return nil, fmt.Errorf("invalid scrypt wallet file: %s", err)
 	}
 	w.metadata = metadata
+	// Set the keyScheme for backward compatibility
+	if w.KeyScheme == "" {
+		w.KeyScheme = keyScheme
+	}
+
 	return w, w.decrypt(password)
 }
 

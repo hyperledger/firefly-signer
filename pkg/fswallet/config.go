@@ -66,6 +66,7 @@ type Config struct {
 
 type ConfigGeneric struct {
 	Config
+	// Feel like we need a generic address resolver here, public key -> address
 	WalletFileValidator func(ctx context.Context, addrString string, kv3 keystorev3.WalletFile) error
 	AddressValidator    func(ctx context.Context, addrString string) (string, error)
 }

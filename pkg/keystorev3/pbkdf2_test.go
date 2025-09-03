@@ -82,15 +82,14 @@ func TestPbkdf2Wallet(t *testing.T) {
 }
 
 func TestPbkdf2WalletFileDecryptInvalid(t *testing.T) {
-
-	_, err := readPbkdf2WalletFile([]byte(`!! not json`), []byte(""), nil)
+	_, err := readPbkdf2WalletFile([]byte(`!! not json`), []byte(""), nil, KeySchemeSecp256k1)
 	assert.Regexp(t, "invalid pbkdf2 keystore", err)
 
 }
 
 func TestPbkdf2WalletFileUnsupportedPRF(t *testing.T) {
 
-	_, err := readPbkdf2WalletFile([]byte(`{}`), []byte(""), nil)
+	_, err := readPbkdf2WalletFile([]byte(`{}`), []byte(""), nil, KeySchemeSecp256k1)
 	assert.Regexp(t, "invalid pbkdf2 wallet file: unsupported prf", err)
 
 }

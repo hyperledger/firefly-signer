@@ -17,6 +17,7 @@
 package keystorev3
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -76,7 +77,7 @@ func TestLoadSampleWallet(t *testing.T) {
 	w, err := ReadWalletFile([]byte(sampleWallet), []byte("correcthorsebatterystaple"))
 	assert.NoError(t, err)
 
-	keypair := w.KeyPair()
+	keypair := w.KeyPair(context.Background(), nil)
 	assert.Equal(t, samplePrivateKey, hex.EncodeToString(keypair.PrivateKeyBytes()))
 }
 
@@ -143,7 +144,8 @@ func TestWalletFileCustomBytes(t *testing.T) {
 	first32 := ([]byte)("planet refuse wheel robot positi")
 	kp, _ := secp256k1.NewSecp256k1KeyPair(first32)
 	assert.NoError(t, err)
-	assert.Equal(t, kp.Address, w2.KeyPair().Address)
+	// TODO nil to eth resolver
+	assert.Equal(t, kp.Address.String(), w2.KeyPair(context.Background(), nil).GetAddress())
 }
 
 func TestWalletFileCustomBytesLight(t *testing.T) {
@@ -163,7 +165,7 @@ func TestWalletFileCustomBytesLight(t *testing.T) {
 	zeroToTheRight := ([]byte)("less than 32 bytes")
 	kp, _ := secp256k1.NewSecp256k1KeyPair(zeroToTheRight)
 	assert.NoError(t, err)
-	assert.Equal(t, kp.Address, w2.KeyPair().Address)
+	assert.Equal(t, kp.Address.String(), w2.KeyPair().GetAddress())
 }
 
 func TestMarshalWalletJSONFail(t *testing.T) {

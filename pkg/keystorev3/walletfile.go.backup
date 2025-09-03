@@ -18,12 +18,10 @@ package keystorev3
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger/firefly-common/pkg/fftypes"
-	"github.com/hyperledger/firefly-signer/pkg/ed25519"
 	"github.com/hyperledger/firefly-signer/pkg/ethtypes"
 	"github.com/hyperledger/firefly-signer/pkg/secp256k1"
 )
@@ -44,13 +42,13 @@ const (
 
 type WalletFile interface {
 	PrivateKey() []byte
-	KeyPair(ctx context.Context) KeyPair
+	KeyPair() KeyPair
 	JSON() []byte
 	GetID() *fftypes.UUID
 	GetVersion() int
 	GetKeyScheme() KeyScheme
 
-	// Any fields set into this that do not conflict with the base fields (id/version/crypto/keyScheme) will
+	// Any fields set into this that do not conflict with the base fields (id/version/crypto) will
 	// be serialized into the JSON when it is marshalled.
 	// This includes setting the "address" field (which is not a core part of the V3 standard) to
 	// an arbitrary string, adding new fields for different key identifiers (like "bjj" or "btc" for
@@ -97,9 +95,8 @@ type cryptoPbkdf2 struct {
 }
 
 type walletFileCoreFields struct {
-	ID        *fftypes.UUID `json:"id"`
-	Version   int           `json:"version"`
-	KeyScheme KeyScheme     `json:"keyScheme"`
+	ID      *fftypes.UUID `json:"id"`
+	Version int           `json:"version"`
 }
 
 type walletFileMetadata struct {
@@ -162,27 +159,16 @@ func marshalWalletJSON(wc *walletFileBase, crypto interface{}) ([]byte, error) {
 	// cannot override these fields
 	jsonMap["id"] = wc.ID
 	jsonMap["version"] = wc.Version
-	jsonMap["keyScheme"] = wc.KeyScheme
 	jsonMap["crypto"] = json.RawMessage(cryptoJSON)
 	return json.Marshal(jsonMap)
 }
 
-func (w *walletFileBase) KeyPair(ctx context.Context) KeyPair {
-	switch w.KeyScheme {
-	case KeySchemeEd25519:
-		// We need an address resolver to get the address from the public key
-		return ed25519.KeyPairFromBytes(ctx, w.privateKey, nil)
-	case KeySchemeSecp256k1:
-		// TODO add address resolver
-		return secp256k1.KeyPairFromBytes(w.privateKey)
-	default:
-		// Default to secp256k1 for backward compatibility
-		return secp256k1.KeyPairFromBytes(w.privateKey)
-	}
+func (w *walletFileBase) KeyPair() KeyPair {
+	return secp256k1.KeyPairFromBytes(w.privateKey)
 }
 
 func (w *walletFileBase) GetKeyScheme() KeyScheme {
-	return w.KeyScheme
+	return KeySchemeSecp256k1
 }
 
 func (w *walletFileBase) PrivateKey() []byte {

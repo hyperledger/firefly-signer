@@ -54,8 +54,8 @@ func NewFilesystemWallet(ctx context.Context, conf *Config, initialListeners ...
 			addr, err := ethtypes.NewAddress(addrString)
 			if err == nil {
 				keypair := kv3.KeyPair()
-				if keypair.Address != *addr {
-					err = i18n.NewError(ctx, signermsgs.MsgAddressMismatch, keypair.Address, addr)
+				if keypair.GetAddress() != addr.String() {
+					err = i18n.NewError(ctx, signermsgs.MsgAddressMismatch, keypair.GetAddress(), addr)
 				}
 			}
 			return err
@@ -136,7 +136,7 @@ func (e *walletEthAddr) SetSyncAddressCallback(cb SyncAddressCallback) {
 	})
 }
 
-func (e *walletEthAddr) getSignerForJSONAccount(ctx context.Context, rawAddrJSON json.RawMessage) (*secp256k1.KeyPair, error) {
+func (e *walletEthAddr) getSignerForJSONAccount(ctx context.Context, rawAddrJSON json.RawMessage) (keystorev3.KeyPair, error) {
 
 	// We require an ethereum address in the "from" field
 	var from ethtypes.Address0xHex
@@ -147,7 +147,7 @@ func (e *walletEthAddr) getSignerForJSONAccount(ctx context.Context, rawAddrJSON
 	return e.getSignerForAddr(ctx, from)
 }
 
-func (e *walletEthAddr) getSignerForAddr(ctx context.Context, from ethtypes.Address0xHex) (*secp256k1.KeyPair, error) {
+func (e *walletEthAddr) getSignerForAddr(ctx context.Context, from ethtypes.Address0xHex) (keystorev3.KeyPair, error) {
 
 	wf, err := e.GetWalletFile(ctx, from)
 	if err != nil {
@@ -162,7 +162,8 @@ func (e *walletEthAddr) Sign(ctx context.Context, txn *ethsigner.Transaction, ch
 	if err != nil {
 		return nil, err
 	}
-	return txn.Sign(keypair, chainID)
+	signer := secp256k1.KeyPairFromBytes(keypair.PrivateKeyBytes())
+	return txn.Sign(signer, chainID)
 }
 
 func (e *walletEthAddr) SignTypedDataV4(ctx context.Context, from ethtypes.Address0xHex, payload *eip712.TypedData) (*ethsigner.EIP712Result, error) {
@@ -170,5 +171,6 @@ func (e *walletEthAddr) SignTypedDataV4(ctx context.Context, from ethtypes.Addre
 	if err != nil {
 		return nil, err
 	}
-	return ethsigner.SignTypedDataV4(ctx, keypair, payload)
+	signer := secp256k1.KeyPairFromBytes(keypair.PrivateKeyBytes())
+	return ethsigner.SignTypedDataV4(ctx, signer, payload)
 }
