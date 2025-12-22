@@ -1096,3 +1096,93 @@ func TestUnnamedInputOutput(t *testing.T) {
 	require.JSONEq(t, `{"0":"12345","1":"test"}`, string(res))
 
 }
+
+func TestRoundTripFixedABIStruct(t *testing.T) {
+
+	// Simulating in Solidity:
+	//
+	// // A struct definition of a simple structure
+	// struct MyStruct {
+	//    bytes32 oneSimpleParam;
+	// }
+	//
+	//
+	// // Decoding it as the only parameter in a type list
+	// abi.decode(encodedData, (MyStruct));
+
+	// Meaning an outer type list
+	var exampleStructABI = ParameterArray{
+		// With a single tuple definition inside representing the structure
+		{
+			Type:         "tuple",
+			InternalType: "struct MyStruct",
+			Components: ParameterArray{
+				{Name: "oneSimpleParam", Type: "bytes32"},
+			},
+		},
+	}
+
+	// Which should encode correctly from an array with a single data element
+	encodedData, err := exampleStructABI.EncodeABIDataJSON([]byte(`[["0xef91179a4b5744dd32ea1a6795ea4c7aac81fe9b6ae530a60817efbac11ef87c"]]`))
+	require.NoError(t, err)
+
+	// In ethers in Typescript you could do:
+	// ethers.AbiCoder.defaultAbiCoder().encode(["tuple(bytes32)"], [[ "0xef91179a4b5744dd32ea1a6795ea4c7aac81fe9b6ae530a60817efbac11ef87c" ]]);
+	require.Equal(t, `0xef91179a4b5744dd32ea1a6795ea4c7aac81fe9b6ae530a60817efbac11ef87c`, "0x"+hex.EncodeToString(encodedData))
+
+	// And clearly should round trip
+	cv, err := exampleStructABI.DecodeABIData(encodedData, 0)
+	require.Len(t, cv.Children, 1)
+	require.NoError(t, err)
+
+	// And get back the same data
+	roundTripJSON, err := cv.Children[0].JSON()
+	require.NoError(t, err)
+	require.JSONEq(t, string(roundTripJSON), `{"oneSimpleParam": "ef91179a4b5744dd32ea1a6795ea4c7aac81fe9b6ae530a60817efbac11ef87c"}`)
+
+}
+
+func TestRoundTripDynamicABIStruct(t *testing.T) {
+
+	// Simulating in Solidity:
+	//
+	// // A struct definition of a simple structure
+	// struct MyStruct {
+	//    bytes32 oneSimpleParam;
+	// }
+	//
+	//
+	// // Decoding it as the only parameter in a type list
+	// abi.decode(encodedData, (MyStruct));
+
+	// Meaning an outer type list
+	var exampleStructABI = ParameterArray{
+		// With a single tuple definition inside representing the structure
+		{
+			Type:         "tuple",
+			InternalType: "struct MyStruct",
+			Components: ParameterArray{
+				{Name: "oneStringParam", Type: "string"},
+			},
+		},
+	}
+
+	// Which should encode correctly from an array with a single data element
+	encodedData, err := exampleStructABI.EncodeABIDataJSON([]byte(`[["abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789"]]`))
+	require.NoError(t, err)
+
+	// In ethers in Typescript you could do:
+	// ethers.AbiCoder.defaultAbiCoder().encode(["tuple(bytes32)"], [[ "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789" ]]);
+	require.Equal(t, `0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000406162636465666768696a6b6c6d6e6f707172737475767778797a204142434445464748494a4b4c4d4e4f505152535455565758595a2030313233343536373839`, "0x"+hex.EncodeToString(encodedData))
+
+	// And clearly should round trip
+	cv, err := exampleStructABI.DecodeABIData(encodedData, 0)
+	require.Len(t, cv.Children, 1)
+	require.NoError(t, err)
+
+	// And get back the same data
+	roundTripJSON, err := cv.Children[0].JSON()
+	require.NoError(t, err)
+	require.JSONEq(t, string(roundTripJSON), `{"oneStringParam": "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789"}`)
+
+}
