@@ -17,10 +17,12 @@
 package abi
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/hyperledger/firefly-common/pkg/ffapi"
@@ -1072,6 +1074,169 @@ func TestErrorString(t *testing.T) {
 	_, ok = customErrABI.ErrorString(mismatchError)
 	assert.False(t, ok)
 
+}
+
+// buildErrorStringABI builds the raw ABI encoding for Error(string) with the given message bytes.
+func buildErrorStringABI(msgBytes []byte) []byte {
+	defaultErr := &Entry{Type: Error, Name: "Error", Inputs: ParameterArray{{Name: "reason", Type: "string"}}}
+	sel := defaultErr.FunctionSelectorBytes()
+	offset := make([]byte, 32)
+	binary.BigEndian.PutUint64(offset[24:], 0x20)
+	length := make([]byte, 32)
+	binary.BigEndian.PutUint64(length[24:], uint64(len(msgBytes)))
+	paddedLen := ((len(msgBytes) + 31) / 32) * 32
+	data := make([]byte, paddedLen)
+	copy(data, msgBytes)
+	result := make([]byte, 0, 4+32+32+paddedLen)
+	result = append(result, sel...)
+	result = append(result, offset...)
+	result = append(result, length...)
+	result = append(result, data...)
+	return result
+}
+
+func TestUnwrapErrorStringPlainError(t *testing.T) {
+	revertData := ethtypes.MustNewHexBytes0xPrefix(
+		"0x08c379a0" +
+			"0000000000000000000000000000000000000000000000000000000000000020" +
+			"000000000000000000000000000000000000000000000000000000000000001a" +
+			"4e6f7420656e6f7567682045746865722070726f76696465642e000000000000")
+
+	result, ok := ABI{}.UnwrapErrorString(revertData)
+	assert.True(t, ok)
+	assert.Equal(t, "Not enough Ether provided.", result)
+}
+
+func TestUnwrapErrorStringSingleNested(t *testing.T) {
+	revertData := ethtypes.MustNewHexBytes0xPrefix(
+		"0x08c379a00000000000000000000000000000000000000000000000000000000000000020" +
+			"000000000000000000000000000000000000000000000000000000000000006b" +
+			"6f757465723a20" +
+			"08c379a0" +
+			"0000000000000000000000000000000000000000000000000000000000000020" +
+			"0000000000000000000000000000000000000000000000000000000000000013" +
+			"696e6e6572206572726f72206d65737361676500000000000000000000000000" +
+			"000000000000000000000000000000000000000000")
+
+	result, ok := ABI{}.UnwrapErrorString(revertData)
+	assert.True(t, ok)
+	assert.Equal(t, "outer: inner error message", result)
+}
+
+func TestUnwrapErrorStringDoubleNested(t *testing.T) {
+	revertData := ethtypes.MustNewHexBytes0xPrefix(
+		"0x08c379a0" +
+			"0000000000000000000000000000000000000000000000000000000000000020" +
+			"00000000000000000000000000000000000000000000000000000000000000cc" +
+			"6c6576656c313a20" +
+			"08c379a0" +
+			"0000000000000000000000000000000000000000000000000000000000000020" +
+			"000000000000000000000000000000000000000000000000000000000000006c" +
+			"6c6576656c323a20" +
+			"08c379a0" +
+			"0000000000000000000000000000000000000000000000000000000000000020" +
+			"000000000000000000000000000000000000000000000000000000000000000d" +
+			"64656570657374206572726f720000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+
+	result, ok := ABI{}.UnwrapErrorString(revertData)
+	assert.True(t, ok)
+	assert.Equal(t, "level1: level2: deepest error", result)
+}
+
+func TestUnwrapErrorStringNestedCustomError(t *testing.T) {
+	customABI := ABI{
+		{Type: Error, Name: "MyCustomError", Inputs: ParameterArray{{Type: "bytes"}}},
+	}
+	customSelector := hex.EncodeToString(customABI[0].FunctionSelectorBytes())
+
+	revertData := ethtypes.MustNewHexBytes0xPrefix(
+		"0x08c379a0" +
+			"0000000000000000000000000000000000000000000000000000000000000020" +
+			"000000000000000000000000000000000000000000000000000000000000007c" +
+			"5b3430345d303164202d206361756768742062797465733a" +
+			customSelector +
+			"0000000000000000000000000000000000000000000000000000000000000020" +
+			"0000000000000000000000000000000000000000000000000000000000000004" +
+			"deadbeef00000000000000000000000000000000000000000000000000000000" +
+			"00000000")
+
+	// Without the custom ABI, the nested section can't be decoded
+	result, ok := ABI{}.UnwrapErrorString(revertData)
+	assert.True(t, ok)
+	assert.True(t, strings.HasPrefix(result, "0x"))
+
+	// With the custom ABI, the nested error is decoded
+	result, ok = customABI.UnwrapErrorString(revertData)
+	assert.True(t, ok)
+	assert.Equal(t, `[404]01d - caught bytes:MyCustomError("0xdeadbeef")`, result)
+}
+
+func TestUnwrapErrorStringUnknownSelector(t *testing.T) {
+	// Unknown top-level selector
+	_, ok := ABI{}.UnwrapErrorString([]byte{0x11, 0x22, 0x33, 0x44})
+	assert.False(t, ok)
+}
+
+func TestUnwrapErrorStringMalformedNestedABI(t *testing.T) {
+	defaultErr := &Entry{Type: Error, Name: "Error", Inputs: ParameterArray{{Name: "reason", Type: "string"}}}
+	sel := defaultErr.FunctionSelectorBytes()
+
+	badData := "prefix:" + string(sel) + "truncated"
+	outerABI := buildErrorStringABI([]byte(badData))
+
+	result, ok := ABI{}.UnwrapErrorString(outerABI)
+	assert.True(t, ok)
+	assert.Equal(t, "prefix:0x08c379a07472756e6361746564", result)
+}
+
+func TestUnwrapErrorStringDepthLimit(t *testing.T) {
+	innerABI := buildErrorStringABI([]byte("should not decode"))
+	s := "prefix:" + string(innerABI)
+	outerABI := buildErrorStringABI([]byte(s))
+
+	// Passes through processRevertReason, then into unwrap at depth 0.
+	// We can't easily test depth=10 through the public API without 10 levels of nesting,
+	// so test the internal function directly.
+	result := unwrapNestedRevertReasons(nil, ABI{}, s, maxNestedRevertDepth)
+	assert.True(t, strings.HasPrefix(result, "0x"))
+	assert.NotEqual(t, "prefix:should not decode", result)
+
+	// At depth max-1, it still decodes
+	result = unwrapNestedRevertReasons(nil, ABI{}, s, maxNestedRevertDepth-1)
+	assert.Equal(t, "prefix:should not decode", result)
+
+	_ = outerABI // suppress unused
+}
+
+func TestUnwrapErrorStringCustomBeforeDefaultError(t *testing.T) {
+	customABI := ABI{
+		{Type: Error, Name: "EarlyErr", Inputs: ParameterArray{{Type: "uint256"}}},
+	}
+	customSel := customABI[0].FunctionSelectorBytes()
+
+	arg := make([]byte, 32)
+	binary.BigEndian.PutUint64(arg[24:], 42)
+	customEncoded := append([]byte(nil), customSel...)
+	customEncoded = append(customEncoded, arg...)
+
+	innerErrorABI := buildErrorStringABI([]byte("late-error"))
+	// Custom selector appears before the Error(string) selector
+	s := "head:" + string(customEncoded) + "middle:" + string(innerErrorABI)
+	outerABI := buildErrorStringABI([]byte(s))
+
+	result, ok := customABI.UnwrapErrorString(outerABI)
+	assert.True(t, ok)
+	assert.Equal(t, `head:EarlyErr("42")`, result)
+}
+
+func TestSanitizeBinaryString(t *testing.T) {
+	assert.Equal(t, "", SanitizeBinaryString(nil))
+	assert.Equal(t, "", SanitizeBinaryString([]byte{}))
+	assert.Equal(t, "hello world", SanitizeBinaryString([]byte("hello world")))
+	assert.Equal(t, "0xdeadbeef", SanitizeBinaryString([]byte{0xde, 0xad, 0xbe, 0xef}))
+	assert.Equal(t, "0x000000", SanitizeBinaryString([]byte{0x00, 0x00, 0x00}))
+	assert.Equal(t, "0x736f6d65206572726f72000000", SanitizeBinaryString([]byte("some error\x00\x00\x00")))
+	assert.Equal(t, "0x0168656c6c6f", SanitizeBinaryString([]byte{0x01, 'h', 'e', 'l', 'l', 'o'}))
 }
 
 func TestUnnamedInputOutput(t *testing.T) {
