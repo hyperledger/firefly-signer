@@ -387,9 +387,9 @@ func unwrapNestedRevertReasons(ctx context.Context, a ABI, s string, depth int) 
 
 	raw := []byte(s)
 
-	// Find the earliest occurrence of any known error selector
-	bestIdx := -1
-	var bestEntry *Entry
+	// Build a lookup map of 4-byte selectors so we can scan the string once
+	type selectorKey = [4]byte
+	selectors := make(map[selectorKey]*Entry)
 	errorsWithDefault := append(ABI{
 		{Type: Error, Name: "Error", Inputs: ParameterArray{{Name: "reason", Type: "string"}}},
 	}, a...)
@@ -398,9 +398,27 @@ func unwrapNestedRevertReasons(ctx context.Context, a ABI, s string, depth int) 
 			continue
 		}
 		sel := e.FunctionSelectorBytes()
-		if idx := bytes.Index(raw, sel); idx >= 0 && (bestIdx < 0 || idx < bestIdx) {
-			bestIdx = idx
-			bestEntry = e
+		if len(sel) >= 4 {
+			var key selectorKey
+			copy(key[:], sel[:4])
+			if _, exists := selectors[key]; !exists {
+				selectors[key] = e
+			}
+		}
+	}
+
+	// Single pass: walk through the bytes looking for any known selector
+	bestIdx := -1
+	var bestEntry *Entry
+	if len(raw) >= 4 {
+		for i := 0; i <= len(raw)-4; i++ {
+			var key selectorKey
+			copy(key[:], raw[i:i+4])
+			if e, ok := selectors[key]; ok {
+				bestIdx = i
+				bestEntry = e
+				break
+			}
 		}
 	}
 
