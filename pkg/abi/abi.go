@@ -382,7 +382,7 @@ func (a ABI) UnwrapErrorString(revertData []byte) (string, bool) {
 // embedded ABI-encoded error data from Solidity catch-and-rethrow patterns.
 func unwrapNestedRevertReasons(ctx context.Context, a ABI, s string, depth int) string {
 	if depth >= maxNestedRevertDepth {
-		return sanitizeBinaryString([]byte(s))
+		return SanitizeBinaryString([]byte(s))
 	}
 
 	raw := []byte(s)
@@ -405,10 +405,10 @@ func unwrapNestedRevertReasons(ctx context.Context, a ABI, s string, depth int) 
 	}
 
 	if bestIdx < 0 {
-		return sanitizeBinaryString(raw)
+		return SanitizeBinaryString(raw)
 	}
 
-	prefix := sanitizeBinaryString(raw[:bestIdx])
+	prefix := SanitizeBinaryString(raw[:bestIdx])
 	embedded := raw[bestIdx:]
 
 	cv, err := bestEntry.DecodeCallDataCtx(ctx, embedded)
@@ -432,10 +432,6 @@ func unwrapNestedRevertReasons(ctx context.Context, a ABI, s string, depth int) 
 // printable ASCII, or hex-encodes the entire input otherwise. This ensures the
 // output is always safe for database TEXT columns and human-readable logging.
 func SanitizeBinaryString(raw []byte) string {
-	return sanitizeBinaryString(raw)
-}
-
-func sanitizeBinaryString(raw []byte) string {
 	for _, b := range raw {
 		if b < 32 || b >= 127 {
 			return "0x" + hex.EncodeToString(raw)
